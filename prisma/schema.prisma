@@ -1,0 +1,308 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  user
+  admin
+}
+
+enum UiLanguage {
+  en
+  he
+}
+
+enum JobStatus {
+  interest
+  contacted
+  applied
+  interviewing
+  offer
+  rejected
+  withdrawn
+  on_hold
+}
+
+enum EventType {
+  interest
+  outreach
+  application
+  meeting
+  status_change
+}
+
+enum Channel {
+  email
+  whatsapp
+  linkedin_inmail
+  phone
+  video
+  in_person
+  other
+}
+
+enum MeetingStage {
+  hr
+  manager
+  technical
+  final
+  other
+}
+
+model User {
+  id                   String     @id @default(cuid())
+  email                String     @unique
+  passwordHash         String?
+  fullName             String
+  role                 Role       @default(user)
+  isActive             Boolean    @default(true)
+  mustChangePassword   Boolean    @default(false)
+  passwordChangedAt    DateTime?
+  uiLanguage           UiLanguage @default(en)
+  googleAccountId      String?    @unique
+  timezone             String     @default("Asia/Jerusalem")
+  digestEnabled        Boolean    @default(false)
+  digestDaysAhead      Int        @default(7)
+  digestHour           Int        @default(8)
+  lastDigestLocalDate  String?
+  calendarRefreshToken String?
+  calendarEmail        String?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  goals         UserGoals?
+  profile       Profile?
+  employments   Employment[]
+  educations    Education[]
+  volunteers    VolunteerRole[]
+  certificates  Certificate[]
+  profileFiles  ProfileFile[]
+  jobs          Job[]
+  contacts      Contact[]
+  notes         Note[]
+  events        Event[]
+  notifications Notification[]
+}
+
+model UserGoals {
+  id                             String @id @default(cuid())
+  userId                         String @unique
+  user                           User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applicationsPerDay             Float  @default(0)
+  networkingPerDay               Float?
+  networkingPerWeek              Float?
+  interviewPracticeMinutesPerDay Float  @default(0)
+  learningMinutesPerDay          Float  @default(0)
+  searchMinutesOverride          Float?
+}
+
+model Profile {
+  id       String @id @default(cuid())
+  userId   String @unique
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  headline String @default("")
+  aboutEn  String @default("")
+  aboutHe  String @default("")
+}
+
+model Employment {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  company       String
+  startDate     DateTime?
+  endDate       DateTime?
+  isCurrent     Boolean   @default(false)
+  descriptionEn String    @default("")
+  descriptionHe String    @default("")
+}
+
+model Education {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school    String
+  degree    String    @default("")
+  field     String    @default("")
+  startDate DateTime?
+  endDate   DateTime?
+}
+
+model VolunteerRole {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization  String
+  role          String    @default("")
+  startDate     DateTime?
+  endDate       DateTime?
+  descriptionEn String    @default("")
+  descriptionHe String    @default("")
+}
+
+model Certificate {
+  id       String    @id @default(cuid())
+  userId   String
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name     String
+  issuer   String    @default("")
+  issuedOn DateTime?
+  url      String    @default("")
+}
+
+/// A private S3 object. objectKey is the key in S3_BUCKET, not a public URL.
+model ProfileFile {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  filename   String
+  objectKey  String
+  mime       String
+  byteSize   Int
+  uploadedAt DateTime @default(now())
+}
+
+model Job {
+  id                     String    @id @default(cuid())
+  userId                 String
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName            String
+  title                  String    @default("")
+  description            String    @default("")
+  interestDate           DateTime
+  followUpAt             DateTime
+  reminderLeadDays       Int?
+  reminderLeadHours      Int?
+  followUpReminderSentAt DateTime?
+  status                 JobStatus @default(interest)
+  importKey              String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  urls                   JobUrl[]
+  cvs                    JobCv[]
+  events                 Event[]
+
+  @@unique([userId, importKey])
+  @@index([userId, status])
+}
+
+model JobUrl {
+  id    String @id @default(cuid())
+  jobId String
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  url   String
+  label String @default("")
+}
+
+/// A private S3 object. objectKey is the key in S3_BUCKET, not a public URL.
+model JobCv {
+  id         String   @id @default(cuid())
+  jobId      String
+  job        Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  filename   String
+  objectKey  String
+  mime       String
+  byteSize   Int
+  uploadedAt DateTime @default(now())
+  events     Event[]
+}
+
+model Contact {
+  id                 String    @id @default(cuid())
+  userId             String
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName           String
+  role               String    @default("")
+  workplace          String    @default("")
+  howWeMet           String    @default("")
+  lastChannel        String    @default("")
+  status             String    @default("")
+  summary            String    @default("")
+  contactedAt        DateTime?
+  nextActionDate     DateTime?
+  nextAction         String    @default("")
+  contactDetails     String    @default("")
+  willingToRecommend Boolean   @default(false)
+  googleResourceName String?
+  importKey          String?
+  createdAt          DateTime  @default(now())
+  events             Event[]
+
+  @@unique([userId, importKey])
+  @@index([userId, fullName])
+}
+
+model Note {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  createdAt DateTime      @default(now())
+  versions  NoteVersion[]
+}
+
+model NoteVersion {
+  id        String   @id @default(cuid())
+  noteId    String
+  note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  version   Int
+  bodyEn    String   @default("")
+  bodyHe    String   @default("")
+  createdAt DateTime @default(now())
+  events    Event[]
+
+  @@unique([noteId, version])
+}
+
+model Event {
+  id                     String        @id @default(cuid())
+  userId                 String
+  user                   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type                   EventType
+  occurredAt             DateTime
+  endsAt                 DateTime?
+  jobId                  String?
+  job                    Job?          @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  contactId              String?
+  contact                Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  channel                Channel?
+  counterpartyName       String        @default("")
+  stage                  MeetingStage?
+  resultingStatus        JobStatus?
+  summary                String        @default("")
+  noteVersionId          String?
+  noteVersion            NoteVersion?  @relation(fields: [noteVersionId], references: [id], onDelete: SetNull)
+  cvId                   String?
+  cv                     JobCv?        @relation(fields: [cvId], references: [id], onDelete: SetNull)
+  tailoredCv             Boolean?
+  googleCalendarEventId  String?
+  googleCalendarHtmlLink String?
+  importKey              String?
+  createdAt              DateTime      @default(now())
+
+  @@unique([userId, importKey])
+  @@index([userId, occurredAt])
+  @@index([jobId, occurredAt])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String
+  dedupeKey String
+  subject   String
+  body      String
+  emailed   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  emailedAt DateTime?
+
+  @@unique([userId, dedupeKey])
+}
