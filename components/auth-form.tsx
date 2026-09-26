@@ -14,6 +14,7 @@ export function AuthForm({
   google,
   error,
   rule,
+  fixedLanguage = false,
 }: {
   mode: "login" | "signup";
   lang: Lang;
@@ -21,6 +22,7 @@ export function AuthForm({
   google: boolean;
   error: string;
   rule: string;
+  fixedLanguage?: boolean;
 }) {
   const [current, setCurrent] = useState<Lang>(lang);
   const [email, setEmail] = useState("");
@@ -30,7 +32,7 @@ export function AuthForm({
   }, [lang]);
 
   useEffect(() => {
-    if (!email.includes("@")) return;
+    if (fixedLanguage || !email.includes("@")) return;
     const handle = setTimeout(() => {
       fetch(`/api/login-language?email=${encodeURIComponent(email)}`)
         .then((response) => response.json())
@@ -40,7 +42,7 @@ export function AuthForm({
         .catch(() => undefined);
     }, 250);
     return () => clearTimeout(handle);
-  }, [email]);
+  }, [email, fixedLanguage]);
 
   const message =
     error === "policy" && (rule === "length" || rule === "lower" || rule === "upper" || rule === "digit")

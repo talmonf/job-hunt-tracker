@@ -3,7 +3,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
-  title: "Job Hunt",
+  title: "Job Hunt Tracker",
   description: "Track companies, applications, interviews, and networking.",
 };
 
