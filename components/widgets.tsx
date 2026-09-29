@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import type { Lang } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
@@ -422,7 +422,19 @@ export function MultiSelect({
   );
 }
 
-export function ConfirmSubmit({ action, message, label, className }: { action: (formData: FormData) => void; message: string; label: string; className?: string }) {
+export function ConfirmSubmit({
+  action,
+  message,
+  label,
+  className,
+  children,
+}: {
+  action: (formData: FormData) => void;
+  message: string;
+  label: string;
+  className?: string;
+  children?: ReactNode;
+}) {
   return (
     <form
       action={action}
@@ -430,6 +442,7 @@ export function ConfirmSubmit({ action, message, label, className }: { action: (
         if (!window.confirm(message)) event.preventDefault();
       }}
     >
+      {children}
       <button className={className ?? quietButton} type="submit">
         {label}
       </button>

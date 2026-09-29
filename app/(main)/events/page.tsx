@@ -7,10 +7,10 @@ import { parseDateOnly } from "@/lib/forms";
 import { EVENT_TYPES } from "@/lib/events";
 import { eventTypeLabel, t } from "@/lib/i18n";
 import { dash, maskText } from "@/lib/mask";
-import { formatDateTime } from "@/lib/dates";
-import { saveEvent } from "@/lib/actions/jobs";
+import { dateTimeInputValue, formatDateTime } from "@/lib/dates";
+import { deleteEvent, saveEvent } from "@/lib/actions/jobs";
 import { EmptyState, Modal, PageFrame } from "@/components/chrome";
-import { DateField, MultiSelect, fieldClass, labelClass } from "@/components/widgets";
+import { ConfirmSubmit, DateField, MultiSelect, fieldClass, labelClass } from "@/components/widgets";
 import { EventForm } from "@/components/event-form";
 
 export const dynamic = "force-dynamic";
@@ -74,8 +74,20 @@ export default async function EventsPage({
       orderBy: { uploadedAt: "desc" },
     }),
   ]);
-  const keep = preserveQuery(search, {}, ["modal"]);
-  const closeHref = `/events${preserveQuery(search, {}, ["modal"])}`;
+  const keep = preserveQuery(search, {}, ["modal", "eventId"]);
+  const closeHref = `/events${keep}`;
+  const editing = firstParam(search.modal) === "edit" ? events.find((event) => event.id === firstParam(search.eventId)) : undefined;
+  const jobOptions = jobs.map((job) => ({
+    id: job.id,
+    label: dash(`${job.companyName}${job.title ? ` — ${job.title}` : ""}`, hide),
+  }));
+  const contactOptions = contacts.map((item) => ({ id: item.id, label: dash(item.fullName, hide) }));
+  const noteOptions = versions.map((item) => ({ id: item.id, label: maskText(`${item.note.title} v${item.version}`, hide) }));
+  const cvOptions = cvs.map((cv) => ({
+    id: cv.id,
+    jobId: cv.jobId,
+    label: dash(`${cv.job.companyName} — ${cv.filename}`, hide),
+  }));
 
   return (
     <PageFrame lang={lang} title={t(lang, "events")} description={t(lang, "eventsIntro")} search={search}>
@@ -83,7 +95,7 @@ export default async function EventsPage({
         <h2 className="text-lg font-medium">{t(lang, "events")}</h2>
         <Link
           className="rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950"
-          href={`/events${preserveQuery(search, { modal: "new" }, ["modal"])}`}
+          href={`/events${preserveQuery(search, { modal: "new" }, ["modal", "eventId"])}`}
         >
           {t(lang, "logEvent")}
         </Link>
@@ -142,6 +154,7 @@ export default async function EventsPage({
                 <th className="px-3 py-2">{t(lang, "networking")}</th>
                 <th className="px-3 py-2">{t(lang, "who")}</th>
                 <th className="px-3 py-2">{t(lang, "summary")}</th>
+                <th className="px-3 py-2" />
               </tr>
             </thead>
             <tbody>
@@ -172,6 +185,25 @@ export default async function EventsPage({
                   </td>
                   <td className="px-3 py-2">{dash(event.counterpartyName, hide)}</td>
                   <td className="max-w-xs truncate px-3 py-2 text-slate-300">{dash(event.summary, hide)}</td>
+                  <td className="px-3 py-2">
+                    <div className="flex gap-3 whitespace-nowrap">
+                      <Link
+                        className="text-sky-300"
+                        href={`/events${preserveQuery(search, { modal: "edit", eventId: event.id }, ["modal", "eventId"])}`}
+                      >
+                        {t(lang, "edit")}
+                      </Link>
+                      <ConfirmSubmit
+                        action={deleteEvent}
+                        message={t(lang, "deleteConfirm")}
+                        label={t(lang, "delete")}
+                        className="text-rose-300"
+                      >
+                        <input type="hidden" name="eventId" value={event.id} />
+                        <input type="hidden" name="returnTo" value={`/events${keep}`} />
+                      </ConfirmSubmit>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
