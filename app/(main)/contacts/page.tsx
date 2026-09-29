@@ -3,13 +3,14 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { firstParam, preserveQuery } from "@/lib/http";
-import { formatDate } from "@/lib/dates";
+import { dateInputValue } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
 import { createContact } from "@/lib/actions/network";
 import { EmptyState, Modal, PageFrame } from "@/components/chrome";
 import { fieldClass, labelClass } from "@/components/widgets";
 import { ContactFields } from "@/components/contact-fields";
+import { ContactDateEditor, ContactStatusEditor, ContactWillingEditor } from "@/components/contact-inline";
 
 export const dynamic = "force-dynamic";
 
@@ -90,9 +91,19 @@ export default async function ContactsPage({
                   <td className="px-3 py-2"><Link className="text-sky-300" href={`/contacts/${contact.id}`}>{dash(contact.fullName, hide)}</Link></td>
                   <td className="px-3 py-2">{dash(contact.role, hide)}</td>
                   <td className="px-3 py-2">{dash(contact.workplace, hide)}</td>
-                  <td className="px-3 py-2">{dash(contact.status, hide)}</td>
-                  <td className="px-3 py-2">{contact.nextActionDate ? formatDate(contact.nextActionDate, user.timezone) : "—"}</td>
-                  <td className="px-3 py-2">{contact.willingToRecommend ? t(lang, "yes") : t(lang, "no")}</td>
+                  <td className="px-3 py-2">
+                    <ContactStatusEditor contactId={contact.id} status={contact.status} lang={lang} />
+                  </td>
+                  <td className="px-3 py-2">
+                    <ContactDateEditor
+                      contactId={contact.id}
+                      value={contact.nextActionDate ? dateInputValue(contact.nextActionDate, user.timezone) : ""}
+                      lang={lang}
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <ContactWillingEditor contactId={contact.id} willing={contact.willingToRecommend} lang={lang} />
+                  </td>
                 </tr>
               ))}
             </tbody>

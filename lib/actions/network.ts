@@ -1,9 +1,11 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "../prisma";
 import { requireUser } from "../session";
 import { parseDateOnly, requiredText } from "../forms";
+import { normalizeContactStatus } from "../contact-status";
 
 export async function createNote(formData: FormData) {
   const user = await requireUser();
@@ -69,13 +71,41 @@ export async function deleteContact(formData: FormData) {
   redirect("/contacts?updated=1");
 }
 
+export async function patchContact(formData: FormData) {
+  const user = await requireUser();
+  const id = requiredText(formData.get("contactId"));
+  const existing = await prisma.contact.findFirst({ where: { id, userId: user.id } });
+  if (!existing) return;
+  const field = requiredText(formData.get("field"));
+  const value = formData.get("value");
+  if (field === "status") {
+    await prisma.contact.update({ where: { id }, data: { status: normalizeContactStatus(requiredText(value)) } });
+  } else if (field === "nextActionDate") {
+    const raw = requiredText(value);
+    if (!raw) {
+      await prisma.contact.update({ where: { id }, data: { nextActionDate: null } });
+    } else {
+      const parsed = parseDateOnly(raw, user.timezone);
+      if (!parsed) return;
+      await prisma.contact.update({ where: { id }, data: { nextActionDate: parsed } });
+    }
+  } else if (field === "willingToRecommend") {
+    await prisma.contact.update({ where: { id }, data: { willingToRecommend: String(value ?? "") === "1" } });
+  } else {
+    return;
+  }
+  revalidatePath("/contacts");
+  revalidatePath(`/contacts/${id}`);
+  revalidatePath("/dashboard");
+}
+
 function contactData(formData: FormData, timeZone: string) {
   return {
     role: requiredText(formData.get("role")),
     workplace: requiredText(formData.get("workplace")),
     howWeMet: requiredText(formData.get("howWeMet")),
     lastChannel: requiredText(formData.get("lastChannel")),
-    status: requiredText(formData.get("status")),
+    status: normalizeContactStatus(requiredText(formData.get("status"))),
     summary: String(formData.get("summary") ?? ""),
     contactedAt: parseDateOnly(formData.get("contactedAt"), timeZone),
     nextActionDate: parseDateOnly(formData.get("nextActionDate"), timeZone),

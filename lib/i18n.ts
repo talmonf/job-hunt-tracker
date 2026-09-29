@@ -1,3 +1,5 @@
+import { normalizeContactStatus } from "./contact-status";
+
 export type Lang = "en" | "he";
 
 const dict = {
@@ -212,6 +214,12 @@ const dict = {
     meetingsWeek: "Meetings this week",
     reminderBlank: "Leave both empty to skip the reminder.",
     followUpHelp: "Defaults to 7 days after the interest date.",
+    chooseDate: "Choose date",
+    prevMonth: "Previous month",
+    nextMonth: "Next month",
+    today: "Today",
+    timeHour: "HH",
+    timeMinute: "MI",
     eventNeedsLink: "Choose a job or a contact.",
     openJob: "Open",
     countImported: "Imported",
@@ -431,6 +439,12 @@ const dict = {
     meetingsWeek: "פגישות השבוע",
     reminderBlank: "השאירו את שני השדות ריקים כדי לא לקבל תזכורת.",
     followUpHelp: "ברירת המחדל היא 7 ימים אחרי תאריך העניין.",
+    chooseDate: "בחירת תאריך",
+    prevMonth: "חודש קודם",
+    nextMonth: "חודש הבא",
+    today: "היום",
+    timeHour: "HH",
+    timeMinute: "MI",
     eventNeedsLink: "יש לבחור משרה או איש קשר.",
     openJob: "פתיחה",
     countImported: "יובאו",
@@ -523,6 +537,28 @@ export function t(lang: Lang, key: MessageKey): string {
 
 export function statusLabel(lang: Lang, status: string): string {
   return (lang === "he" ? statusHe : statusEn)[status] ?? status;
+}
+
+const contactStatusEn: Record<string, string> = {
+  follow_up_needed: "Follow-up required",
+  conversation_held: "Conversation held",
+  outreach_sent: "Outreach sent",
+  waiting: "Waiting for reply",
+  closed: "Closed",
+};
+
+const contactStatusHe: Record<string, string> = {
+  follow_up_needed: "נדרש פולואפ",
+  conversation_held: "התקיימה שיחה",
+  outreach_sent: "נשלחה פנייה",
+  waiting: "ממתין לתשובה",
+  closed: "סגור",
+};
+
+export function contactStatusLabel(lang: Lang, status: string): string {
+  const key = normalizeContactStatus(status);
+  if (!key) return "";
+  return (lang === "he" ? contactStatusHe : contactStatusEn)[key] ?? status;
 }
 
 export function eventTypeLabel(lang: Lang, type: string): string {

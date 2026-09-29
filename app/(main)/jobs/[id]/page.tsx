@@ -61,12 +61,12 @@ export default async function JobDetailPage({
         </label>
         <label>
           <span className={labelClass}>{t(lang, "interestDate")}</span>
-          <DateField name="interestDate" defaultValue={dateInputValue(job.interestDate, user.timezone)} required />
+          <DateField name="interestDate" defaultValue={dateInputValue(job.interestDate, user.timezone)} required lang={lang} />
         </label>
-        <label>
+        <div>
           <span className={labelClass}>{t(lang, "followUp")}</span>
-          <DateTimeField name="followUpAt" defaultValue={dateTimeInputValue(job.followUpAt, user.timezone)} required />
-        </label>
+          <DateTimeField name="followUpAt" defaultValue={dateTimeInputValue(job.followUpAt, user.timezone)} required lang={lang} />
+        </div>
         <label>
           <span className={labelClass}>{t(lang, "reminderLead")} — {t(lang, "days")}</span>
           <input className={fieldClass} name="reminderLeadDays" defaultValue={job.reminderLeadDays ?? ""} inputMode="numeric" />

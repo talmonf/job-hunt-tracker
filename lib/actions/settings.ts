@@ -117,6 +117,6 @@ export async function importMentme(formData: FormData) {
   }
 }
 
-function isUploadedFile(value: FormDataEntryValue | null): value is Blob {
-  return !!value && typeof value === "object" && "arrayBuffer" in value && typeof value.arrayBuffer === "function" && typeof value.size === "number";
+function isUploadedFile(value: FormDataEntryValue | null): value is File {
+  return typeof value === "object" && value !== null && "arrayBuffer" in value && typeof value.arrayBuffer === "function" && typeof value.size === "number";
 }

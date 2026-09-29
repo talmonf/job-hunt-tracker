@@ -168,8 +168,8 @@ function EmploymentForm({ row, timeZone, lang }: { row?: { id: string; title: st
       {row ? <input type="hidden" name="id" value={row.id} /> : null}
       <label><span className={labelClass}>{t(lang, "title")}</span><input className={fieldClass} name="title" defaultValue={row?.title ?? ""} required /></label>
       <label><span className={labelClass}>{t(lang, "company")}</span><input className={fieldClass} name="company" defaultValue={row?.company ?? ""} required /></label>
-      <label><span className={labelClass}>{t(lang, "start")}</span><DateField name="startDate" defaultValue={row?.startDate ? dateInputValue(row.startDate, timeZone) : ""} /></label>
-      <label><span className={labelClass}>{t(lang, "end")}</span><DateField name="endDate" defaultValue={row?.endDate ? dateInputValue(row.endDate, timeZone) : ""} /></label>
+      <label><span className={labelClass}>{t(lang, "start")}</span><DateField name="startDate" defaultValue={row?.startDate ? dateInputValue(row.startDate, timeZone) : ""} lang={lang} /></label>
+      <label><span className={labelClass}>{t(lang, "end")}</span><DateField name="endDate" defaultValue={row?.endDate ? dateInputValue(row.endDate, timeZone) : ""} lang={lang} /></label>
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="isCurrent" value="1" defaultChecked={row?.isCurrent} /> {t(lang, "currentRole")}</label>
       <label><span className={labelClass}>{t(lang, "bodyEn")}</span><textarea className={fieldClass} name="descriptionEn" rows={3} defaultValue={row?.descriptionEn ?? ""} /></label>
       <label><span className={labelClass}>{t(lang, "bodyHe")}</span><textarea className={fieldClass} name="descriptionHe" rows={3} defaultValue={row?.descriptionHe ?? ""} /></label>
@@ -185,8 +185,8 @@ function EducationForm({ row, timeZone, lang }: { row?: { id: string; school: st
       <label><span className={labelClass}>{t(lang, "school")}</span><input className={fieldClass} name="school" defaultValue={row?.school ?? ""} required /></label>
       <label><span className={labelClass}>{t(lang, "degree")}</span><input className={fieldClass} name="degree" defaultValue={row?.degree ?? ""} /></label>
       <label><span className={labelClass}>{t(lang, "field")}</span><input className={fieldClass} name="field" defaultValue={row?.field ?? ""} /></label>
-      <label><span className={labelClass}>{t(lang, "start")}</span><DateField name="startDate" defaultValue={row?.startDate ? dateInputValue(row.startDate, timeZone) : ""} /></label>
-      <label><span className={labelClass}>{t(lang, "end")}</span><DateField name="endDate" defaultValue={row?.endDate ? dateInputValue(row.endDate, timeZone) : ""} /></label>
+      <label><span className={labelClass}>{t(lang, "start")}</span><DateField name="startDate" defaultValue={row?.startDate ? dateInputValue(row.startDate, timeZone) : ""} lang={lang} /></label>
+      <label><span className={labelClass}>{t(lang, "end")}</span><DateField name="endDate" defaultValue={row?.endDate ? dateInputValue(row.endDate, timeZone) : ""} lang={lang} /></label>
       <SubmitButton label={t(lang, "save")} />
     </form>
   );
@@ -198,8 +198,8 @@ function VolunteerForm({ row, timeZone, lang }: { row?: { id: string; organizati
       {row ? <input type="hidden" name="id" value={row.id} /> : null}
       <label><span className={labelClass}>{t(lang, "organization")}</span><input className={fieldClass} name="organization" defaultValue={row?.organization ?? ""} required /></label>
       <label><span className={labelClass}>{t(lang, "role")}</span><input className={fieldClass} name="role" defaultValue={row?.role ?? ""} /></label>
-      <label><span className={labelClass}>{t(lang, "start")}</span><DateField name="startDate" defaultValue={row?.startDate ? dateInputValue(row.startDate, timeZone) : ""} /></label>
-      <label><span className={labelClass}>{t(lang, "end")}</span><DateField name="endDate" defaultValue={row?.endDate ? dateInputValue(row.endDate, timeZone) : ""} /></label>
+      <label><span className={labelClass}>{t(lang, "start")}</span><DateField name="startDate" defaultValue={row?.startDate ? dateInputValue(row.startDate, timeZone) : ""} lang={lang} /></label>
+      <label><span className={labelClass}>{t(lang, "end")}</span><DateField name="endDate" defaultValue={row?.endDate ? dateInputValue(row.endDate, timeZone) : ""} lang={lang} /></label>
       <textarea className={fieldClass} name="descriptionEn" rows={3} defaultValue={row?.descriptionEn ?? ""} />
       <textarea className={fieldClass} name="descriptionHe" rows={3} defaultValue={row?.descriptionHe ?? ""} />
       <SubmitButton label={t(lang, "save")} />
@@ -213,7 +213,7 @@ function CertificateForm({ row, timeZone, lang }: { row?: { id: string; name: st
       {row ? <input type="hidden" name="id" value={row.id} /> : null}
       <label><span className={labelClass}>{t(lang, "certificates")}</span><input className={fieldClass} name="name" defaultValue={row?.name ?? ""} required /></label>
       <label><span className={labelClass}>{t(lang, "issuer")}</span><input className={fieldClass} name="issuer" defaultValue={row?.issuer ?? ""} /></label>
-      <label><span className={labelClass}>{t(lang, "issuedOn")}</span><DateField name="issuedOn" defaultValue={row?.issuedOn ? dateInputValue(row.issuedOn, timeZone) : ""} /></label>
+      <label><span className={labelClass}>{t(lang, "issuedOn")}</span><DateField name="issuedOn" defaultValue={row?.issuedOn ? dateInputValue(row.issuedOn, timeZone) : ""} lang={lang} /></label>
       <label><span className={labelClass}>{t(lang, "urls")}</span><input className={fieldClass} name="url" defaultValue={row?.url ?? ""} /></label>
       <SubmitButton label={t(lang, "save")} />
     </form>

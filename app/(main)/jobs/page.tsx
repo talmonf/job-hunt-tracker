@@ -98,20 +98,20 @@ export default async function JobsPage({
             <div />
             <label>
               <span className={labelClass}>{t(lang, "interestDate")} {t(lang, "from")}</span>
-              <DateField name="interestFrom" defaultValue={firstParam(search.interestFrom)} />
+              <DateField name="interestFrom" defaultValue={firstParam(search.interestFrom)} lang={lang} />
             </label>
             <label>
               <span className={labelClass}>{t(lang, "to")}</span>
-              <DateField name="interestTo" defaultValue={firstParam(search.interestTo)} />
+              <DateField name="interestTo" defaultValue={firstParam(search.interestTo)} lang={lang} />
             </label>
             <div />
             <label>
               <span className={labelClass}>{t(lang, "followUp")} {t(lang, "from")}</span>
-              <DateField name="followFrom" defaultValue={firstParam(search.followFrom)} />
+              <DateField name="followFrom" defaultValue={firstParam(search.followFrom)} lang={lang} />
             </label>
             <label>
               <span className={labelClass}>{t(lang, "to")}</span>
-              <DateField name="followTo" defaultValue={firstParam(search.followTo)} />
+              <DateField name="followTo" defaultValue={firstParam(search.followTo)} lang={lang} />
             </label>
           </div>
           <button className="mt-3 rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950" type="submit">
@@ -179,13 +179,13 @@ export default async function JobsPage({
             <input className={fieldClass} name="url3" placeholder="https://" />
             <label>
               <span className={labelClass}>{t(lang, "interestDate")}</span>
-              <DateField name="interestDate" defaultValue={interestDefault} required />
+              <DateField name="interestDate" defaultValue={interestDefault} required lang={lang} />
             </label>
-            <label>
+            <div>
               <span className={labelClass}>{t(lang, "followUp")}</span>
-              <DateTimeField name="followUpAt" defaultValue={followDefault} required />
+              <DateTimeField name="followUpAt" defaultValue={followDefault} required lang={lang} />
               <span className="mt-1 block text-xs text-slate-400">{t(lang, "followUpHelp")}</span>
-            </label>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <label>
                 <span className={labelClass}>{t(lang, "days")}</span>

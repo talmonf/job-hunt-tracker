@@ -1,4 +1,5 @@
-import { t } from "@/lib/i18n";
+import { CONTACT_STATUSES, isContactStatus, normalizeContactStatus } from "@/lib/contact-status";
+import { contactStatusLabel, t } from "@/lib/i18n";
 import { DateField, SubmitButton, fieldClass, labelClass } from "./widgets";
 
 export function ContactFields({
@@ -34,9 +35,22 @@ export function ContactFields({
       <label><span className={labelClass}>{t(lang, "workplace")}</span><input className={fieldClass} name="workplace" defaultValue={contact?.workplace ?? ""} /></label>
       <label><span className={labelClass}>{t(lang, "howWeMet")}</span><input className={fieldClass} name="howWeMet" defaultValue={contact?.howWeMet ?? ""} /></label>
       <label><span className={labelClass}>{t(lang, "channel")}</span><input className={fieldClass} name="lastChannel" defaultValue={contact?.lastChannel ?? ""} /></label>
-      <label><span className={labelClass}>{t(lang, "status")}</span><input className={fieldClass} name="status" defaultValue={contact?.status ?? ""} /></label>
-      <label><span className={labelClass}>{t(lang, "contactedAt")}</span><DateField name="contactedAt" defaultValue={contactedAt} /></label>
-      <label><span className={labelClass}>{t(lang, "nextActionDate")}</span><DateField name="nextActionDate" defaultValue={nextActionDate} /></label>
+      <label>
+        <span className={labelClass}>{t(lang, "status")}</span>
+        <select className={fieldClass} name="status" defaultValue={normalizeContactStatus(contact?.status ?? "")}>
+          <option value="">{t(lang, "none")}</option>
+          {CONTACT_STATUSES.map((status) => (
+            <option key={status} value={status}>
+              {contactStatusLabel(lang, status)}
+            </option>
+          ))}
+          {contact?.status && !isContactStatus(normalizeContactStatus(contact.status)) ? (
+            <option value={contact.status}>{contact.status}</option>
+          ) : null}
+        </select>
+      </label>
+      <label><span className={labelClass}>{t(lang, "contactedAt")}</span><DateField name="contactedAt" defaultValue={contactedAt} lang={lang} /></label>
+      <label><span className={labelClass}>{t(lang, "nextActionDate")}</span><DateField name="nextActionDate" defaultValue={nextActionDate} lang={lang} /></label>
       <label className="md:col-span-2"><span className={labelClass}>{t(lang, "nextAction")}</span><input className={fieldClass} name="nextAction" defaultValue={contact?.nextAction ?? ""} /></label>
       <label className="md:col-span-2"><span className={labelClass}>{t(lang, "contactDetails")}</span><textarea className={fieldClass} name="contactDetails" rows={2} defaultValue={contact?.contactDetails ?? ""} /></label>
       <label className="md:col-span-2"><span className={labelClass}>{t(lang, "conversation")}</span><textarea className={fieldClass} name="summary" rows={3} defaultValue={contact?.summary ?? ""} /></label>

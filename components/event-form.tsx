@@ -81,18 +81,18 @@ export function EventForm({
           </select>
         </label>
       </div>
-      <label>
+      <div>
         <span className={labelClass}>{type === "meeting" ? t(lang, "meetingFrom") : t(lang, "when")}</span>
-        <DateTimeField name="occurredAt" defaultValue={event?.occurredAt} required />
-      </label>
+        <DateTimeField name="occurredAt" defaultValue={event?.occurredAt} required lang={lang} />
+      </div>
       {type === "meeting" ? (
         <>
-          <label>
+          <div>
             <span className={labelClass}>
               {t(lang, "meetingTo")} ({t(lang, "optional")})
             </span>
-            <DateTimeField name="endsAt" defaultValue={event?.endsAt} />
-          </label>
+            <DateTimeField name="endsAt" defaultValue={event?.endsAt} lang={lang} />
+          </div>
           <p className="text-xs text-slate-400">{t(lang, "calendarDefaultLength")}</p>
           <label>
             <span className={labelClass}>{t(lang, "stage")}</span>

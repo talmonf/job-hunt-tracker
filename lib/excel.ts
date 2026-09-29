@@ -3,6 +3,8 @@ import type { Channel, MeetingStage } from "@prisma/client";
 import { prisma } from "./prisma";
 import { excelSerialToUtcDate, wallClockToUtc, addDays, formatDate } from "./dates";
 import { recomputeJobStatus } from "./job-status";
+import { normalizeContactStatus } from "./contact-status";
+import { contactStatusLabel } from "./i18n";
 
 const SHEET_GOALS = "הגדרת יעדים";
 const SHEET_JOBS = "ניהול הגשת מועמדויות";
@@ -130,7 +132,7 @@ export async function exportWorkbook(userId: string, timeZone: string): Promise<
       contact.workplace,
       contact.howWeMet,
       contact.lastChannel,
-      contact.status,
+      contactStatusLabel("he", contact.status) || contact.status,
       contact.summary,
       contact.contactedAt ? formatDate(contact.contactedAt, timeZone) : "",
       "",
@@ -304,7 +306,7 @@ async function importContacts(userId: string, sheet: ExcelJS.Worksheet, timeZone
       workplace,
       howWeMet: textOf(row.getCell(header.columns.source ?? 4).value),
       lastChannel: textOf(row.getCell(header.columns.channel ?? 5).value),
-      status: textOf(row.getCell(header.columns.status ?? 6).value),
+      status: normalizeContactStatus(textOf(row.getCell(header.columns.status ?? 6).value)),
       summary: textOf(row.getCell(header.columns.summary ?? 7).value),
       contactedAt: parseDate(row.getCell(header.columns.contacted ?? 8).value, timeZone),
       nextActionDate: parseDate(row.getCell(header.columns.nextDate ?? 10).value, timeZone),
