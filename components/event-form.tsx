@@ -193,7 +193,9 @@ export function EventForm({
         <span className={labelClass}>{t(lang, "summary")}</span>
         <textarea className={fieldClass} name="summary" rows={3} defaultValue={event?.summary || ""} />
       </label>
-      <SubmitButton label={t(lang, "save")} />
+      <div>
+        <SubmitButton label={t(lang, "save")} />
+      </div>
     </form>
   );
 }

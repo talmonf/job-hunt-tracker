@@ -37,7 +37,7 @@ export function AppHeader({
   path: string;
 }) {
   return (
-    <header className="border-b border-slate-800 bg-slate-950">
+    <header className="sticky top-0 z-30 border-b border-slate-800 bg-slate-950">
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-3 px-4 py-3">
         <Link className="text-lg font-semibold text-white" href="/dashboard">
           {t(lang, "appName")}

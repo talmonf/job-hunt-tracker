@@ -1,14 +1,14 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
-import { dateInputValue, dateTimeInputValue, formatDateTime } from "@/lib/dates";
-import { channelLabel, eventTypeLabel, stageLabel, statusLabel, t } from "@/lib/i18n";
+import { dateInputValue, dateTimeInputValue } from "@/lib/dates";
+import { statusLabel, t } from "@/lib/i18n";
 import { dash, maskText } from "@/lib/mask";
-import { addJobUrl, deleteCv, deleteEvent, deleteJob, deleteJobUrl, saveEvent, updateJob, uploadCv } from "@/lib/actions/jobs";
+import { addJobUrl, deleteCv, deleteJob, deleteJobUrl, saveEvent, updateJob, uploadCv } from "@/lib/actions/jobs";
 import { PageFrame, statusClass } from "@/components/chrome";
 import { DateField, DateTimeField, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
 import { EventForm } from "@/components/event-form";
+import { EventHistoryTable } from "@/components/event-history";
 import { firstParam } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +29,7 @@ export default async function JobDetailPage({
     include: {
       urls: true,
       cvs: { orderBy: { uploadedAt: "desc" } },
-      events: { orderBy: { occurredAt: "desc" }, include: { contact: true, note: true } },
+      events: { orderBy: { occurredAt: "desc" } },
     },
   });
   if (!job) notFound();
@@ -154,41 +154,14 @@ export default async function JobDetailPage({
       />
 
       <h2 className="mb-2 mt-8 text-lg">{t(lang, "history")}</h2>
-      <ol className="space-y-3">
-        {job.events.map((event) => (
-          <li key={event.id} className="rounded-md border border-slate-700 p-3 text-sm">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-medium">{eventTypeLabel(lang, event.type)}</span>
-              <span>{formatDateTime(event.occurredAt, user.timezone)}{event.endsAt ? ` – ${formatDateTime(event.endsAt, user.timezone)}` : ""}</span>
-            </div>
-            {event.resultingStatus ? <p className={statusClass(event.resultingStatus)}>{statusLabel(lang, event.resultingStatus)}</p> : null}
-            {event.counterpartyName ? <p>{t(lang, "who")}: {dash(event.counterpartyName, hide)}</p> : null}
-            {event.channel ? <p>{channelLabel(lang, event.channel)}</p> : null}
-            {event.stage ? <p>{stageLabel(lang, event.stage)}</p> : null}
-            {event.contact ? <p>{dash(event.contact.fullName, hide)}</p> : null}
-            {event.summary ? <p className="whitespace-pre-wrap text-slate-300">{dash(event.summary, hide)}</p> : null}
-            {event.note ? (
-              <p>
-                <Link className="text-sky-300" href={`/notes/${event.note.id}`}>
-                  {dash(event.note.title, hide)}
-                </Link>
-              </p>
-            ) : null}
-            {event.googleCalendarHtmlLink ? (
-              <a className="text-sky-300" href={event.googleCalendarHtmlLink} target="_blank" rel="noreferrer">
-                Google Calendar
-              </a>
-            ) : null}
-            <div className="mt-2 flex gap-3">
-              <Link className="text-sky-300" href={`/jobs/${job.id}?editEvent=${event.id}`}>{t(lang, "edit")}</Link>
-              <form action={deleteEvent}>
-                <input type="hidden" name="eventId" value={event.id} />
-                <button className="text-rose-300" type="submit">{t(lang, "delete")}</button>
-              </form>
-            </div>
-          </li>
-        ))}
-      </ol>
+      <EventHistoryTable
+        lang={lang}
+        timezone={user.timezone}
+        hide={hide}
+        events={job.events}
+        editHref={(eventId) => `/jobs/${job.id}?editEvent=${eventId}`}
+        returnTo={`/jobs/${job.id}`}
+      />
       <div className="mt-8">
         <form action={deleteJob}>
           <input type="hidden" name="jobId" value={job.id} />
