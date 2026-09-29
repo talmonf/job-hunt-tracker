@@ -3,7 +3,7 @@ import { requireUser } from "@/lib/session";
 import { googleConfigured, smtpConfigured } from "@/lib/mail";
 import { t } from "@/lib/i18n";
 import { firstParam } from "@/lib/http";
-import { disconnectCalendar, importMentme, saveDigest, saveGoals, startCalendarLink } from "@/lib/actions/settings";
+import { disconnectCalendar, importMentme, saveSettings, startCalendarLink } from "@/lib/actions/settings";
 import { PageFrame } from "@/components/chrome";
 import { SubmitButton, fieldClass, labelClass } from "@/components/widgets";
 
@@ -22,8 +22,21 @@ export default async function SettingsPage({
   const searchMinutes = goals?.searchMinutesOverride ?? ((goals?.applicationsPerDay ?? 0) + networkingDaily) * 30;
   return (
     <PageFrame lang={lang} title={t(lang, "settings")} description={t(lang, "settingsIntro")} search={search}>
-      <h2 className="text-lg">{t(lang, "goals")}</h2>
-      <form action={saveGoals} className="mt-3 grid gap-3 md:grid-cols-2">
+      <h2 className="mb-2 text-lg">{t(lang, "importExport")}</h2>
+      <form action={importMentme} className="flex flex-wrap items-end gap-3">
+        <label>
+          <span className={labelClass}>{t(lang, "importFile")}</span>
+          <input name="file" type="file" accept=".xlsx" />
+        </label>
+        <SubmitButton label={t(lang, "importAction")} />
+      </form>
+      {firstParam(search.jobs) ? null : null}
+      <a className="mt-3 inline-block text-sm text-sky-300" href="/api/export">
+        {t(lang, "exportAction")}
+      </a>
+
+      <form action={saveSettings} className="mt-8 grid gap-3 md:grid-cols-2">
+        <h2 className="text-lg md:col-span-2">{t(lang, "goals")}</h2>
         <NumberField name="applicationsPerDay" label={t(lang, "applicationsPerDay")} defaultValue={goals?.applicationsPerDay ?? 0} />
         <NumberField name="networkingPerDay" label={t(lang, "networkingPerDay")} defaultValue={goals?.networkingPerDay ?? ""} />
         <NumberField name="networkingPerWeek" label={t(lang, "networkingPerWeek")} defaultValue={goals?.networkingPerWeek ?? ""} />
@@ -33,7 +46,17 @@ export default async function SettingsPage({
         <p className="md:col-span-2 text-sm text-slate-300">
           {t(lang, "searchFormula")}: {Math.round(searchMinutes)} {t(lang, "minutesPerDay")}
         </p>
-        <SubmitButton label={t(lang, "save")} />
+        <h2 className="mt-4 text-lg md:col-span-2">{t(lang, "emailDigest")}</h2>
+        {!smtpConfigured() ? <p className="text-sm text-amber-200 md:col-span-2">{t(lang, "smtpOff")}</p> : null}
+        <label className="flex items-center gap-2 text-sm md:col-span-2">
+          <input type="checkbox" name="digestEnabled" value="1" defaultChecked={user.digestEnabled} />
+          {t(lang, "digestEnabled")}
+        </label>
+        <NumberField name="digestDaysAhead" label={t(lang, "digestDays")} defaultValue={user.digestDaysAhead} />
+        <NumberField name="digestHour" label={t(lang, "digestHour")} defaultValue={user.digestHour} />
+        <div className="md:col-span-2">
+          <SubmitButton label={t(lang, "save")} />
+        </div>
       </form>
 
       <h2 className="mb-2 mt-8 text-lg">{t(lang, "calendar")}</h2>
@@ -56,31 +79,6 @@ export default async function SettingsPage({
       ) : (
         <p className="text-sm text-slate-300">{t(lang, "calendarMissing")}</p>
       )}
-
-      <h2 className="mb-2 mt-8 text-lg">{t(lang, "emailDigest")}</h2>
-      {!smtpConfigured() ? <p className="mb-2 text-sm text-amber-200">{t(lang, "smtpOff")}</p> : null}
-      <form action={saveDigest} className="grid gap-3 md:grid-cols-2">
-        <label className="flex items-center gap-2 text-sm md:col-span-2">
-          <input type="checkbox" name="digestEnabled" value="1" defaultChecked={user.digestEnabled} />
-          {t(lang, "digestEnabled")}
-        </label>
-        <NumberField name="digestDaysAhead" label={t(lang, "digestDays")} defaultValue={user.digestDaysAhead} />
-        <NumberField name="digestHour" label={t(lang, "digestHour")} defaultValue={user.digestHour} />
-        <SubmitButton label={t(lang, "save")} />
-      </form>
-
-      <h2 className="mb-2 mt-8 text-lg">{t(lang, "importExport")}</h2>
-      <form action={importMentme} className="flex flex-wrap items-end gap-3">
-        <label>
-          <span className={labelClass}>{t(lang, "importFile")}</span>
-          <input name="file" type="file" accept=".xlsx" />
-        </label>
-        <SubmitButton label={t(lang, "importAction")} />
-      </form>
-      {firstParam(search.jobs) ? null : null}
-      <a className="mt-3 inline-block text-sm text-sky-300" href="/api/export">
-        {t(lang, "exportAction")}
-      </a>
     </PageFrame>
   );
 }

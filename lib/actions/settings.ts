@@ -43,6 +43,22 @@ export async function saveGoals(formData: FormData) {
   redirect("/settings?updated=1");
 }
 
+export async function saveSettings(formData: FormData) {
+  const user = await requireUser();
+  const days = optionalInt(formData.get("digestDaysAhead"), 90);
+  const hour = optionalInt(formData.get("digestHour"), 23);
+  if (days === "invalid" || hour === "invalid" || days === null || hour === null) redirect("/settings?error=required");
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      digestEnabled: formData.get("digestEnabled") === "1",
+      digestDaysAhead: days,
+      digestHour: hour,
+    },
+  });
+  await saveGoals(formData);
+}
+
 export async function saveDigest(formData: FormData) {
   const user = await requireUser();
   const days = optionalInt(formData.get("digestDaysAhead"), 90);
