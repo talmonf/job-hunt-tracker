@@ -16,6 +16,8 @@ export function EventForm({
   calendarLinked,
   defaultJobId,
   defaultContactId,
+  lockLinks = false,
+  returnTo,
   event,
 }: {
   action: (formData: FormData) => void;
@@ -23,10 +25,12 @@ export function EventForm({
   jobs: { id: string; label: string }[];
   contacts: { id: string; label: string }[];
   notes: { id: string; label: string }[];
-  cvs: { id: string; label: string }[];
+  cvs: { id: string; label: string; jobId?: string }[];
   calendarLinked: boolean;
   defaultJobId?: string;
   defaultContactId?: string;
+  lockLinks?: boolean;
+  returnTo?: string;
   event?: {
     id: string;
     type: string;
@@ -44,9 +48,18 @@ export function EventForm({
   };
 }) {
   const [type, setType] = useState(event?.type || "interest");
+  const [jobId, setJobId] = useState(defaultJobId || "");
+  const visibleCvs = cvs.filter((cv) => !cv.jobId || cv.jobId === jobId);
   return (
     <form action={action} className="grid gap-3">
       {event ? <input type="hidden" name="eventId" value={event.id} /> : null}
+      {returnTo ? <input type="hidden" name="returnTo" value={returnTo} /> : null}
+      {lockLinks ? (
+        <>
+          <input type="hidden" name="jobId" value={defaultJobId || ""} />
+          <input type="hidden" name="contactId" value={defaultContactId || ""} />
+        </>
+      ) : null}
       <label>
         <span className={labelClass}>{t(lang, "eventType")}</span>
         <select className={fieldClass} name="type" value={type} onChange={(e) => setType(e.target.value)}>
@@ -57,30 +70,37 @@ export function EventForm({
           ))}
         </select>
       </label>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label>
-          <span className={labelClass}>{t(lang, "jobs")}</span>
-          <select className={fieldClass} name="jobId" defaultValue={defaultJobId || ""}>
-            <option value="">{t(lang, "none")}</option>
-            {jobs.map((job) => (
-              <option key={job.id} value={job.id}>
-                {job.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span className={labelClass}>{t(lang, "networking")}</span>
-          <select className={fieldClass} name="contactId" defaultValue={defaultContactId || ""}>
-            <option value="">{t(lang, "none")}</option>
-            {contacts.map((contact) => (
-              <option key={contact.id} value={contact.id}>
-                {contact.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      {lockLinks ? null : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label>
+            <span className={labelClass}>{t(lang, "jobs")}</span>
+            <select
+              className={fieldClass}
+              name="jobId"
+              value={jobId}
+              onChange={(e) => setJobId(e.target.value)}
+            >
+              <option value="">{t(lang, "none")}</option>
+              {jobs.map((job) => (
+                <option key={job.id} value={job.id}>
+                  {job.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span className={labelClass}>{t(lang, "networking")}</span>
+            <select className={fieldClass} name="contactId" defaultValue={defaultContactId || ""}>
+              <option value="">{t(lang, "none")}</option>
+              {contacts.map((contact) => (
+                <option key={contact.id} value={contact.id}>
+                  {contact.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
       <div>
         <span className={labelClass}>{type === "meeting" ? t(lang, "meetingFrom") : t(lang, "when")}</span>
         <DateTimeField name="occurredAt" defaultValue={event?.occurredAt} required lang={lang} />
@@ -145,7 +165,7 @@ export function EventForm({
             <span className={labelClass}>{t(lang, "whichCv")}</span>
             <select className={fieldClass} name="cvId" defaultValue={event?.cvId || ""}>
               <option value="">{t(lang, "none")}</option>
-              {cvs.map((cv) => (
+              {visibleCvs.map((cv) => (
                 <option key={cv.id} value={cv.id}>
                   {cv.label}
                 </option>

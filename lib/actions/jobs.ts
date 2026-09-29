@@ -142,28 +142,28 @@ export async function deleteCv(formData: FormData) {
 export async function saveEvent(formData: FormData) {
   const user = await requireUser();
   const type = requiredText(formData.get("type")) as EventType;
-  if (!EVENT_TYPES.includes(type)) redirect("/jobs?error=required");
+  if (!EVENT_TYPES.includes(type)) redirect(eventReturn(formData, undefined, undefined, "required"));
   const jobId = requiredText(formData.get("jobId"));
   const contactId = requiredText(formData.get("contactId"));
   const job = jobId ? await ownedJob(user.id, jobId) : null;
   const contact = contactId
     ? await prisma.contact.findFirst({ where: { id: contactId, userId: user.id } })
     : null;
-  if (!job && !contact) redirect("/jobs?error=link");
+  if (!job && !contact) redirect(eventReturn(formData, undefined, undefined, "link"));
   const occurredAt = parseDateTime(formData.get("occurredAt"), user.timezone);
-  if (!occurredAt) redirect(eventReturn(job?.id, contact?.id, "date"));
+  if (!occurredAt) redirect(eventReturn(formData, job?.id, contact?.id, "date"));
   const endsAt = type === "meeting" ? parseDateTime(formData.get("endsAt"), user.timezone) : null;
-  if (endsAt && endsAt.getTime() < occurredAt.getTime()) redirect(eventReturn(job?.id, contact?.id, "date"));
+  if (endsAt && endsAt.getTime() < occurredAt.getTime()) redirect(eventReturn(formData, job?.id, contact?.id, "date"));
   const channel = optionalEnum(formData.get("channel"), CHANNELS) as Channel | null;
   const stage = optionalEnum(formData.get("stage"), STAGES) as MeetingStage | null;
   let resultingStatus = defaultResultingStatus(type);
   if (type === "status_change") {
     const picked = requiredText(formData.get("resultingStatus")) as JobStatus;
-    if (!JOB_STATUSES.includes(picked)) redirect(eventReturn(job?.id, contact?.id, "required"));
+    if (!JOB_STATUSES.includes(picked)) redirect(eventReturn(formData, job?.id, contact?.id, "required"));
     resultingStatus = picked;
   }
-  if (type === "outreach" && !channel) redirect(eventReturn(job?.id, contact?.id, "required"));
-  if (type === "meeting" && !stage) redirect(eventReturn(job?.id, contact?.id, "required"));
+  if (type === "outreach" && !channel) redirect(eventReturn(formData, job?.id, contact?.id, "required"));
+  if (type === "meeting" && !stage) redirect(eventReturn(formData, job?.id, contact?.id, "required"));
   const noteVersionId = requiredText(formData.get("noteVersionId"));
   const noteVersion = noteVersionId
     ? await prisma.noteVersion.findFirst({ where: { id: noteVersionId, note: { userId: user.id } } })
@@ -217,8 +217,8 @@ export async function saveEvent(formData: FormData) {
   }
   if (job) await recomputeJobStatus(job.id);
   if (existing?.jobId && existing.jobId !== job?.id) await recomputeJobStatus(existing.jobId);
-  const target = job ? `/jobs/${job.id}` : `/contacts/${contact!.id}`;
-  redirect(`${target}?${calendarFailed ? "warn=calendar" : existing ? "updated=1" : "created=1"}`);
+  const flash = calendarFailed ? "warn=calendar" : existing ? "updated=1" : "created=1";
+  redirect(eventDone(formData, job?.id, contact?.id, flash));
 }
 
 export async function deleteEvent(formData: FormData) {
@@ -226,11 +226,11 @@ export async function deleteEvent(formData: FormData) {
   const event = await prisma.event.findFirst({
     where: { id: requiredText(formData.get("eventId")), userId: user.id },
   });
-  if (!event) redirect("/jobs");
+  if (!event) redirect(eventDone(formData, undefined, undefined, ""));
   await deleteCalendarEvent(user, event.googleCalendarEventId);
   await prisma.event.delete({ where: { id: event.id } });
   if (event.jobId) await recomputeJobStatus(event.jobId);
-  redirect(event.jobId ? `/jobs/${event.jobId}?updated=1` : event.contactId ? `/contacts/${event.contactId}?updated=1` : "/jobs?updated=1");
+  redirect(eventDone(formData, event.jobId ?? undefined, event.contactId ?? undefined, "updated=1"));
 }
 
 function readReminder(formData: FormData): { days: number | null; hours: number | null } | "invalid" {
@@ -256,10 +256,22 @@ function back(formData: FormData, fallback: string, error: string) {
   return `${path}${join}error=${error}`;
 }
 
-function eventReturn(jobId: string | undefined, contactId: string | undefined, error: string) {
-  if (jobId) return `/jobs/${jobId}?error=${error}`;
-  if (contactId) return `/contacts/${contactId}?error=${error}`;
-  return `/jobs?error=${error}`;
+function withReturnTo(formData: FormData, fallback: string, query: string) {
+  const returnTo = requiredText(formData.get("returnTo"));
+  const path = returnTo.startsWith("/") ? returnTo : fallback;
+  if (!query) return path;
+  const join = path.includes("?") ? "&" : "?";
+  return `${path}${join}${query}`;
+}
+
+function eventReturn(formData: FormData, jobId: string | undefined, contactId: string | undefined, error: string) {
+  const fallback = jobId ? `/jobs/${jobId}` : contactId ? `/contacts/${contactId}` : "/jobs";
+  return withReturnTo(formData, fallback, `error=${error}`);
+}
+
+function eventDone(formData: FormData, jobId: string | undefined, contactId: string | undefined, query: string) {
+  const fallback = jobId ? `/jobs/${jobId}` : contactId ? `/contacts/${contactId}` : "/jobs";
+  return withReturnTo(formData, fallback, query);
 }
 
 function optionalEnum(value: FormDataEntryValue | null, allowed: readonly string[]) {

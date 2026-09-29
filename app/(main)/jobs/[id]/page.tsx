@@ -33,11 +33,11 @@ export default async function JobDetailPage({
     },
   });
   if (!job) notFound();
-  const [jobs, contacts, versions] = await Promise.all([
-    prisma.job.findMany({ where: { userId: user.id }, orderBy: { companyName: "asc" } }),
-    prisma.contact.findMany({ where: { userId: user.id }, orderBy: { fullName: "asc" } }),
-    prisma.noteVersion.findMany({ where: { note: { userId: user.id } }, include: { note: true }, orderBy: { createdAt: "desc" } }),
-  ]);
+  const versions = await prisma.noteVersion.findMany({
+    where: { note: { userId: user.id } },
+    include: { note: true },
+    orderBy: { createdAt: "desc" },
+  });
   const lang = user.uiLanguage;
   const editing = job.events.find((event) => event.id === firstParam(search.editEvent));
   return (
@@ -126,9 +126,11 @@ export default async function JobDetailPage({
         action={saveEvent}
         lang={lang}
         calendarLinked={Boolean(user.calendarRefreshToken)}
+        lockLinks
         defaultJobId={job.id}
-        jobs={jobs.map((item) => ({ id: item.id, label: dash(`${item.companyName}${item.title ? ` — ${item.title}` : ""}`, hide) }))}
-        contacts={contacts.map((item) => ({ id: item.id, label: dash(item.fullName, hide) }))}
+        defaultContactId={editing?.contactId ?? undefined}
+        jobs={[]}
+        contacts={[]}
         notes={versions.map((item) => ({ id: item.id, label: maskText(`${item.note.title} v${item.version}`, hide) }))}
         cvs={job.cvs.map((cv) => ({ id: cv.id, label: dash(cv.filename, hide) }))}
         event={
