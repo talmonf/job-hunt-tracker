@@ -23,10 +23,10 @@ export default async function SettingsPage({
   return (
     <PageFrame lang={lang} title={t(lang, "settings")} description={t(lang, "settingsIntro")} search={search}>
       <h2 className="mb-2 text-lg">{t(lang, "importExport")}</h2>
-      <form action={importMentme} className="flex flex-wrap items-end gap-3">
+      <form action={importMentme} encType="multipart/form-data" className="flex flex-wrap items-end gap-3">
         <label>
           <span className={labelClass}>{t(lang, "importFile")}</span>
-          <input name="file" type="file" accept=".xlsx" />
+          <input name="file" type="file" accept=".xlsx" required />
         </label>
         <SubmitButton label={t(lang, "importAction")} />
       </form>

@@ -17,7 +17,10 @@ export const quietButton = "rounded-md border border-slate-600 px-3 py-1.5 text-
 export function SubmitButton({ label }: { label: string }) {
   const { pending } = useFormStatus();
   return (
-    <button className={primaryButton} disabled={pending} type="submit">
+    <button className={`${primaryButton} inline-flex items-center gap-2`} disabled={pending} type="submit" aria-busy={pending}>
+      {pending ? (
+        <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+      ) : null}
       {label}
     </button>
   );

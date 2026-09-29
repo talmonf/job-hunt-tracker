@@ -3,6 +3,7 @@
 import { randomBytes } from "crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { prisma } from "../prisma";
 import { requireUser } from "../session";
 import { optionalFloat, optionalInt } from "../forms";
@@ -105,11 +106,17 @@ export async function startCalendarLink() {
 export async function importMentme(formData: FormData) {
   const user = await requireUser();
   const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) redirect("/settings?error=import");
+  if (!isUploadedFile(file) || file.size === 0) redirect("/settings?error=import");
   try {
     const result = await importWorkbook(user.id, Buffer.from(await file.arrayBuffer()), user.timezone);
     redirect(`/settings?created=1&jobs=${result.jobs}&contacts=${result.contacts}&events=${result.events}&goals=${result.goals}`);
-  } catch {
+  } catch (error) {
+    if (isRedirectError(error)) throw error;
+    console.error("importMentme failed", error);
     redirect("/settings?error=import");
   }
+}
+
+function isUploadedFile(value: FormDataEntryValue | null): value is Blob {
+  return !!value && typeof value === "object" && "arrayBuffer" in value && typeof value.arrayBuffer === "function" && typeof value.size === "number";
 }
