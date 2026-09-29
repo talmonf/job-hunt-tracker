@@ -273,6 +273,7 @@ model Event {
   user                   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   type                   EventType
   occurredAt             DateTime
+  startsAt               DateTime?
   endsAt                 DateTime?
   jobId                  String?
   job                    Job?          @relation(fields: [jobId], references: [id], onDelete: SetNull)
@@ -295,6 +296,7 @@ model Event {
 
   @@unique([userId, importKey])
   @@index([userId, occurredAt])
+  @@index([userId, startsAt])
   @@index([jobId, occurredAt])
 }
 

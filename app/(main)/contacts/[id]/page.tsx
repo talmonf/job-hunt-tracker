@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
-import { dateInputValue, dateTimeInputValue } from "@/lib/dates";
+import { dateInputValue } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
+import { eventFormValues } from "@/lib/events";
 import { deleteContact, updateContact } from "@/lib/actions/network";
 import { saveEvent } from "@/lib/actions/jobs";
 import { PageFrame } from "@/components/chrome";
@@ -57,25 +58,7 @@ export default async function ContactDetailPage({
         contacts={[]}
         notes={notes.map((item) => ({ id: item.id, label: dash(item.title, hide) }))}
         cvs={[]}
-        event={
-          editing
-            ? {
-                id: editing.id,
-                type: editing.type,
-                occurredAt: dateTimeInputValue(editing.occurredAt, user.timezone),
-                endsAt: editing.endsAt ? dateTimeInputValue(editing.endsAt, user.timezone) : "",
-                channel: editing.channel ?? "",
-                stage: editing.stage ?? "",
-                counterpartyName: editing.counterpartyName,
-                summary: editing.summary,
-                noteId: editing.noteId ?? "",
-                cvId: editing.cvId ?? "",
-                tailoredCv: Boolean(editing.tailoredCv),
-                resultingStatus: editing.resultingStatus ?? "",
-                onCalendar: Boolean(editing.googleCalendarEventId),
-              }
-            : undefined
-        }
+        event={editing ? eventFormValues(editing, user.timezone) : undefined}
       />
       <h2 className="mb-2 mt-8 text-lg">{t(lang, "history")}</h2>
       <EventHistoryTable

@@ -152,8 +152,10 @@ export async function saveEvent(formData: FormData) {
   if (!job && !contact) redirect(eventReturn(formData, undefined, undefined, "link"));
   const occurredAt = parseDateTime(formData.get("occurredAt"), user.timezone);
   if (!occurredAt) redirect(eventReturn(formData, job?.id, contact?.id, "date"));
+  const startsAt = type === "meeting" ? parseDateTime(formData.get("startsAt"), user.timezone) : null;
   const endsAt = type === "meeting" ? parseDateTime(formData.get("endsAt"), user.timezone) : null;
-  if (endsAt && endsAt.getTime() < occurredAt.getTime()) redirect(eventReturn(formData, job?.id, contact?.id, "date"));
+  if (type === "meeting" && !startsAt) redirect(eventReturn(formData, job?.id, contact?.id, "date"));
+  if (startsAt && endsAt && endsAt.getTime() < startsAt.getTime()) redirect(eventReturn(formData, job?.id, contact?.id, "date"));
   const channel = optionalEnum(formData.get("channel"), CHANNELS) as Channel | null;
   const stage = optionalEnum(formData.get("stage"), STAGES) as MeetingStage | null;
   let resultingStatus = defaultResultingStatus(type);
@@ -175,6 +177,7 @@ export async function saveEvent(formData: FormData) {
   const data = {
     type,
     occurredAt,
+    startsAt,
     endsAt,
     jobId: job?.id ?? null,
     contactId: contact?.id ?? null,

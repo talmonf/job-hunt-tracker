@@ -4,6 +4,7 @@ import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { dateInputValue, dateTimeInputValue } from "@/lib/dates";
 import { statusLabel, t } from "@/lib/i18n";
 import { dash, maskText } from "@/lib/mask";
+import { eventFormValues } from "@/lib/events";
 import { addJobUrl, deleteCv, deleteJob, deleteJobUrl, saveEvent, updateJob, uploadCv } from "@/lib/actions/jobs";
 import { PageFrame, statusClass } from "@/components/chrome";
 import { DateField, DateTimeField, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
@@ -132,25 +133,7 @@ export default async function JobDetailPage({
         contacts={[]}
         notes={notes.map((item) => ({ id: item.id, label: dash(item.title, hide) }))}
         cvs={job.cvs.map((cv) => ({ id: cv.id, label: dash(cv.filename, hide) }))}
-        event={
-          editing
-            ? {
-                id: editing.id,
-                type: editing.type,
-                occurredAt: dateTimeInputValue(editing.occurredAt, user.timezone),
-                endsAt: editing.endsAt ? dateTimeInputValue(editing.endsAt, user.timezone) : "",
-                channel: editing.channel ?? "",
-                stage: editing.stage ?? "",
-                counterpartyName: editing.counterpartyName,
-                summary: editing.summary,
-                noteId: editing.noteId ?? "",
-                cvId: editing.cvId ?? "",
-                tailoredCv: Boolean(editing.tailoredCv),
-                resultingStatus: editing.resultingStatus ?? "",
-                onCalendar: Boolean(editing.googleCalendarEventId),
-              }
-            : undefined
-        }
+        event={editing ? eventFormValues(editing, user.timezone) : undefined}
       />
 
       <h2 className="mb-2 mt-8 text-lg">{t(lang, "history")}</h2>

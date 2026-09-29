@@ -20,6 +20,32 @@ export function formatTime(date: Date, timeZone: string): string {
   return `${pad(parts.hour)}:${pad(parts.minute)}`;
 }
 
+const weekdayEn = ["Sun", "Mon", "Tues", "Wed", "Thurs", "Fri", "Sat"] as const;
+const weekdayHe = ["יום א׳", "יום ב׳", "יום ג׳", "יום ד׳", "יום ה׳", "יום ו׳", "שבת"] as const;
+
+function weekdayIndex(date: Date, timeZone: string): number {
+  const weekday = new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short" }).format(date);
+  const map: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return map[weekday] ?? 0;
+}
+
+function formatWeekdayDayMonth(date: Date, timeZone: string, lang: "en" | "he"): string {
+  const parts = partsInZone(date, timeZone);
+  const weekday = (lang === "he" ? weekdayHe : weekdayEn)[weekdayIndex(date, timeZone)];
+  return `${weekday} ${parts.day}/${parts.month} ${pad(parts.hour)}:${pad(parts.minute)}`;
+}
+
+export function formatScheduledRange(start: Date, end: Date | null, timeZone: string, lang: "en" | "he" = "en"): string {
+  const from = formatWeekdayDayMonth(start, timeZone, lang);
+  if (!end) return from;
+  const startParts = partsInZone(start, timeZone);
+  const endParts = partsInZone(end, timeZone);
+  const sameDay =
+    startParts.year === endParts.year && startParts.month === endParts.month && startParts.day === endParts.day;
+  if (sameDay) return `${from} - ${pad(endParts.hour)}:${pad(endParts.minute)}`;
+  return `${from} - ${formatWeekdayDayMonth(end, timeZone, lang)}`;
+}
+
 export function wallClockToUtc(value: string, timeZone: string): Date | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?$/.exec(value);
   if (!match) return null;

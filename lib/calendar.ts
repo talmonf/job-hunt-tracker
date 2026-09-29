@@ -41,7 +41,7 @@ export async function syncMeetingToCalendar(input: {
     }
     return null;
   }
-  const start = input.event.occurredAt;
+  const start = input.event.startsAt ?? input.event.occurredAt;
   const end = input.event.endsAt ?? new Date(start.getTime() + 60 * 60 * 1000);
   const summary = [
     "Interview",

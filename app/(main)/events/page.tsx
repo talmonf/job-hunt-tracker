@@ -4,14 +4,15 @@ import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { allParams, firstParam, preserveQuery } from "@/lib/http";
 import { parseDateOnly } from "@/lib/forms";
-import { EVENT_TYPES } from "@/lib/events";
-import { eventTypeLabel, t } from "@/lib/i18n";
+import { EVENT_TYPES, eventFormValues, eventLoggedAt, eventScheduledStart } from "@/lib/events";
+import { eventHappenedLabel, eventTypeLabel, t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
-import { dateTimeInputValue, formatDateTime } from "@/lib/dates";
+import { formatDateTime, formatScheduledRange } from "@/lib/dates";
 import { deleteEvent, saveEvent } from "@/lib/actions/jobs";
 import { EmptyState, Modal, PageFrame } from "@/components/chrome";
 import { ConfirmSubmit, DateField, MultiSelect, fieldClass, labelClass } from "@/components/widgets";
 import { EventForm } from "@/components/event-form";
+import { EventSummary } from "@/components/event-summary";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +53,12 @@ export default async function EventsPage({
       : {}),
     ...(types.length ? { type: { in: types } } : {}),
     ...(occurredFrom || occurredTo
-      ? { occurredAt: { gte: occurredFrom ?? undefined, lte: occurredTo ?? undefined } }
+      ? {
+          OR: [
+            { occurredAt: { gte: occurredFrom ?? undefined, lte: occurredTo ?? undefined } },
+            { startsAt: { gte: occurredFrom ?? undefined, lte: occurredTo ?? undefined } },
+          ],
+        }
       : {}),
   };
   const [events, jobs, contacts, notes, cvs] = await Promise.all([
@@ -149,6 +155,7 @@ export default async function EventsPage({
               <tr>
                 <SortHead label={t(lang, "eventType")} column="type" sort={sort} dir={dir} search={search} />
                 <SortHead label={t(lang, "when")} column="occurredAt" sort={sort} dir={dir} search={search} />
+                <th className="px-3 py-2">{t(lang, "scheduled")}</th>
                 <th className="px-3 py-2">{t(lang, "jobs")}</th>
                 <th className="px-3 py-2">{t(lang, "networking")}</th>
                 <th className="px-3 py-2">{t(lang, "who")}</th>
@@ -157,12 +164,14 @@ export default async function EventsPage({
               </tr>
             </thead>
             <tbody>
-              {events.map((event) => (
+              {events.map((event) => {
+                const scheduled = eventScheduledStart(event);
+                return (
                 <tr key={event.id} className="border-t border-slate-800">
-                  <td className="px-3 py-2">{eventTypeLabel(lang, event.type)}</td>
-                  <td className="px-3 py-2">
-                    {formatDateTime(event.occurredAt, user.timezone)}
-                    {event.endsAt ? ` – ${formatDateTime(event.endsAt, user.timezone)}` : ""}
+                  <td className="px-3 py-2">{eventHappenedLabel(lang, event.type, event.stage)}</td>
+                  <td className="whitespace-nowrap px-3 py-2">{formatDateTime(eventLoggedAt(event), user.timezone)}</td>
+                  <td className="whitespace-nowrap px-3 py-2">
+                    {scheduled ? formatScheduledRange(scheduled, event.endsAt, user.timezone, lang) : "—"}
                   </td>
                   <td className="px-3 py-2">
                     {event.job ? (
@@ -183,7 +192,9 @@ export default async function EventsPage({
                     )}
                   </td>
                   <td className="px-3 py-2">{dash(event.counterpartyName, hide)}</td>
-                  <td className="max-w-xs truncate px-3 py-2 text-slate-300">{dash(event.summary, hide)}</td>
+                  <td className="max-w-xs px-3 py-2 text-slate-300">
+                    <EventSummary text={dash(event.summary, hide)} moreLabel={t(lang, "more")} lessLabel={t(lang, "less")} />
+                  </td>
                   <td className="px-3 py-2">
                     <div className="flex gap-3 whitespace-nowrap">
                       <Link
@@ -204,7 +215,8 @@ export default async function EventsPage({
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -222,25 +234,7 @@ export default async function EventsPage({
             contacts={contactOptions}
             notes={noteOptions}
             cvs={cvOptions}
-            event={
-              editing
-                ? {
-                    id: editing.id,
-                    type: editing.type,
-                    occurredAt: dateTimeInputValue(editing.occurredAt, user.timezone),
-                    endsAt: editing.endsAt ? dateTimeInputValue(editing.endsAt, user.timezone) : "",
-                    channel: editing.channel ?? "",
-                    stage: editing.stage ?? "",
-                    counterpartyName: editing.counterpartyName,
-                    summary: editing.summary,
-                    noteId: editing.noteId ?? "",
-                    cvId: editing.cvId ?? "",
-                    tailoredCv: Boolean(editing.tailoredCv),
-                    resultingStatus: editing.resultingStatus ?? "",
-                    onCalendar: Boolean(editing.googleCalendarEventId),
-                  }
-                : undefined
-            }
+            event={editing ? eventFormValues(editing, user.timezone) : undefined}
           />
         </Modal>
       ) : null}

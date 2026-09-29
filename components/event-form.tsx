@@ -35,6 +35,7 @@ export function EventForm({
     id: string;
     type: string;
     occurredAt: string;
+    startsAt: string;
     endsAt: string;
     channel: string;
     stage: string;
@@ -102,11 +103,15 @@ export function EventForm({
         </div>
       )}
       <div>
-        <span className={labelClass}>{type === "meeting" ? t(lang, "meetingFrom") : t(lang, "when")}</span>
+        <span className={labelClass}>{t(lang, "when")}</span>
         <DateTimeField name="occurredAt" defaultValue={event?.occurredAt} required lang={lang} />
       </div>
       {type === "meeting" ? (
         <>
+          <div>
+            <span className={labelClass}>{t(lang, "meetingFrom")}</span>
+            <DateTimeField name="startsAt" defaultValue={event?.startsAt} required lang={lang} />
+          </div>
           <div>
             <span className={labelClass}>
               {t(lang, "meetingTo")} ({t(lang, "optional")})

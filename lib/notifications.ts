@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import { formatDate, formatDateTime, localDateString, localHour } from "./dates";
+import { formatDate, formatDateTime, formatScheduledRange, localDateString, localHour } from "./dates";
 import { sendMail, smtpConfigured } from "./mail";
 
 export async function runNotifications(now = new Date()) {
@@ -61,9 +61,16 @@ export async function runNotifications(now = new Date()) {
         orderBy: { followUpAt: "asc" },
       }),
       prisma.event.findMany({
-        where: { userId: user.id, type: "meeting", occurredAt: { gte: now, lte: until } },
+        where: {
+          userId: user.id,
+          type: "meeting",
+          OR: [
+            { startsAt: { gte: now, lte: until } },
+            { AND: [{ startsAt: null }, { occurredAt: { gte: now, lte: until } }] },
+          ],
+        },
         include: { job: true, contact: true },
-        orderBy: { occurredAt: "asc" },
+        orderBy: { startsAt: "asc" },
       }),
       prisma.contact.findMany({
         where: { userId: user.id, nextActionDate: { gte: now, lte: until } },
@@ -76,9 +83,14 @@ export async function runNotifications(now = new Date()) {
       ...followUps.map((job) => `- ${formatDateTime(job.followUpAt, user.timezone)} ${job.companyName} ${job.title}`.trim()),
       he ? "פגישות" : "Meetings",
       ...meetings.map((meeting) => {
-        const end = meeting.endsAt ? ` – ${formatDateTime(meeting.endsAt, user.timezone)}` : "";
         const who = meeting.job?.companyName || meeting.contact?.fullName || "";
-        return `- ${formatDateTime(meeting.occurredAt, user.timezone)}${end} ${who}`.trim();
+        const when = formatScheduledRange(
+          meeting.startsAt ?? meeting.occurredAt,
+          meeting.endsAt,
+          user.timezone,
+          he ? "he" : "en",
+        );
+        return `- ${when} ${who}`.trim();
       }),
       he ? "פעולות נטוורקינג" : "Networking next steps",
       ...contacts.map((contact) => `- ${formatDate(contact.nextActionDate!, user.timezone)} ${contact.fullName}`),

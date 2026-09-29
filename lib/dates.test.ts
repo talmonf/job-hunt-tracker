@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { excelSerialToUtcDate, formatDate, wallClockToUtc } from "./dates";
+import { excelSerialToUtcDate, formatDate, formatScheduledRange, wallClockToUtc } from "./dates";
 
 test("excel serial 46271 is 6 September 2026", () => {
   const date = excelSerialToUtcDate(46271);
@@ -12,4 +12,13 @@ test("wall clock in Jerusalem becomes UTC", () => {
   assert.ok(date);
   assert.equal(date?.toISOString(), "2026-09-22T05:00:00.000Z");
   assert.equal(formatDate(date!, "Asia/Jerusalem"), "22/09/2026");
+});
+
+test("scheduled meeting range omits year and repeats the date once", () => {
+  const start = wallClockToUtc("2026-10-06T14:00", "Asia/Jerusalem");
+  const end = wallClockToUtc("2026-10-06T14:30", "Asia/Jerusalem");
+  assert.ok(start);
+  assert.ok(end);
+  assert.equal(formatScheduledRange(start!, end, "Asia/Jerusalem", "en"), "Tues 6/10 14:00 - 14:30");
+  assert.equal(formatScheduledRange(start!, end, "Asia/Jerusalem", "he"), "יום ג׳ 6/10 14:00 - 14:30");
 });

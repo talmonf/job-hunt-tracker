@@ -166,7 +166,7 @@ export async function exportWorkbook(userId: string, timeZone: string): Promise<
     interviewSheet.addRow([
       interview.job?.companyName ?? "",
       interview.job?.title ?? "",
-      formatDate(interview.occurredAt, timeZone),
+      formatDate(interview.startsAt ?? interview.occurredAt, timeZone),
       interview.stage ?? "",
       interview.summary,
       "",
@@ -368,7 +368,7 @@ async function importInterviews(userId: string, sheet: ExcelJS.Worksheet, timeZo
       await prisma.note.update({ where: { id: existing.noteId }, data: { bodyHe } });
       await prisma.event.update({
         where: { id: existing.id },
-        data: { summary, occurredAt: when, stage: interviewStage(kind) },
+        data: { summary, occurredAt: when, startsAt: when, stage: interviewStage(kind) },
       });
     } else if (!existing) {
       const note = await prisma.note.create({
@@ -386,6 +386,7 @@ async function importInterviews(userId: string, sheet: ExcelJS.Worksheet, timeZo
           jobId: job.id,
           type: "meeting",
           occurredAt: when,
+          startsAt: when,
           resultingStatus: "interviewing",
           stage: interviewStage(kind),
           summary,

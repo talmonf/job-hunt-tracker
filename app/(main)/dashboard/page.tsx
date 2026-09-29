@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
-import { formatDate, formatDateTime, startOfIsoWeek } from "@/lib/dates";
+import { formatDate, formatDateTime, formatScheduledRange, startOfIsoWeek } from "@/lib/dates";
 import { statusLabel, t } from "@/lib/i18n";
 import { JOB_STATUSES } from "@/lib/events";
 import { dash } from "@/lib/mask";
@@ -20,13 +20,29 @@ export default async function DashboardPage() {
   const [applications, outreaches, meetings, statuses, followUps, upcomingMeetings, nextSteps] = await Promise.all([
     prisma.event.count({ where: { userId: user.id, type: "application", occurredAt: { gte: weekStart, lt: weekEnd } } }),
     prisma.event.count({ where: { userId: user.id, type: "outreach", occurredAt: { gte: weekStart, lt: weekEnd } } }),
-    prisma.event.count({ where: { userId: user.id, type: "meeting", occurredAt: { gte: weekStart, lt: weekEnd } } }),
+    prisma.event.count({
+      where: {
+        userId: user.id,
+        type: "meeting",
+        OR: [
+          { startsAt: { gte: weekStart, lt: weekEnd } },
+          { AND: [{ startsAt: null }, { occurredAt: { gte: weekStart, lt: weekEnd } }] },
+        ],
+      },
+    }),
     prisma.job.groupBy({ by: ["status"], where: { userId: user.id }, _count: { _all: true } }),
     prisma.job.findMany({ where: { userId: user.id, followUpAt: { gte: new Date(), lte: horizon } }, orderBy: { followUpAt: "asc" }, take: 8 }),
     prisma.event.findMany({
-      where: { userId: user.id, type: "meeting", occurredAt: { gte: new Date(), lte: horizon } },
+      where: {
+        userId: user.id,
+        type: "meeting",
+        OR: [
+          { startsAt: { gte: new Date(), lte: horizon } },
+          { AND: [{ startsAt: null }, { occurredAt: { gte: new Date(), lte: horizon } }] },
+        ],
+      },
       include: { job: true, contact: true },
-      orderBy: { occurredAt: "asc" },
+      orderBy: { startsAt: "asc" },
       take: 8,
     }),
     prisma.contact.findMany({
@@ -72,8 +88,7 @@ export default async function DashboardPage() {
           ))}
           {upcomingMeetings.map((meeting) => (
             <li key={meeting.id}>
-              {formatDateTime(meeting.occurredAt, user.timezone)}
-              {meeting.endsAt ? ` – ${formatDateTime(meeting.endsAt, user.timezone)}` : ""} · {dash(meeting.job?.companyName || meeting.contact?.fullName || "", hide)}
+              {formatScheduledRange(meeting.startsAt ?? meeting.occurredAt, meeting.endsAt, user.timezone, lang)} · {dash(meeting.job?.companyName || meeting.contact?.fullName || "", hide)}
             </li>
           ))}
           {nextSteps.map((contact) => (

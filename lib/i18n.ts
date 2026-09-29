@@ -154,6 +154,9 @@ const dict = {
     when: "Date and time",
     meetingFrom: "From",
     meetingTo: "To",
+    scheduled: "Scheduled",
+    more: "more...",
+    less: "less",
     who: "Who",
     channel: "Channel",
     stage: "Stage",
@@ -384,6 +387,9 @@ const dict = {
     when: "תאריך ושעה",
     meetingFrom: "מתאריך ושעה",
     meetingTo: "עד תאריך ושעה",
+    scheduled: "מועד",
+    more: "עוד...",
+    less: "פחות",
     who: "עם מי",
     channel: "ערוץ",
     stage: "שלב",
@@ -493,7 +499,7 @@ const typeEn: Record<string, string> = {
   interest: "Initial interest",
   outreach: "Contacted them",
   application: "Application sent",
-  meeting: "Meeting",
+  meeting: "Meeting scheduled",
   status_change: "Status update",
 };
 
@@ -501,7 +507,7 @@ const typeHe: Record<string, string> = {
   interest: "עניין ראשוני",
   outreach: "פנייה",
   application: "הגשת מועמדות",
-  meeting: "פגישה",
+  meeting: "פגישה נקבעה",
   status_change: "עדכון סטטוס",
 };
 
@@ -573,6 +579,13 @@ export function contactStatusLabel(lang: Lang, status: string): string {
 
 export function eventTypeLabel(lang: Lang, type: string): string {
   return (lang === "he" ? typeHe : typeEn)[type] ?? type;
+}
+
+export function eventHappenedLabel(lang: Lang, type: string, stage?: string | null): string {
+  if (type !== "meeting") return eventTypeLabel(lang, type);
+  const stageText = stage ? stageLabel(lang, stage) : "";
+  if (lang === "he") return stageText ? `פגישת ${stageText} נקבעה` : "פגישה נקבעה";
+  return stageText ? `${stageText} meeting scheduled` : "Meeting scheduled";
 }
 
 const noteTypeEn: Record<string, string> = {
