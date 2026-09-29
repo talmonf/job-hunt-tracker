@@ -4,72 +4,80 @@ import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { formatDateTime } from "@/lib/dates";
 import { t } from "@/lib/i18n";
-import { dash, maskText } from "@/lib/mask";
-import { deleteNote, saveNoteVersion } from "@/lib/actions/network";
+import { dash } from "@/lib/mask";
+import { cloneNote, deleteNote, updateNote } from "@/lib/actions/network";
 import { PageFrame } from "@/components/chrome";
-import { SubmitButton, fieldClass, labelClass } from "@/components/widgets";
+import { ConfirmSubmit } from "@/components/widgets";
+import { NoteFields, jobNoteLabel } from "@/components/note-fields";
 
 export const dynamic = "force-dynamic";
 
-export default async function NoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function NoteDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await requireUser();
   const hide = await hidePersonalInfo();
   const { id } = await params;
-  const note = await prisma.note.findFirst({
-    where: { id, userId: user.id },
-    include: {
-      versions: {
-        orderBy: { version: "desc" },
-        include: { events: { include: { job: true, contact: true } } },
-      },
-    },
-  });
+  const search = await searchParams;
+  const [note, jobs] = await Promise.all([
+    prisma.note.findFirst({
+      where: { id, userId: user.id },
+      include: { job: true, events: { orderBy: { occurredAt: "desc" }, include: { job: true, contact: true } } },
+    }),
+    prisma.job.findMany({ where: { userId: user.id }, orderBy: { companyName: "asc" } }),
+  ]);
   if (!note) notFound();
-  const latest = note.versions[0];
   const lang = user.uiLanguage;
   return (
-    <PageFrame lang={lang} backHref="/notes" title={dash(note.title, hide)} description={t(lang, "noteDetailIntro")}>
-      <form action={saveNoteVersion} className="grid gap-3">
-        <input type="hidden" name="noteId" value={note.id} />
-        <label>
-          <span className={labelClass}>{t(lang, "title")}</span>
-          <input className={fieldClass} name="title" defaultValue={note.title} />
-        </label>
-        <label>
-          <span className={labelClass}>{t(lang, "bodyEn")}</span>
-          <textarea className={fieldClass} name="bodyEn" rows={6} defaultValue={latest?.bodyEn ?? ""} />
-        </label>
-        <label>
-          <span className={labelClass}>{t(lang, "bodyHe")}</span>
-          <textarea className={fieldClass} name="bodyHe" rows={6} defaultValue={latest?.bodyHe ?? ""} />
-        </label>
-        <SubmitButton label={t(lang, "save")} />
-      </form>
-      <h2 className="mb-2 mt-8 text-lg">{t(lang, "versions")}</h2>
-      <ol className="space-y-3">
-        {note.versions.map((version) => (
-          <li key={version.id} className="rounded-md border border-slate-700 p-3 text-sm">
-            <div className="font-medium">{t(lang, "version")} {version.version} · {formatDateTime(version.createdAt, user.timezone)}</div>
-            {version.bodyEn ? <p className="mt-2 whitespace-pre-wrap" dir="ltr">{maskText(version.bodyEn, hide)}</p> : null}
-            {version.bodyHe ? <p className="mt-2 whitespace-pre-wrap" dir="rtl">{maskText(version.bodyHe, hide)}</p> : null}
-            {version.events.length ? (
-              <ul className="mt-2 text-slate-300">
-                {version.events.map((event) => (
-                  <li key={event.id}>
-                    {event.job ? <Link className="text-sky-300" href={`/jobs/${event.jobId}`}>{dash(event.job.companyName, hide)}</Link> : null}
-                    {event.contact ? <Link className="text-sky-300" href={`/contacts/${event.contactId}`}>{dash(event.contact.fullName, hide)}</Link> : null}
-                    <span className="ms-2">{formatDateTime(event.occurredAt, user.timezone)}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </li>
-        ))}
-      </ol>
-      <form action={deleteNote} className="mt-6">
-        <input type="hidden" name="noteId" value={note.id} />
-        <button className="text-sm text-rose-300" type="submit">{t(lang, "delete")}</button>
-      </form>
+    <PageFrame lang={lang} backHref="/notes" title={dash(note.title, hide)} description={t(lang, "noteDetailIntro")} search={search}>
+      <NoteFields
+        lang={lang}
+        action={updateNote}
+        note={note}
+        jobs={jobs.map((job) => ({ id: job.id, label: dash(jobNoteLabel(job), hide) }))}
+      />
+      <div className="mt-4 flex flex-wrap gap-4">
+        <form action={cloneNote}>
+          <input type="hidden" name="noteId" value={note.id} />
+          <button className="text-sm text-sky-300" type="submit">
+            {t(lang, "clone")}
+          </button>
+        </form>
+        <ConfirmSubmit
+          action={deleteNote}
+          message={t(lang, "deleteConfirm")}
+          label={t(lang, "delete")}
+          className="text-sm text-rose-300"
+        >
+          <input type="hidden" name="noteId" value={note.id} />
+        </ConfirmSubmit>
+      </div>
+      {note.events.length ? (
+        <>
+          <h2 className="mb-2 mt-8 text-lg">{t(lang, "linkedEvents")}</h2>
+          <ul className="space-y-2 text-sm">
+            {note.events.map((event) => (
+              <li key={event.id} className="rounded-md border border-slate-700 px-3 py-2">
+                {event.job ? (
+                  <Link className="text-sky-300" href={`/jobs/${event.jobId}`}>
+                    {dash(jobNoteLabel(event.job), hide)}
+                  </Link>
+                ) : null}
+                {event.contact ? (
+                  <Link className="ms-2 text-sky-300" href={`/contacts/${event.contactId}`}>
+                    {dash(event.contact.fullName, hide)}
+                  </Link>
+                ) : null}
+                <span className="ms-2 text-slate-400">{formatDateTime(event.occurredAt, user.timezone)}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
     </PageFrame>
   );
 }

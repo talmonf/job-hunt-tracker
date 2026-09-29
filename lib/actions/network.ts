@@ -6,45 +6,72 @@ import { prisma } from "../prisma";
 import { requireUser } from "../session";
 import { parseDateOnly, requiredText } from "../forms";
 import { normalizeContactStatus } from "../contact-status";
+import { NOTE_TYPES } from "../notes";
+import type { NoteType } from "@prisma/client";
 
 export async function createNote(formData: FormData) {
   const user = await requireUser();
-  const title = requiredText(formData.get("title"));
-  const bodyEn = String(formData.get("bodyEn") ?? "");
-  const bodyHe = String(formData.get("bodyHe") ?? "");
-  if (!title || (!bodyEn.trim() && !bodyHe.trim())) redirect("/notes?error=required");
-  const note = await prisma.note.create({
-    data: {
-      userId: user.id,
-      title,
-      versions: { create: { version: 1, bodyEn, bodyHe } },
-    },
-  });
+  const data = await noteFields(formData, user.id);
+  if (!data) redirect("/notes?error=required");
+  const note = await prisma.note.create({ data: { userId: user.id, ...data } });
   redirect(`/notes/${note.id}?created=1`);
 }
 
-export async function saveNoteVersion(formData: FormData) {
+export async function updateNote(formData: FormData) {
   const user = await requireUser();
-  const note = await prisma.note.findFirst({
-    where: { id: requiredText(formData.get("noteId")), userId: user.id },
-    include: { versions: { orderBy: { version: "desc" }, take: 1 } },
-  });
+  const note = await ownedNote(user.id, requiredText(formData.get("noteId")));
   if (!note) redirect("/notes?error=required");
-  const bodyEn = String(formData.get("bodyEn") ?? "");
-  const bodyHe = String(formData.get("bodyHe") ?? "");
-  if (!bodyEn.trim() && !bodyHe.trim()) redirect(`/notes/${note.id}?error=required`);
-  const title = requiredText(formData.get("title")) || note.title;
-  await prisma.note.update({ where: { id: note.id }, data: { title } });
-  await prisma.noteVersion.create({
-    data: { noteId: note.id, version: (note.versions[0]?.version ?? 0) + 1, bodyEn, bodyHe },
+  const data = await noteFields(formData, user.id);
+  if (!data) redirect(`/notes/${note.id}?error=required`);
+  await prisma.note.update({ where: { id: note.id }, data });
+  redirect(`/notes/${note.id}?updated=1`);
+}
+
+export async function cloneNote(formData: FormData) {
+  const user = await requireUser();
+  const note = await ownedNote(user.id, requiredText(formData.get("noteId")));
+  if (!note) redirect("/notes?error=required");
+  const suffix = user.uiLanguage === "he" ? "(עותק)" : "(copy)";
+  const copy = await prisma.note.create({
+    data: {
+      userId: user.id,
+      title: `${note.title} ${suffix}`,
+      jobId: note.jobId,
+      type: note.type,
+      additionalInfo: note.additionalInfo,
+      bodyEn: note.bodyEn,
+      bodyHe: note.bodyHe,
+    },
   });
-  redirect(`/notes/${note.id}?created=1`);
+  redirect(`/notes/${copy.id}?created=1`);
 }
 
 export async function deleteNote(formData: FormData) {
   const user = await requireUser();
   await prisma.note.deleteMany({ where: { id: requiredText(formData.get("noteId")), userId: user.id } });
   redirect("/notes?updated=1");
+}
+
+async function ownedNote(userId: string, id: string) {
+  if (!id) return null;
+  return prisma.note.findFirst({ where: { id, userId } });
+}
+
+async function noteFields(formData: FormData, userId: string) {
+  const title = requiredText(formData.get("title"));
+  if (!title) return null;
+  const type = requiredText(formData.get("type")) as NoteType;
+  if (!NOTE_TYPES.includes(type)) return null;
+  const jobId = requiredText(formData.get("jobId"));
+  const job = jobId ? await prisma.job.findFirst({ where: { id: jobId, userId } }) : null;
+  return {
+    title,
+    type,
+    jobId: job?.id ?? null,
+    additionalInfo: String(formData.get("additionalInfo") ?? ""),
+    bodyEn: String(formData.get("bodyEn") ?? ""),
+    bodyHe: String(formData.get("bodyHe") ?? ""),
+  };
 }
 
 export async function createContact(formData: FormData) {

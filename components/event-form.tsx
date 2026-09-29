@@ -40,7 +40,7 @@ export function EventForm({
     stage: string;
     counterpartyName: string;
     summary: string;
-    noteVersionId: string;
+    noteId: string;
     cvId: string;
     tailoredCv: boolean;
     resultingStatus: string;
@@ -179,8 +179,8 @@ export function EventForm({
         </>
       ) : null}
       <label>
-        <span className={labelClass}>{t(lang, "noteVersion")}</span>
-        <select className={fieldClass} name="noteVersionId" defaultValue={event?.noteVersionId || ""}>
+        <span className={labelClass}>{t(lang, "note")}</span>
+        <select className={fieldClass} name="noteId" defaultValue={event?.noteId || ""}>
           <option value="">{t(lang, "none")}</option>
           {notes.map((note) => (
             <option key={note.id} value={note.id}>

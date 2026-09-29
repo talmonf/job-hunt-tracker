@@ -54,6 +54,15 @@ enum MeetingStage {
   other
 }
 
+enum NoteType {
+  interview_prep
+  interview_debrief
+  company_research
+  follow_up
+  thank_you
+  other
+}
+
 model User {
   id                   String     @id @default(cuid())
   email                String     @unique
@@ -187,6 +196,7 @@ model Job {
   urls                   JobUrl[]
   cvs                    JobCv[]
   events                 Event[]
+  notes                  Note[]
 
   @@unique([userId, importKey])
   @@index([userId, status])
@@ -239,25 +249,22 @@ model Contact {
 }
 
 model Note {
-  id        String        @id @default(cuid())
-  userId    String
-  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String
-  createdAt DateTime      @default(now())
-  versions  NoteVersion[]
-}
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String
+  jobId          String?
+  job            Job?     @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  type           NoteType @default(interview_prep)
+  additionalInfo String   @default("")
+  bodyEn         String   @default("")
+  bodyHe         String   @default("")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
+  events         Event[]
 
-model NoteVersion {
-  id        String   @id @default(cuid())
-  noteId    String
-  note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
-  version   Int
-  bodyEn    String   @default("")
-  bodyHe    String   @default("")
-  createdAt DateTime @default(now())
-  events    Event[]
-
-  @@unique([noteId, version])
+  @@index([userId, createdAt])
+  @@index([jobId])
 }
 
 model Event {
@@ -276,8 +283,8 @@ model Event {
   stage                  MeetingStage?
   resultingStatus        JobStatus?
   summary                String        @default("")
-  noteVersionId          String?
-  noteVersion            NoteVersion?  @relation(fields: [noteVersionId], references: [id], onDelete: SetNull)
+  noteId                 String?
+  note                   Note?         @relation(fields: [noteId], references: [id], onDelete: SetNull)
   cvId                   String?
   cv                     JobCv?        @relation(fields: [cvId], references: [id], onDelete: SetNull)
   tailoredCv             Boolean?

@@ -164,10 +164,8 @@ export async function saveEvent(formData: FormData) {
   }
   if (type === "outreach" && !channel) redirect(eventReturn(formData, job?.id, contact?.id, "required"));
   if (type === "meeting" && !stage) redirect(eventReturn(formData, job?.id, contact?.id, "required"));
-  const noteVersionId = requiredText(formData.get("noteVersionId"));
-  const noteVersion = noteVersionId
-    ? await prisma.noteVersion.findFirst({ where: { id: noteVersionId, note: { userId: user.id } } })
-    : null;
+  const noteId = requiredText(formData.get("noteId"));
+  const note = noteId ? await prisma.note.findFirst({ where: { id: noteId, userId: user.id } }) : null;
   const cvId = requiredText(formData.get("cvId"));
   const cv = cvId && job ? await prisma.jobCv.findFirst({ where: { id: cvId, jobId: job.id } }) : null;
   const eventId = requiredText(formData.get("eventId"));
@@ -185,7 +183,7 @@ export async function saveEvent(formData: FormData) {
     stage: type === "meeting" ? stage : null,
     resultingStatus,
     summary: String(formData.get("summary") ?? ""),
-    noteVersionId: noteVersion?.id ?? null,
+    noteId: note?.id ?? null,
     cvId: cv?.id ?? null,
     tailoredCv: type === "application" ? formData.get("tailoredCv") === "1" : null,
   };

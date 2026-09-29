@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { dateInputValue, formatDateTime } from "@/lib/dates";
 import { eventTypeLabel, t } from "@/lib/i18n";
-import { dash, maskText } from "@/lib/mask";
+import { dash } from "@/lib/mask";
 import { deleteContact, updateContact } from "@/lib/actions/network";
 import { saveEvent } from "@/lib/actions/jobs";
 import { PageFrame } from "@/components/chrome";
@@ -18,12 +18,11 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
   const { id } = await params;
   const contact = await prisma.contact.findFirst({
     where: { id, userId: user.id },
-    include: { events: { orderBy: { occurredAt: "desc" }, include: { job: true, noteVersion: { include: { note: true } } } } },
+    include: { events: { orderBy: { occurredAt: "desc" }, include: { job: true, note: true } } },
   });
   if (!contact) notFound();
-  const versions = await prisma.noteVersion.findMany({
-    where: { note: { userId: user.id } },
-    include: { note: true },
+  const notes = await prisma.note.findMany({
+    where: { userId: user.id },
     orderBy: { createdAt: "desc" },
   });
   const lang = user.uiLanguage;
@@ -45,7 +44,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
         defaultContactId={contact.id}
         jobs={[]}
         contacts={[]}
-        notes={versions.map((item) => ({ id: item.id, label: maskText(`${item.note.title} v${item.version}`, hide) }))}
+        notes={notes.map((item) => ({ id: item.id, label: dash(item.title, hide) }))}
         cvs={[]}
       />
       <h2 className="mb-2 mt-8 text-lg">{t(lang, "history")}</h2>

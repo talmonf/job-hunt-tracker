@@ -29,13 +29,12 @@ export default async function JobDetailPage({
     include: {
       urls: true,
       cvs: { orderBy: { uploadedAt: "desc" } },
-      events: { orderBy: { occurredAt: "desc" }, include: { contact: true, noteVersion: { include: { note: true } } } },
+      events: { orderBy: { occurredAt: "desc" }, include: { contact: true, note: true } },
     },
   });
   if (!job) notFound();
-  const versions = await prisma.noteVersion.findMany({
-    where: { note: { userId: user.id } },
-    include: { note: true },
+  const notes = await prisma.note.findMany({
+    where: { userId: user.id },
     orderBy: { createdAt: "desc" },
   });
   const lang = user.uiLanguage;
@@ -131,7 +130,7 @@ export default async function JobDetailPage({
         defaultContactId={editing?.contactId ?? undefined}
         jobs={[]}
         contacts={[]}
-        notes={versions.map((item) => ({ id: item.id, label: maskText(`${item.note.title} v${item.version}`, hide) }))}
+        notes={notes.map((item) => ({ id: item.id, label: dash(item.title, hide) }))}
         cvs={job.cvs.map((cv) => ({ id: cv.id, label: dash(cv.filename, hide) }))}
         event={
           editing
@@ -144,7 +143,7 @@ export default async function JobDetailPage({
                 stage: editing.stage ?? "",
                 counterpartyName: editing.counterpartyName,
                 summary: editing.summary,
-                noteVersionId: editing.noteVersionId ?? "",
+                noteId: editing.noteId ?? "",
                 cvId: editing.cvId ?? "",
                 tailoredCv: Boolean(editing.tailoredCv),
                 resultingStatus: editing.resultingStatus ?? "",
@@ -168,10 +167,10 @@ export default async function JobDetailPage({
             {event.stage ? <p>{stageLabel(lang, event.stage)}</p> : null}
             {event.contact ? <p>{dash(event.contact.fullName, hide)}</p> : null}
             {event.summary ? <p className="whitespace-pre-wrap text-slate-300">{dash(event.summary, hide)}</p> : null}
-            {event.noteVersion ? (
+            {event.note ? (
               <p>
-                <Link className="text-sky-300" href={`/notes/${event.noteVersion.noteId}`}>
-                  {maskText(`${event.noteVersion.note.title} v${event.noteVersion.version}`, hide)}
+                <Link className="text-sky-300" href={`/notes/${event.note.id}`}>
+                  {dash(event.note.title, hide)}
                 </Link>
               </p>
             ) : null}

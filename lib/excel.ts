@@ -55,7 +55,7 @@ export async function exportWorkbook(userId: string, timeZone: string): Promise<
     prisma.contact.findMany({ where: { userId }, orderBy: { fullName: "asc" } }),
     prisma.event.findMany({
       where: { userId, type: "meeting" },
-      include: { job: true, noteVersion: true },
+      include: { job: true, note: true },
       orderBy: { occurredAt: "asc" },
     }),
   ]);
@@ -171,7 +171,7 @@ export async function exportWorkbook(userId: string, timeZone: string): Promise<
       interview.summary,
       "",
       "",
-      interview.noteVersion?.bodyHe || interview.noteVersion?.bodyEn || "",
+      interview.note?.bodyHe || interview.note?.bodyEn || "",
       "",
       "",
       "",
@@ -364,8 +364,8 @@ async function importInterviews(userId: string, sheet: ExcelJS.Worksheet, timeZo
       .join("\n\n");
     const eventKey = `mentme:interview:${company.toLowerCase()}:${title.toLowerCase()}:${when.toISOString().slice(0, 10)}`;
     const existing = await prisma.event.findUnique({ where: { userId_importKey: { userId, importKey: eventKey } } });
-    if (existing?.noteVersionId) {
-      await prisma.noteVersion.update({ where: { id: existing.noteVersionId }, data: { bodyHe } });
+    if (existing?.noteId) {
+      await prisma.note.update({ where: { id: existing.noteId }, data: { bodyHe } });
       await prisma.event.update({
         where: { id: existing.id },
         data: { summary, occurredAt: when, stage: interviewStage(kind) },
@@ -375,9 +375,10 @@ async function importInterviews(userId: string, sheet: ExcelJS.Worksheet, timeZo
         data: {
           userId,
           title: `סיכום ראיון: ${company}`,
-          versions: { create: { version: 1, bodyHe } },
+          jobId: job.id,
+          type: "interview_debrief",
+          bodyHe,
         },
-        include: { versions: true },
       });
       await prisma.event.create({
         data: {
@@ -388,7 +389,7 @@ async function importInterviews(userId: string, sheet: ExcelJS.Worksheet, timeZo
           resultingStatus: "interviewing",
           stage: interviewStage(kind),
           summary,
-          noteVersionId: note.versions[0]?.id,
+          noteId: note.id,
           importKey: eventKey,
         },
       });

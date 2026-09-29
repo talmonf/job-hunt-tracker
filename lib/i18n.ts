@@ -8,8 +8,8 @@ const dict = {
     splashTitle: "Keep the search in one place",
     splashBody:
       "Track companies and roles, even when no job is posted yet. Status changes only when you log what happened: a first note of interest, a message, an application, or an interview. Set a follow-up on every job and an optional reminder before that date.",
-    splashBody2:
-      "Prepare interview answers in Hebrew and English, keep versions, and attach one to a conversation. Keep networking contacts next to the roles they can help with. Goals on the dashboard show whether this week matches the pace you chose.",
+      splashBody2:
+      "Prepare interview answers in Hebrew and English, edit or clone a note when you need a copy, and attach one to a conversation. Keep networking contacts next to the roles they can help with. Goals on the dashboard show whether this week matches the pace you chose.",
     splashSignIn: "Sign in to continue.",
     email: "Email",
     password: "Password",
@@ -68,7 +68,7 @@ const dict = {
     emptyEvents: "No events yet. Add one using the button above.",
     jobsIntro: "Roles and companies you are tracking.",
     eventsIntro: "What happened across jobs and contacts.",
-    notesIntro: "Interview answers, with a version each time you save.",
+    notesIntro: "Notes linked to jobs. Edit, delete, or clone when you need a copy.",
     contactsIntro: "People who can help with the search.",
     settingsIntro: "Goals, calendar, email, and the MentMe workbook.",
     profileIntro: "The experience a tailored CV will use later.",
@@ -76,9 +76,10 @@ const dict = {
     usersIntro: "Create accounts, reset passwords, and deactivate users.",
     jobDetailIntro: "Description, files, follow-up, and the events that set status.",
     contactDetailIntro: "Contact details and the events linked to this person.",
-    noteDetailIntro: "Saving creates a new version. Older versions stay available.",
+    noteDetailIntro: "Saving updates this note. Clone it if you need a separate copy.",
     addJob: "Add job",
     addNote: "Add note",
+    clone: "Clone",
     addContact: "Add contact",
     addUser: "Add user",
     logEvent: "Log event",
@@ -157,7 +158,9 @@ const dict = {
     channel: "Channel",
     stage: "Stage",
     summary: "Summary",
-    noteVersion: "Note version",
+    note: "Note",
+    noteType: "Note type",
+    additionalInfo: "Additional info",
     none: "None",
     addToCalendar: "Add to Google Calendar",
     calendarDefaultLength: "If the end is empty, the calendar event lasts 60 minutes.",
@@ -235,8 +238,8 @@ const dict = {
     splashTitle: "כל החיפוש במקום אחד",
     splashBody:
       "לעקוב אחרי חברות ותפקידים, גם כשאין משרה מפורסמת. הסטטוס משתנה רק כשרושמים מה קרה: עניין ראשוני, פנייה, הגשת מועמדות או ראיון. לכל משרה יש תאריך המשך, ואפשר תזכורת לפניו.",
-    splashBody2:
-      "מכינים תשובות לראיון בעברית ובאנגלית, שומרים גרסאות, ומקשרים גרסה לשיחה. אנשי הקשר יושבים ליד התפקידים שבהם הם יכולים לעזור. לוח הבקרה מראה אם השבוע תואם את הקצב שהגדרתם.",
+      splashBody2:
+      "מכינים תשובות לראיון בעברית ובאנגלית, עורכים או משכפלים הערה כשצריך עותק, ומקשרים הערה לשיחה. אנשי הקשר יושבים ליד התפקידים שבהם הם יכולים לעזור. לוח הבקרה מראה אם השבוע תואם את הקצב שהגדרתם.",
     splashSignIn: "יש להתחבר כדי להמשיך.",
     email: "אימייל",
     password: "סיסמה",
@@ -295,7 +298,7 @@ const dict = {
     emptyEvents: "אין עדיין אירועים. הוסיפו אחד באמצעות הכפתור למעלה.",
     jobsIntro: "תפקידים וחברות במעקב.",
     eventsIntro: "מה שקרה במשרות ובאנשי הקשר.",
-    notesIntro: "תשובות לראיון, עם גרסה חדשה בכל שמירה.",
+    notesIntro: "הערות המקושרות למשרות. אפשר לערוך, למחוק או לשכפל.",
     contactsIntro: "אנשים שיכולים לעזור בחיפוש.",
     settingsIntro: "יעדים, יומן, דוא״ל, וקובץ MentMe.",
     profileIntro: "הניסיון שישמש אחר כך להתאמת קורות חיים.",
@@ -303,9 +306,10 @@ const dict = {
     usersIntro: "יצירת חשבונות, איפוס סיסמה וכיבוי משתמשים.",
     jobDetailIntro: "תיאור, קבצים, המשך טיפול, והאירועים שקובעים את הסטטוס.",
     contactDetailIntro: "פרטי הקשר והאירועים שמקושרים אליו.",
-    noteDetailIntro: "שמירה יוצרת גרסה חדשה. גרסאות קודמות נשארות.",
+    noteDetailIntro: "שמירה מעדכנת את ההערה. לשמירת עותק נפרד, השתמשו בשכפול.",
     addJob: "הוספת משרה",
     addNote: "הוספת הערה",
+    clone: "שכפול",
     addContact: "הוספת איש קשר",
     addUser: "הוספת משתמש",
     logEvent: "דיווח אירוע",
@@ -384,7 +388,9 @@ const dict = {
     channel: "ערוץ",
     stage: "שלב",
     summary: "סיכום",
-    noteVersion: "גרסת הערה",
+    note: "הערה",
+    noteType: "סוג הערה",
+    additionalInfo: "מידע נוסף",
     none: "ללא",
     addToCalendar: "הוספה ליומן Google",
     calendarDefaultLength: "אם שעת הסיום ריקה, האירוע ביומן נמשך 60 דקות.",
@@ -567,6 +573,28 @@ export function contactStatusLabel(lang: Lang, status: string): string {
 
 export function eventTypeLabel(lang: Lang, type: string): string {
   return (lang === "he" ? typeHe : typeEn)[type] ?? type;
+}
+
+const noteTypeEn: Record<string, string> = {
+  interview_prep: "Interview prep",
+  interview_debrief: "Interview debrief",
+  company_research: "Company research",
+  follow_up: "Follow-up",
+  thank_you: "Thank you",
+  other: "Other",
+};
+
+const noteTypeHe: Record<string, string> = {
+  interview_prep: "הכנה לראיון",
+  interview_debrief: "סיכום ראיון",
+  company_research: "מחקר חברה",
+  follow_up: "המשך טיפול",
+  thank_you: "תודה",
+  other: "אחר",
+};
+
+export function noteTypeLabel(lang: Lang, type: string): string {
+  return (lang === "he" ? noteTypeHe : noteTypeEn)[type] ?? type;
 }
 
 export function channelLabel(lang: Lang, channel: string): string {

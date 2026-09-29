@@ -6,7 +6,7 @@ import { allParams, firstParam, preserveQuery } from "@/lib/http";
 import { parseDateOnly } from "@/lib/forms";
 import { EVENT_TYPES } from "@/lib/events";
 import { eventTypeLabel, t } from "@/lib/i18n";
-import { dash, maskText } from "@/lib/mask";
+import { dash } from "@/lib/mask";
 import { dateTimeInputValue, formatDateTime } from "@/lib/dates";
 import { deleteEvent, saveEvent } from "@/lib/actions/jobs";
 import { EmptyState, Modal, PageFrame } from "@/components/chrome";
@@ -55,7 +55,7 @@ export default async function EventsPage({
       ? { occurredAt: { gte: occurredFrom ?? undefined, lte: occurredTo ?? undefined } }
       : {}),
   };
-  const [events, jobs, contacts, versions, cvs] = await Promise.all([
+  const [events, jobs, contacts, notes, cvs] = await Promise.all([
     prisma.event.findMany({
       where,
       orderBy: { [sort]: dir },
@@ -63,9 +63,8 @@ export default async function EventsPage({
     }),
     prisma.job.findMany({ where: { userId: user.id }, orderBy: { companyName: "asc" } }),
     prisma.contact.findMany({ where: { userId: user.id }, orderBy: { fullName: "asc" } }),
-    prisma.noteVersion.findMany({
-      where: { note: { userId: user.id } },
-      include: { note: true },
+    prisma.note.findMany({
+      where: { userId: user.id },
       orderBy: { createdAt: "desc" },
     }),
     prisma.jobCv.findMany({
@@ -82,7 +81,7 @@ export default async function EventsPage({
     label: dash(`${job.companyName}${job.title ? ` — ${job.title}` : ""}`, hide),
   }));
   const contactOptions = contacts.map((item) => ({ id: item.id, label: dash(item.fullName, hide) }));
-  const noteOptions = versions.map((item) => ({ id: item.id, label: maskText(`${item.note.title} v${item.version}`, hide) }));
+  const noteOptions = notes.map((item) => ({ id: item.id, label: dash(item.title, hide) }));
   const cvOptions = cvs.map((cv) => ({
     id: cv.id,
     jobId: cv.jobId,
@@ -210,24 +209,38 @@ export default async function EventsPage({
           </table>
         </div>
       )}
-      {firstParam(search.modal) === "new" ? (
-        <Modal title={t(lang, "logEvent")} closeHref={closeHref} closeLabel={t(lang, "close")}>
+      {firstParam(search.modal) === "new" || editing ? (
+        <Modal title={editing ? t(lang, "edit") : t(lang, "logEvent")} closeHref={closeHref} closeLabel={t(lang, "close")}>
           <EventForm
             action={saveEvent}
             lang={lang}
             calendarLinked={Boolean(user.calendarRefreshToken)}
             returnTo={`/events${keep}`}
-            jobs={jobs.map((job) => ({
-              id: job.id,
-              label: dash(`${job.companyName}${job.title ? ` — ${job.title}` : ""}`, hide),
-            }))}
-            contacts={contacts.map((item) => ({ id: item.id, label: dash(item.fullName, hide) }))}
-            notes={versions.map((item) => ({ id: item.id, label: maskText(`${item.note.title} v${item.version}`, hide) }))}
-            cvs={cvs.map((cv) => ({
-              id: cv.id,
-              jobId: cv.jobId,
-              label: dash(`${cv.job.companyName} — ${cv.filename}`, hide),
-            }))}
+            defaultJobId={editing?.jobId ?? undefined}
+            defaultContactId={editing?.contactId ?? undefined}
+            jobs={jobOptions}
+            contacts={contactOptions}
+            notes={noteOptions}
+            cvs={cvOptions}
+            event={
+              editing
+                ? {
+                    id: editing.id,
+                    type: editing.type,
+                    occurredAt: dateTimeInputValue(editing.occurredAt, user.timezone),
+                    endsAt: editing.endsAt ? dateTimeInputValue(editing.endsAt, user.timezone) : "",
+                    channel: editing.channel ?? "",
+                    stage: editing.stage ?? "",
+                    counterpartyName: editing.counterpartyName,
+                    summary: editing.summary,
+                    noteId: editing.noteId ?? "",
+                    cvId: editing.cvId ?? "",
+                    tailoredCv: Boolean(editing.tailoredCv),
+                    resultingStatus: editing.resultingStatus ?? "",
+                    onCalendar: Boolean(editing.googleCalendarEventId),
+                  }
+                : undefined
+            }
           />
         </Modal>
       ) : null}
@@ -249,7 +262,7 @@ function SortHead({
   search: Record<string, string | string[] | undefined>;
 }) {
   const nextDir = sort === column && dir === "asc" ? "desc" : "asc";
-  const href = `/events${preserveQuery(search, { sort: column, dir: nextDir }, ["modal", "created", "updated", "error", "warn"])}`;
+  const href = `/events${preserveQuery(search, { sort: column, dir: nextDir }, ["modal", "eventId", "created", "updated", "error", "warn"])}`;
   const active = sort === column;
   return (
     <th className="px-3 py-2" aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}>
