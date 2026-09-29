@@ -2,7 +2,7 @@ export type Lang = "en" | "he";
 
 const dict = {
   en: {
-    appName: "Job Hunt",
+    appName: "Job Hunt Tracker",
     splashTitle: "Keep the search in one place",
     splashBody:
       "Track companies and roles, even when no job is posted yet. Status changes only when you log what happened: a first note of interest, a message, an application, or an interview. Set a follow-up on every job and an optional reminder before that date.",
@@ -221,7 +221,7 @@ const dict = {
     goalsCount: "goals",
   },
   he: {
-    appName: "חיפוש עבודה",
+    appName: "מעקב חיפוש עבודה",
     splashTitle: "כל החיפוש במקום אחד",
     splashBody:
       "לעקוב אחרי חברות ותפקידים, גם כשאין משרה מפורסמת. הסטטוס משתנה רק כשרושמים מה קרה: עניין ראשוני, פנייה, הגשת מועמדות או ראיון. לכל משרה יש תאריך המשך, ואפשר תזכורת לפניו.",

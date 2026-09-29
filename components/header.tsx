@@ -3,7 +3,7 @@ import type { Lang } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
 import { maskText } from "@/lib/mask";
 import { setObfuscate, setUserLanguage, signOutAction } from "@/lib/actions/auth";
-import { LanguageSwitch, ObfuscateToggle, SignOutButton } from "./widgets";
+import { LanguageSwitch, NavLinks, ObfuscateToggle, SignOutButton, UserMenu } from "./widgets";
 
 const links = [
   ["/settings", "settings"],
@@ -13,6 +13,14 @@ const links = [
   ["/notes", "notes"],
   ["/contacts", "networking"],
 ] as const;
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  const first = Array.from(parts[0])[0] ?? "";
+  const last = parts.length > 1 ? (Array.from(parts[parts.length - 1])[0] ?? "") : "";
+  return (first + last).toUpperCase();
+}
 
 export function AppHeader({
   lang,
@@ -34,35 +42,30 @@ export function AppHeader({
           {t(lang, "appName")}
         </Link>
         <nav className="flex flex-wrap gap-1">
-          {links.map(([href, key]) => (
-            <Link
-              key={href}
-              href={href}
-              className={`rounded-full px-3 py-1 text-sm ${path.startsWith(href) ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-900 hover:text-white"}`}
-            >
-              {t(lang, key)}
-            </Link>
-          ))}
-          {role === "admin" ? (
-            <Link
-              href="/admin/users"
-              className={`rounded-full px-3 py-1 text-sm ${path.startsWith("/admin") ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-900"}`}
-            >
-              {t(lang, "users")}
-            </Link>
-          ) : null}
+          <NavLinks
+            links={[
+              ...links.map(([href, key]) => ({ href, label: t(lang, key) })),
+              ...(role === "admin" ? [{ href: "/admin/users", label: t(lang, "users") }] : []),
+            ]}
+          />
         </nav>
         <div className="ms-auto flex flex-wrap items-center gap-3">
-          <span className="text-sm text-slate-300">
-            {t(lang, "signedInAs")} {maskText(name, hide)}
-            {role === "admin" ? <span className="ms-2 rounded bg-slate-700 px-1.5 py-0.5 text-xs text-slate-100">{t(lang, "admin")}</span> : null}
-          </span>
-          <LanguageSwitch action={setUserLanguage} lang={lang} returnTo={path} />
-          <ObfuscateToggle action={setObfuscate} hide={hide} label={t(lang, "hideInfo")} returnTo={path} />
-          <Link className="text-sm text-slate-300 hover:text-white" href="/change-password">
-            {t(lang, "changePassword")}
-          </Link>
-          <SignOutButton action={signOutAction} label={t(lang, "signOut")} confirm={t(lang, "signOutConfirm")} />
+          <LanguageSwitch action={setUserLanguage} lang={lang} />
+          <ObfuscateToggle action={setObfuscate} hide={hide} label={t(lang, "hideInfo")} />
+          <UserMenu
+            initials={hide ? "\u2022\u2022" : initials(name)}
+            name={maskText(name, hide)}
+            isAdmin={role === "admin"}
+            adminLabel={t(lang, "admin")}
+            changePasswordLabel={t(lang, "changePassword")}
+          >
+            <SignOutButton
+              action={signOutAction}
+              label={t(lang, "signOut")}
+              confirm={t(lang, "signOutConfirm")}
+              className="block w-full px-3 py-2 text-start text-sm text-slate-200 hover:bg-slate-800"
+            />
+          </UserMenu>
         </div>
       </div>
     </header>

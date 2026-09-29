@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import type { Lang } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
@@ -190,13 +192,13 @@ export function ObfuscateToggle({
   action,
   hide,
   label,
-  returnTo,
 }: {
   action: (formData: FormData) => void;
   hide: boolean;
   label: string;
-  returnTo: string;
+  returnTo?: string;
 }) {
+  const returnTo = usePathname();
   return (
     <form action={action}>
       <input type="hidden" name="value" value={hide ? "0" : "1"} />
@@ -216,7 +218,103 @@ function ToggleBox({ label, checked }: { label: string; checked: boolean }) {
   );
 }
 
-export function SignOutButton({ action, label, confirm }: { action: () => void; label: string; confirm: string }) {
+export function NavLinks({ links }: { links: { href: string; label: string }[] }) {
+  const pathname = usePathname();
+  return (
+    <>
+      {links.map(({ href, label }) => {
+        const active = pathname === href || pathname.startsWith(`${href}/`);
+        return (
+          <Link
+            key={href}
+            href={href}
+            aria-current={active ? "page" : undefined}
+            className={`rounded-full px-3 py-1 text-sm ${active ? "bg-slate-800 text-white" : "text-slate-300 hover:bg-slate-900 hover:text-white"}`}
+          >
+            {label}
+          </Link>
+        );
+      })}
+    </>
+  );
+}
+
+export function UserMenu({
+  initials,
+  name,
+  isAdmin,
+  adminLabel,
+  changePasswordLabel,
+  children,
+}: {
+  initials: string;
+  name: string;
+  isAdmin: boolean;
+  adminLabel: string;
+  changePasswordLabel: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
+
+  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        title={name}
+        aria-label={name}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-sky-500 text-sm font-semibold text-slate-950 hover:bg-sky-400"
+      >
+        {initials}
+      </button>
+      {open ? (
+        <div role="menu" className="absolute end-0 z-30 mt-2 w-56 rounded-md border border-slate-700 bg-slate-900 py-1 shadow-lg">
+          <div className="border-b border-slate-700 px-3 py-2 text-sm text-slate-200">
+            {name}
+            {isAdmin ? <span className="ms-2 rounded bg-slate-700 px-1.5 py-0.5 text-xs text-slate-100">{adminLabel}</span> : null}
+          </div>
+          <Link role="menuitem" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-800" href="/change-password">
+            {changePasswordLabel}
+          </Link>
+          {children}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function SignOutButton({
+  action,
+  label,
+  confirm,
+  className,
+}: {
+  action: () => void;
+  label: string;
+  confirm: string;
+  className?: string;
+}) {
   return (
     <form
       action={action}
@@ -224,7 +322,7 @@ export function SignOutButton({ action, label, confirm }: { action: () => void; 
         if (!window.confirm(confirm)) event.preventDefault();
       }}
     >
-      <button className="text-sm text-slate-300 hover:text-white" type="submit">
+      <button className={className ?? "text-sm text-slate-300 hover:text-white"} role="menuitem" type="submit">
         {label}
       </button>
     </form>
@@ -234,12 +332,12 @@ export function SignOutButton({ action, label, confirm }: { action: () => void; 
 export function LanguageSwitch({
   action,
   lang,
-  returnTo,
 }: {
   action: (formData: FormData) => void;
   lang: Lang;
-  returnTo: string;
+  returnTo?: string;
 }) {
+  const returnTo = usePathname();
   return (
     <div className="flex overflow-hidden rounded-md border border-slate-700">
       {(["en", "he"] as const).map((value) => (
