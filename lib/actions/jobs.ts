@@ -6,7 +6,7 @@ import type { Channel, EventType, JobStatus, MeetingStage } from "@prisma/client
 import { prisma } from "../prisma";
 import { requireUser } from "../session";
 import { optionalInt, parseDateOnly, parseDateTime, requiredText } from "../forms";
-import { defaultResultingStatus, CHANNELS, EVENT_TYPES, JOB_STATUSES, STAGES } from "../events";
+import { defaultResultingStatus, CHANNELS, EMPLOYMENT_TYPES, ENGAGEMENTS, EVENT_TYPES, JOB_STATUSES, STAGES, WORK_ARRANGEMENTS } from "../events";
 import { recomputeJobStatus } from "../job-status";
 import { t } from "../i18n";
 import { removeStored, saveUpload } from "../files";
@@ -27,6 +27,7 @@ export async function createJob(formData: FormData) {
       userId: user.id,
       companyName,
       title,
+      ...readJobAttributes(formData),
       description,
       interestDate,
       followUpAt,
@@ -111,6 +112,7 @@ export async function updateJob(formData: FormData) {
     data: {
       companyName,
       title: requiredText(formData.get("title")),
+      ...readJobAttributes(formData),
       description: String(formData.get("description") ?? ""),
       interestDate,
       followUpAt,
@@ -275,6 +277,15 @@ export async function deleteEvent(formData: FormData) {
   redirect(eventDone(formData, event.jobId ?? undefined, event.contactId ?? undefined, "updated=1"));
 }
 
+function readJobAttributes(formData: FormData) {
+  return {
+    location: requiredText(formData.get("location")),
+    employmentType: optionalEnum(formData.get("employmentType"), EMPLOYMENT_TYPES),
+    workArrangement: optionalEnum(formData.get("workArrangement"), WORK_ARRANGEMENTS),
+    engagement: optionalEnum(formData.get("engagement"), ENGAGEMENTS),
+  };
+}
+
 function readReminder(formData: FormData): { days: number | null; hours: number | null } | "invalid" {
   const days = optionalInt(formData.get("reminderLeadDays"), 365);
   const hours = optionalInt(formData.get("reminderLeadHours"), 23);
@@ -337,8 +348,8 @@ function eventDone(formData: FormData, jobId: string | undefined, contactId: str
   return withReturnTo(formData, fallback, query);
 }
 
-function optionalEnum(value: FormDataEntryValue | null, allowed: readonly string[]) {
+function optionalEnum<T extends string>(value: FormDataEntryValue | null, allowed: readonly T[]): T | null {
   const text = requiredText(value);
-  if (!text) return null;
-  return allowed.includes(text) ? text : null;
+  if (!(allowed as readonly string[]).includes(text)) return null;
+  return text as T;
 }

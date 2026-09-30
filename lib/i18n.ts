@@ -50,6 +50,10 @@ const dict = {
     to: "To",
     company: "Company",
     title: "Job title",
+    location: "Location",
+    employmentType: "Employment type",
+    workArrangement: "Work arrangement",
+    engagement: "Engagement",
     description: "Description",
     urls: "Links",
     interestDate: "Interest date",
@@ -311,6 +315,10 @@ const dict = {
     to: "עד תאריך",
     company: "חברה",
     title: "תפקיד",
+    location: "מיקום",
+    employmentType: "היקף משרה",
+    workArrangement: "אופן עבודה",
+    engagement: "סוג העסקה",
     description: "תיאור",
     urls: "קישורים",
     interestDate: "תאריך עניין",
@@ -613,6 +621,30 @@ export function t(lang: Lang, key: MessageKey): string {
 
 export function statusLabel(lang: Lang, status: string): string {
   return (lang === "he" ? statusHe : statusEn)[status] ?? status;
+}
+
+const jobAttributeEn: Record<string, string> = {
+  full_time: "Full-time",
+  part_time: "Part-time",
+  on_site: "On-site",
+  remote: "Remote",
+  hybrid: "Hybrid",
+  employee: "Employee",
+  freelance: "Freelance",
+};
+
+const jobAttributeHe: Record<string, string> = {
+  full_time: "משרה מלאה",
+  part_time: "משרה חלקית",
+  on_site: "במשרד",
+  remote: "מרחוק",
+  hybrid: "היברידי",
+  employee: "שכיר",
+  freelance: "פרילנס",
+};
+
+export function jobAttributeLabel(lang: Lang, value: string): string {
+  return (lang === "he" ? jobAttributeHe : jobAttributeEn)[value] ?? value;
 }
 
 const contactStatusEn: Record<string, string> = {

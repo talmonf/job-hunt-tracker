@@ -2,13 +2,13 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { dateInputValue, dateTimeInputValue } from "@/lib/dates";
-import { statusLabel, t } from "@/lib/i18n";
+import { jobAttributeLabel, statusLabel, t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
-import { eventFormValues } from "@/lib/events";
+import { EMPLOYMENT_TYPES, ENGAGEMENTS, WORK_ARRANGEMENTS, eventFormValues } from "@/lib/events";
 import { deleteCv, deleteJob, saveEvent, updateJob, uploadCv } from "@/lib/actions/jobs";
 import { toChipLink } from "@/lib/entity-links";
 import { PageFrame, statusClass } from "@/components/chrome";
-import { DateField, DateTimeField, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
+import { AttributeSelect, DateField, DateTimeField, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
 import { JobUrlsEditor } from "@/components/job-urls";
 import { EventForm } from "@/components/event-form";
 import { EventHistoryTable } from "@/components/event-history";
@@ -74,6 +74,31 @@ export default async function JobDetailPage({
           <span className={labelClass}>{t(lang, "title")}</span>
           <input className={fieldClass} name="title" defaultValue={job.title} />
         </label>
+        <label>
+          <span className={labelClass}>{t(lang, "location")}</span>
+          <input className={fieldClass} name="location" defaultValue={job.location} />
+        </label>
+        <AttributeSelect
+          lang={lang}
+          name="employmentType"
+          label={t(lang, "employmentType")}
+          options={EMPLOYMENT_TYPES}
+          value={job.employmentType ?? ""}
+        />
+        <AttributeSelect
+          lang={lang}
+          name="workArrangement"
+          label={t(lang, "workArrangement")}
+          options={WORK_ARRANGEMENTS}
+          value={job.workArrangement ?? ""}
+        />
+        <AttributeSelect
+          lang={lang}
+          name="engagement"
+          label={t(lang, "engagement")}
+          options={ENGAGEMENTS}
+          value={job.engagement ?? ""}
+        />
         <div className="md:col-span-2">
           {job.description ? (
             <div className="mb-3">

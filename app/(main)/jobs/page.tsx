@@ -4,20 +4,20 @@ import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { allParams, firstParam, preserveQuery } from "@/lib/http";
 import { parseDateOnly } from "@/lib/forms";
-import { JOB_STATUSES, statusesForJobList } from "@/lib/events";
-import { statusLabel, t, type Lang } from "@/lib/i18n";
+import { EMPLOYMENT_TYPES, ENGAGEMENTS, JOB_STATUSES, WORK_ARRANGEMENTS, statusesForJobList } from "@/lib/events";
+import { jobAttributeLabel, statusLabel, t, type Lang } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { createJob } from "@/lib/actions/jobs";
 import { EmptyState, Modal, PageFrame } from "@/components/chrome";
-import { DateField, DateTimeField, MultiSelect, SubmitButton, compactFieldClass, compactLabelClass, fieldClass, labelClass } from "@/components/widgets";
+import { AttributeSelect, DateField, DateTimeField, MultiSelect, SubmitButton, compactFieldClass, compactLabelClass, fieldClass, labelClass } from "@/components/widgets";
 import { JobStatusEditor } from "@/components/job-status-editor";
 import { JobUrlsEditor } from "@/components/job-urls";
 import { MentionTextarea } from "@/components/mention-textarea";
 
 export const dynamic = "force-dynamic";
 
-const SORTS = ["companyName", "title", "status", "interestDate", "followUpAt"] as const;
+const SORTS = ["companyName", "title", "location", "employmentType", "workArrangement", "engagement", "status", "interestDate", "followUpAt"] as const;
 
 export default async function JobsPage({
   searchParams,
@@ -44,6 +44,7 @@ export default async function JobsPage({
           OR: [
             { companyName: { contains: q, mode: "insensitive" } },
             { title: { contains: q, mode: "insensitive" } },
+            { location: { contains: q, mode: "insensitive" } },
           ],
         }
       : {}),
@@ -143,6 +144,10 @@ export default async function JobsPage({
               <tr>
                 <SortHead label={t(lang, "company")} column="companyName" sort={sort} dir={dir} search={search} />
                 <SortHead label={t(lang, "title")} column="title" sort={sort} dir={dir} search={search} />
+                <SortHead label={t(lang, "location")} column="location" sort={sort} dir={dir} search={search} />
+                <SortHead label={t(lang, "employmentType")} column="employmentType" sort={sort} dir={dir} search={search} />
+                <SortHead label={t(lang, "workArrangement")} column="workArrangement" sort={sort} dir={dir} search={search} />
+                <SortHead label={t(lang, "engagement")} column="engagement" sort={sort} dir={dir} search={search} />
                 <SortHead label={t(lang, "status")} column="status" sort={sort} dir={dir} search={search} />
                 <SortHead label={t(lang, "interestDate")} column="interestDate" sort={sort} dir={dir} search={search} />
                 <SortHead label={t(lang, "followUp")} column="followUpAt" sort={sort} dir={dir} search={search} />
@@ -159,6 +164,10 @@ export default async function JobsPage({
                     </Link>
                   </td>
                   <td className="px-3 py-2">{dash(job.title, hide)}</td>
+                  <td className="px-3 py-2">{dash(job.location, hide)}</td>
+                  <td className="px-3 py-2">{job.employmentType ? jobAttributeLabel(lang, job.employmentType) : "—"}</td>
+                  <td className="px-3 py-2">{job.workArrangement ? jobAttributeLabel(lang, job.workArrangement) : "—"}</td>
+                  <td className="px-3 py-2">{job.engagement ? jobAttributeLabel(lang, job.engagement) : "—"}</td>
                   <td className="px-3 py-2">
                     <JobStatusEditor jobId={job.id} status={job.status} lang={lang} />
                   </td>
@@ -184,6 +193,13 @@ export default async function JobsPage({
               <span className={labelClass}>{t(lang, "title")}</span>
               <input className={fieldClass} name="title" />
             </label>
+            <label>
+              <span className={labelClass}>{t(lang, "location")}</span>
+              <input className={fieldClass} name="location" />
+            </label>
+            <AttributeSelect lang={lang} name="employmentType" label={t(lang, "employmentType")} options={EMPLOYMENT_TYPES} />
+            <AttributeSelect lang={lang} name="workArrangement" label={t(lang, "workArrangement")} options={WORK_ARRANGEMENTS} />
+            <AttributeSelect lang={lang} name="engagement" label={t(lang, "engagement")} options={ENGAGEMENTS} />
             <MentionTextarea
               lang={lang}
               name="description"

@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import type { Lang } from "@/lib/i18n";
-import { t } from "@/lib/i18n";
+import { jobAttributeLabel, t } from "@/lib/i18n";
 
 export const fieldClass =
   "w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-sm text-slate-100 outline-none focus:border-sky-500";
@@ -16,6 +16,34 @@ export const compactLabelClass = "mb-0.5 block text-[11px] leading-none text-sla
 export const primaryButton =
   "rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950 hover:bg-sky-400 disabled:opacity-60";
 export const quietButton = "rounded-md border border-slate-600 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-800";
+
+export function AttributeSelect({
+  lang,
+  name,
+  label,
+  options,
+  value = "",
+}: {
+  lang: Lang;
+  name: string;
+  label: string;
+  options: readonly string[];
+  value?: string;
+}) {
+  return (
+    <label>
+      <span className={labelClass}>{label}</span>
+      <select className={fieldClass} name={name} defaultValue={value}>
+        <option value="">—</option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {jobAttributeLabel(lang, option)}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
 
 export function SubmitButton({ label }: { label: string }) {
   const { pending } = useFormStatus();

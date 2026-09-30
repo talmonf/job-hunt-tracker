@@ -65,6 +65,22 @@ enum NoteType {
   other
 }
 
+enum EmploymentType {
+  full_time
+  part_time
+}
+
+enum WorkArrangement {
+  on_site
+  remote
+  hybrid
+}
+
+enum Engagement {
+  employee
+  freelance
+}
+
 enum EntityLinkKind {
   google_contact
   linkedin
@@ -195,6 +211,10 @@ model Job {
   user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   companyName            String
   title                  String    @default("")
+  location               String    @default("")
+  employmentType         EmploymentType?
+  workArrangement        WorkArrangement?
+  engagement             Engagement?
   description            String    @default("")
   interestDate           DateTime
   followUpAt             DateTime?

@@ -1,4 +1,4 @@
-import type { EventType, JobStatus } from "@prisma/client";
+import type { EmploymentType, Engagement, EventType, JobStatus, WorkArrangement } from "@prisma/client";
 import { dateTimeInputValue } from "./dates";
 
 export const JOB_STATUSES = [
@@ -21,6 +21,12 @@ export function statusesForJobList(selected: readonly string[]): JobStatus[] {
   if (picked.length > 0) return picked;
   return JOB_STATUSES.filter((status) => !(HIDDEN_FROM_DEFAULT_JOB_LIST as readonly string[]).includes(status));
 }
+
+export const EMPLOYMENT_TYPES = ["full_time", "part_time"] as const satisfies readonly EmploymentType[];
+
+export const WORK_ARRANGEMENTS = ["on_site", "remote", "hybrid"] as const satisfies readonly WorkArrangement[];
+
+export const ENGAGEMENTS = ["employee", "freelance"] as const satisfies readonly Engagement[];
 
 export const EVENT_TYPES = ["interest", "outreach", "application", "meeting", "status_change"] as const satisfies readonly EventType[];
 
