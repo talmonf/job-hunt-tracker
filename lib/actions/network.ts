@@ -7,6 +7,7 @@ import { requireUser } from "../session";
 import { parseDateOnly, requiredText } from "../forms";
 import { normalizeContactStatus } from "../contact-status";
 import { NOTE_TYPES } from "../notes";
+import { isHttpUrl } from "../entity-links";
 import type { NoteType } from "@prisma/client";
 
 export async function createNote(formData: FormData) {
@@ -32,6 +33,7 @@ export async function cloneNote(formData: FormData) {
   const note = await ownedNote(user.id, requiredText(formData.get("noteId")));
   if (!note) redirect("/notes?error=required");
   const suffix = user.uiLanguage === "he" ? "(עותק)" : "(copy)";
+  const links = await prisma.entityLink.findMany({ where: { noteId: note.id, userId: user.id } });
   const copy = await prisma.note.create({
     data: {
       userId: user.id,
@@ -41,6 +43,17 @@ export async function cloneNote(formData: FormData) {
       additionalInfo: note.additionalInfo,
       bodyEn: note.bodyEn,
       bodyHe: note.bodyHe,
+      entityLinks: {
+        create: links.map((link) => ({
+          userId: user.id,
+          kind: link.kind,
+          displayName: link.displayName,
+          title: link.title,
+          googleResourceName: link.googleResourceName,
+          url: link.url,
+          contactId: link.contactId,
+        })),
+      },
     },
   });
   redirect(`/notes/${copy.id}?created=1`);
@@ -138,6 +151,10 @@ function contactData(formData: FormData, timeZone: string) {
     nextActionDate: parseDateOnly(formData.get("nextActionDate"), timeZone),
     nextAction: requiredText(formData.get("nextAction")),
     contactDetails: String(formData.get("contactDetails") ?? ""),
+    linkedinUrl: (() => {
+      const value = requiredText(formData.get("linkedinUrl"));
+      return isHttpUrl(value) ? value : "";
+    })(),
     willingToRecommend: formData.get("willingToRecommend") === "1",
   };
 }

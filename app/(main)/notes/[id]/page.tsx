@@ -6,9 +6,13 @@ import { formatDateTime } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
 import { cloneNote, deleteNote, updateNote } from "@/lib/actions/network";
+import { toChipLink } from "@/lib/entity-links";
 import { PageFrame } from "@/components/chrome";
 import { ConfirmSubmit } from "@/components/widgets";
 import { NoteFields, jobNoteLabel } from "@/components/note-fields";
+import { ContactChip } from "@/components/contact-chip";
+import { EntityLinksSection } from "@/components/entity-links";
+import { MentionText } from "@/components/mention-text";
 
 export const dynamic = "force-dynamic";
 
@@ -23,22 +27,57 @@ export default async function NoteDetailPage({
   const hide = await hidePersonalInfo();
   const { id } = await params;
   const search = await searchParams;
-  const [note, jobs] = await Promise.all([
+  const [note, jobs, contacts] = await Promise.all([
     prisma.note.findFirst({
       where: { id, userId: user.id },
-      include: { job: true, events: { orderBy: { occurredAt: "desc" }, include: { job: true, contact: true } } },
+      include: {
+        job: true,
+        entityLinks: { orderBy: { createdAt: "asc" } },
+        events: { orderBy: { occurredAt: "desc" }, include: { job: true, contact: true } },
+      },
     }),
     prisma.job.findMany({ where: { userId: user.id }, orderBy: { companyName: "asc" } }),
+    prisma.contact.findMany({ where: { userId: user.id }, orderBy: { fullName: "asc" } }),
   ]);
   if (!note) notFound();
   const lang = user.uiLanguage;
+  const localContacts = contacts.map((contact) => ({
+    id: contact.id,
+    fullName: contact.fullName,
+    role: contact.role,
+    workplace: contact.workplace,
+    googleResourceName: contact.googleResourceName,
+    linkedinUrl: contact.linkedinUrl,
+  }));
+  const people = note.entityLinks.map(toChipLink);
+  const googleConnected = Boolean(user.contactsRefreshToken);
+  const lookup = { contacts: localContacts, links: people };
   return (
     <PageFrame lang={lang} backHref="/notes" title={dash(note.title, hide)} description={t(lang, "noteDetailIntro")} search={search}>
+      {(note.additionalInfo || note.bodyEn || note.bodyHe) ? (
+        <div className="mb-6 space-y-4">
+          <h2 className="text-lg">{t(lang, "preview")}</h2>
+          {note.additionalInfo ? <MentionText text={note.additionalInfo} hide={hide} lookup={lookup} /> : null}
+          {note.bodyEn ? <MentionText text={note.bodyEn} hide={hide} lookup={lookup} /> : null}
+          {note.bodyHe ? <MentionText text={note.bodyHe} hide={hide} lookup={lookup} /> : null}
+        </div>
+      ) : null}
       <NoteFields
         lang={lang}
         action={updateNote}
         note={note}
         jobs={jobs.map((job) => ({ id: job.id, label: dash(jobNoteLabel(job), hide) }))}
+        localContacts={localContacts}
+        googleConnected={googleConnected}
+      />
+      <EntityLinksSection
+        lang={lang}
+        hide={hide}
+        links={people}
+        noteId={note.id}
+        localContacts={localContacts}
+        googleConnected={googleConnected}
+        allowUrl
       />
       <div className="mt-4 flex flex-wrap gap-4">
         <form action={cloneNote}>
@@ -68,9 +107,17 @@ export default async function NoteDetailPage({
                   </Link>
                 ) : null}
                 {event.contact ? (
-                  <Link className="ms-2 text-sky-300" href={`/contacts/${event.contactId}`}>
-                    {dash(event.contact.fullName, hide)}
-                  </Link>
+                  <span className="ms-2 inline-block">
+                    <ContactChip
+                      hide={hide}
+                      link={{
+                        kind: "local_contact",
+                        displayName: event.contact.fullName,
+                        title: event.contact.role,
+                        contactId: event.contact.id,
+                      }}
+                    />
+                  </span>
                 ) : null}
                 <span className="ms-2 text-slate-400">{formatDateTime(event.occurredAt, user.timezone)}</span>
               </li>

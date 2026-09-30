@@ -3,7 +3,14 @@ import { requireUser } from "@/lib/session";
 import { googleConfigured, smtpConfigured } from "@/lib/mail";
 import { t } from "@/lib/i18n";
 import { firstParam } from "@/lib/http";
-import { disconnectCalendar, importMentme, saveSettings, startCalendarLink } from "@/lib/actions/settings";
+import {
+  disconnectCalendar,
+  disconnectGoogleContacts,
+  importMentme,
+  saveSettings,
+  startCalendarLink,
+  startGoogleContactsLink,
+} from "@/lib/actions/settings";
 import { PageFrame } from "@/components/chrome";
 import { SubmitButton, fieldClass, labelClass } from "@/components/widgets";
 
@@ -78,6 +85,27 @@ export default async function SettingsPage({
         )
       ) : (
         <p className="text-sm text-slate-300">{t(lang, "calendarMissing")}</p>
+      )}
+
+      <h2 className="mb-2 mt-8 text-lg">{t(lang, "googleContacts")}</h2>
+      {googleConfigured() ? (
+        user.contactsRefreshToken ? (
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span>
+              {t(lang, "googleContactsLinked")}: {user.contactsEmail || "Google"}
+            </span>
+            <form action={disconnectGoogleContacts}>
+              <button className="text-rose-300" type="submit">{t(lang, "disconnectGoogleContacts")}</button>
+            </form>
+          </div>
+        ) : (
+          <form action={startGoogleContactsLink}>
+            <p className="mb-2 text-sm text-slate-300">{t(lang, "googleContactsHint")}</p>
+            <SubmitButton label={t(lang, "linkGoogleContacts")} />
+          </form>
+        )
+      ) : (
+        <p className="text-sm text-slate-300">{t(lang, "googleContactsMissing")}</p>
       )}
     </PageFrame>
   );

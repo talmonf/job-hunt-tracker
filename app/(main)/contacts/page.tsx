@@ -112,7 +112,19 @@ export default async function ContactsPage({
       )}
       {firstParam(search.modal) === "new" ? (
         <Modal title={t(lang, "addContact")} closeHref={`/contacts${preserveQuery(search, {}, ["modal"])}`} closeLabel={t(lang, "close")}>
-          <ContactFields lang={lang} action={createContact} />
+          <ContactFields
+            lang={lang}
+            action={createContact}
+            localContacts={contacts.map((item) => ({
+              id: item.id,
+              fullName: item.fullName,
+              role: item.role,
+              workplace: item.workplace,
+              googleResourceName: item.googleResourceName,
+              linkedinUrl: item.linkedinUrl,
+            }))}
+            googleConnected={Boolean(user.contactsRefreshToken)}
+          />
         </Modal>
       ) : null}
     </PageFrame>

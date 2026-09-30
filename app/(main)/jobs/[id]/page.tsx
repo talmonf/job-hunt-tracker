@@ -6,10 +6,14 @@ import { statusLabel, t } from "@/lib/i18n";
 import { dash, maskText } from "@/lib/mask";
 import { eventFormValues } from "@/lib/events";
 import { addJobUrl, deleteCv, deleteJob, deleteJobUrl, saveEvent, updateJob, uploadCv } from "@/lib/actions/jobs";
+import { toChipLink } from "@/lib/entity-links";
 import { PageFrame, statusClass } from "@/components/chrome";
 import { DateField, DateTimeField, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
 import { EventForm } from "@/components/event-form";
 import { EventHistoryTable } from "@/components/event-history";
+import { EntityLinksSection } from "@/components/entity-links";
+import { MentionText } from "@/components/mention-text";
+import { MentionTextarea } from "@/components/mention-textarea";
 import { firstParam } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
@@ -25,20 +29,34 @@ export default async function JobDetailPage({
   const hide = await hidePersonalInfo();
   const { id } = await params;
   const search = await searchParams;
-  const job = await prisma.job.findFirst({
-    where: { id, userId: user.id },
-    include: {
-      urls: true,
-      cvs: { orderBy: { uploadedAt: "desc" } },
-      events: { orderBy: { occurredAt: "desc" } },
-    },
-  });
+  const [job, notes, contacts] = await Promise.all([
+    prisma.job.findFirst({
+      where: { id, userId: user.id },
+      include: {
+        urls: true,
+        cvs: { orderBy: { uploadedAt: "desc" } },
+        events: { orderBy: { occurredAt: "desc" } },
+        entityLinks: { orderBy: { createdAt: "asc" } },
+      },
+    }),
+    prisma.note.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.contact.findMany({ where: { userId: user.id }, orderBy: { fullName: "asc" } }),
+  ]);
   if (!job) notFound();
-  const notes = await prisma.note.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-  });
   const lang = user.uiLanguage;
+  const localContacts = contacts.map((contact) => ({
+    id: contact.id,
+    fullName: contact.fullName,
+    role: contact.role,
+    workplace: contact.workplace,
+    googleResourceName: contact.googleResourceName,
+    linkedinUrl: contact.linkedinUrl,
+  }));
+  const people = job.entityLinks.map(toChipLink);
+  const googleConnected = Boolean(user.contactsRefreshToken);
   const editing = job.events.find((event) => event.id === firstParam(search.editEvent));
   return (
     <PageFrame lang={lang} backHref="/jobs" title={dash(job.companyName, hide)} description={t(lang, "jobDetailIntro")} search={search}>
@@ -55,10 +73,24 @@ export default async function JobDetailPage({
           <span className={labelClass}>{t(lang, "title")}</span>
           <input className={fieldClass} name="title" defaultValue={job.title} />
         </label>
-        <label className="md:col-span-2">
-          <span className={labelClass}>{t(lang, "description")}</span>
-          <textarea className={fieldClass} name="description" rows={5} defaultValue={job.description} />
-        </label>
+        <div className="md:col-span-2">
+          {job.description ? (
+            <div className="mb-3">
+              <p className={`${labelClass}`}>{t(lang, "preview")}</p>
+              <MentionText text={job.description} hide={hide} lookup={{ contacts: localContacts, links: people }} />
+            </div>
+          ) : null}
+          <MentionTextarea
+            lang={lang}
+            name="description"
+            label={t(lang, "description")}
+            defaultValue={job.description}
+            rows={5}
+            localContacts={localContacts}
+            googleConnected={googleConnected}
+            allowUrl={false}
+          />
+        </div>
         <label>
           <span className={labelClass}>{t(lang, "interestDate")}</span>
           <DateField name="interestDate" defaultValue={dateInputValue(job.interestDate, user.timezone)} required lang={lang} />
@@ -100,6 +132,15 @@ export default async function JobDetailPage({
         <input className={fieldClass} name="url" placeholder="https://" />
         <SubmitButton label={t(lang, "add")} />
       </form>
+
+      <EntityLinksSection
+        lang={lang}
+        hide={hide}
+        links={people}
+        jobId={job.id}
+        localContacts={localContacts}
+        googleConnected={googleConnected}
+      />
 
       <h2 className="mb-2 mt-8 text-lg">{t(lang, "cvCount")}</h2>
       <ul className="space-y-2 text-sm">

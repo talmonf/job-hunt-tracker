@@ -34,6 +34,12 @@ test("meeting labels say the stage was scheduled", () => {
   assert.equal(eventHappenedLabel("en", "application"), "Application sent");
 });
 
+test("status updates include the new status", () => {
+  assert.equal(eventHappenedLabel("en", "status_change", null, "rejected"), "Status update (Rejected)");
+  assert.equal(eventHappenedLabel("he", "status_change", null, "rejected"), "עדכון סטטוס (נדחה)");
+  assert.equal(eventHappenedLabel("en", "status_change"), "Status update");
+});
+
 test("upcoming meetings name the interview kind", () => {
   assert.equal(meetingKindLabel("en", "hr"), "HR / screening interview");
   assert.equal(meetingKindLabel("en", "technical"), "Technical interview");

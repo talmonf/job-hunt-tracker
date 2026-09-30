@@ -42,14 +42,24 @@ export default async function NotesPage({
         }
       : {}),
   };
-  const [notes, jobs] = await Promise.all([
+  const [notes, jobs, contacts] = await Promise.all([
     prisma.note.findMany({
       where,
       include: { job: true },
       orderBy: { createdAt: "desc" },
     }),
     prisma.job.findMany({ where: { userId: user.id }, orderBy: { companyName: "asc" } }),
+    prisma.contact.findMany({ where: { userId: user.id }, orderBy: { fullName: "asc" } }),
   ]);
+  const localContacts = contacts.map((contact) => ({
+    id: contact.id,
+    fullName: contact.fullName,
+    role: contact.role,
+    workplace: contact.workplace,
+    googleResourceName: contact.googleResourceName,
+    linkedinUrl: contact.linkedinUrl,
+  }));
+  const googleConnected = Boolean(user.contactsRefreshToken);
   const jobOptions = jobs.map((job) => ({ id: job.id, label: dash(jobNoteLabel(job), hide) }));
   return (
     <PageFrame lang={lang} title={t(lang, "notes")} description={t(lang, "notesIntro")} search={search}>
@@ -148,7 +158,7 @@ export default async function NotesPage({
       )}
       {firstParam(search.modal) === "new" ? (
         <Modal title={t(lang, "addNote")} closeHref={`/notes${preserveQuery(search, {}, ["modal"])}`} closeLabel={t(lang, "close")}>
-          <NoteFields lang={lang} action={createNote} jobs={jobOptions} />
+          <NoteFields lang={lang} action={createNote} jobs={jobOptions} localContacts={localContacts} googleConnected={googleConnected} />
         </Modal>
       ) : null}
     </PageFrame>

@@ -7,10 +7,15 @@ import { dash } from "@/lib/mask";
 import { eventFormValues } from "@/lib/events";
 import { deleteContact, updateContact } from "@/lib/actions/network";
 import { saveEvent } from "@/lib/actions/jobs";
+import { toChipLink } from "@/lib/entity-links";
 import { PageFrame } from "@/components/chrome";
 import { EventForm } from "@/components/event-form";
 import { EventHistoryTable } from "@/components/event-history";
 import { ContactFields } from "@/components/contact-fields";
+import { ContactChip } from "@/components/contact-chip";
+import { ContactGoogleLink } from "@/components/contact-google-link";
+import { EntityLinksSection } from "@/components/entity-links";
+import { MentionText } from "@/components/mention-text";
 import { firstParam } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
@@ -26,25 +31,82 @@ export default async function ContactDetailPage({
   const hide = await hidePersonalInfo();
   const { id } = await params;
   const search = await searchParams;
-  const contact = await prisma.contact.findFirst({
-    where: { id, userId: user.id },
-    include: { events: { orderBy: { occurredAt: "desc" } } },
-  });
+  const [contact, notes, contacts] = await Promise.all([
+    prisma.contact.findFirst({
+      where: { id, userId: user.id },
+      include: { events: { orderBy: { occurredAt: "desc" } }, parentLinks: { orderBy: { createdAt: "asc" } } },
+    }),
+    prisma.note.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.contact.findMany({ where: { userId: user.id }, orderBy: { fullName: "asc" } }),
+  ]);
   if (!contact) notFound();
-  const notes = await prisma.note.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-  });
   const lang = user.uiLanguage;
   const editing = contact.events.find((event) => event.id === firstParam(search.editEvent));
+  const localContacts = contacts.map((item) => ({
+    id: item.id,
+    fullName: item.fullName,
+    role: item.role,
+    workplace: item.workplace,
+    googleResourceName: item.googleResourceName,
+    linkedinUrl: item.linkedinUrl,
+  }));
+  const people = contact.parentLinks.map(toChipLink);
+  const googleConnected = Boolean(user.contactsRefreshToken);
+  const lookup = { contacts: localContacts, links: people };
   return (
     <PageFrame lang={lang} backHref="/contacts" title={dash(contact.fullName, hide)} description={t(lang, "contactDetailIntro")} search={search}>
+      <div className="mb-4 space-y-3">
+        <ContactGoogleLink
+          lang={lang}
+          hide={hide}
+          contactId={contact.id}
+          fullName={contact.fullName}
+          role={contact.role}
+          googleResourceName={contact.googleResourceName}
+          googleConnected={googleConnected}
+        />
+        {contact.linkedinUrl ? (
+          <ContactChip
+            hide={hide}
+            link={{ kind: "linkedin", displayName: contact.fullName, title: contact.role, url: contact.linkedinUrl }}
+          />
+        ) : null}
+        {contact.contactDetails || contact.summary ? (
+          <div className="space-y-3">
+            {contact.contactDetails ? (
+              <div>
+                <p className="mb-1 text-xs text-slate-300">{t(lang, "preview")}</p>
+                <MentionText text={contact.contactDetails} hide={hide} lookup={lookup} />
+              </div>
+            ) : null}
+            {contact.summary ? (
+              <div>
+                <p className="mb-1 text-xs text-slate-300">{t(lang, "preview")}</p>
+                <MentionText text={contact.summary} hide={hide} lookup={lookup} />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
       <ContactFields
         lang={lang}
         action={updateContact}
         contact={contact}
         contactedAt={contact.contactedAt ? dateInputValue(contact.contactedAt, user.timezone) : ""}
         nextActionDate={contact.nextActionDate ? dateInputValue(contact.nextActionDate, user.timezone) : ""}
+        localContacts={localContacts}
+        googleConnected={googleConnected}
+      />
+      <EntityLinksSection
+        lang={lang}
+        hide={hide}
+        links={people}
+        parentContactId={contact.id}
+        localContacts={localContacts.filter((item) => item.id !== contact.id)}
+        googleConnected={googleConnected}
       />
       <h2 className="mb-2 mt-8 text-lg">{t(lang, "logEvent")}</h2>
       <EventForm

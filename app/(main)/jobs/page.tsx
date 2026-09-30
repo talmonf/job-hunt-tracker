@@ -11,6 +11,7 @@ import { formatDate, formatDateTime } from "@/lib/dates";
 import { createJob } from "@/lib/actions/jobs";
 import { EmptyState, Modal, PageFrame, statusClass } from "@/components/chrome";
 import { DateField, DateTimeField, MultiSelect, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
+import { MentionTextarea } from "@/components/mention-textarea";
 
 export const dynamic = "force-dynamic";
 
@@ -49,11 +50,23 @@ export default async function JobsPage({
     ...(interestFrom || interestTo ? { interestDate: { gte: interestFrom ?? undefined, lte: interestTo ?? undefined } } : {}),
     ...(followFrom || followTo ? { followUpAt: { gte: followFrom ?? undefined, lte: followTo ?? undefined } } : {}),
   };
-  const jobs = await prisma.job.findMany({
-    where,
-    orderBy: { [sort]: dir },
-    include: { _count: { select: { urls: true, cvs: true } } },
-  });
+  const [jobs, contacts] = await Promise.all([
+    prisma.job.findMany({
+      where,
+      orderBy: { [sort]: dir },
+      include: { _count: { select: { urls: true, cvs: true } } },
+    }),
+    prisma.contact.findMany({ where: { userId: user.id }, orderBy: { fullName: "asc" } }),
+  ]);
+  const localContacts = contacts.map((contact) => ({
+    id: contact.id,
+    fullName: contact.fullName,
+    role: contact.role,
+    workplace: contact.workplace,
+    googleResourceName: contact.googleResourceName,
+    linkedinUrl: contact.linkedinUrl,
+  }));
+  const googleConnected = Boolean(user.contactsRefreshToken);
   const keep = preserveQuery(search, {}, ["modal"]);
   const closeHref = `/jobs${preserveQuery(search, {}, ["modal"])}`;
   const today = new Date();
@@ -167,10 +180,15 @@ export default async function JobsPage({
               <span className={labelClass}>{t(lang, "title")}</span>
               <input className={fieldClass} name="title" />
             </label>
-            <label>
-              <span className={labelClass}>{t(lang, "description")}</span>
-              <textarea className={fieldClass} name="description" rows={4} />
-            </label>
+            <MentionTextarea
+              lang={lang}
+              name="description"
+              label={t(lang, "description")}
+              rows={4}
+              localContacts={localContacts}
+              googleConnected={googleConnected}
+              allowUrl={false}
+            />
             <label>
               <span className={labelClass}>{t(lang, "urls")}</span>
               <input className={fieldClass} name="url1" placeholder="https://" />

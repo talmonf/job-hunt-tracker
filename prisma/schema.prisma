@@ -63,6 +63,13 @@ enum NoteType {
   other
 }
 
+enum EntityLinkKind {
+  google_contact
+  linkedin
+  url
+  local_contact
+}
+
 model User {
   id                   String     @id @default(cuid())
   email                String     @unique
@@ -81,6 +88,8 @@ model User {
   lastDigestLocalDate  String?
   calendarRefreshToken String?
   calendarEmail        String?
+  contactsRefreshToken String?
+  contactsEmail        String?
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
 
@@ -96,6 +105,7 @@ model User {
   notes         Note[]
   events        Event[]
   notifications Notification[]
+  entityLinks   EntityLink[]
 }
 
 model UserGoals {
@@ -197,6 +207,7 @@ model Job {
   cvs                    JobCv[]
   events                 Event[]
   notes                  Note[]
+  entityLinks            EntityLink[]
 
   @@unique([userId, importKey])
   @@index([userId, status])
@@ -240,9 +251,12 @@ model Contact {
   contactDetails     String    @default("")
   willingToRecommend Boolean   @default(false)
   googleResourceName String?
+  linkedinUrl        String    @default("")
   importKey          String?
   createdAt          DateTime  @default(now())
   events             Event[]
+  entityLinks        EntityLink[] @relation("LinkContact")
+  parentLinks        EntityLink[] @relation("ParentContact")
 
   @@unique([userId, importKey])
   @@index([userId, fullName])
@@ -262,9 +276,34 @@ model Note {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @default(now()) @updatedAt
   events         Event[]
+  entityLinks    EntityLink[]
 
   @@index([userId, createdAt])
   @@index([jobId])
+}
+
+model EntityLink {
+  id                 String          @id @default(cuid())
+  userId             String
+  user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind               EntityLinkKind
+  displayName        String
+  title              String          @default("")
+  googleResourceName String?
+  url                String          @default("")
+  contactId          String?
+  contact            Contact?        @relation("LinkContact", fields: [contactId], references: [id], onDelete: SetNull)
+  jobId              String?
+  job                Job?            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  noteId             String?
+  note               Note?           @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  parentContactId    String?
+  parentContact      Contact?        @relation("ParentContact", fields: [parentContactId], references: [id], onDelete: Cascade)
+  createdAt          DateTime        @default(now())
+
+  @@index([userId, jobId])
+  @@index([userId, noteId])
+  @@index([userId, parentContactId])
 }
 
 model Event {
