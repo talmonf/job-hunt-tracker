@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
-import { formatDate, formatDateTime, formatScheduledRange, startOfIsoWeek } from "@/lib/dates";
-import { statusLabel, t } from "@/lib/i18n";
+import { addLocalDays, formatDate, formatDateTime, formatScheduledRange, formatWeekRange, startOfSundayWeek } from "@/lib/dates";
+import { channelLabel, meetingKindLabel, statusLabel, t, type Lang } from "@/lib/i18n";
 import { JOB_STATUSES } from "@/lib/events";
 import { dash } from "@/lib/mask";
 import { PageFrame, statusClass } from "@/components/chrome";
@@ -14,8 +14,8 @@ export default async function DashboardPage() {
   const hide = await hidePersonalInfo();
   const lang = user.uiLanguage;
   const goals = await prisma.userGoals.findUnique({ where: { userId: user.id } });
-  const weekStart = startOfIsoWeek(new Date(), user.timezone);
-  const weekEnd = new Date(weekStart.getTime() + 7 * 86400000);
+  const weekStart = startOfSundayWeek(new Date(), user.timezone);
+  const weekEnd = addLocalDays(weekStart, 7, user.timezone);
   const horizon = new Date(Date.now() + user.digestDaysAhead * 86400000);
   const [applications, outreaches, meetings, statuses, followUps, upcomingMeetings, nextSteps] = await Promise.all([
     prisma.event.count({ where: { userId: user.id, type: "application", occurredAt: { gte: weekStart, lt: weekEnd } } }),
@@ -56,7 +56,10 @@ export default async function DashboardPage() {
   const counts = new Map(statuses.map((row) => [row.status, row._count._all]));
   return (
     <PageFrame lang={lang} title={t(lang, "dashboard")} description={t(lang, "dashboardIntro")}>
-      <h2 className="mb-3 text-lg">{t(lang, "thisWeek")}</h2>
+      <h2 className="mb-3 text-lg">
+        {t(lang, "thisWeek")}
+        <span className="ms-2 text-sm font-normal text-slate-400">{formatWeekRange(weekStart, user.timezone, lang)}</span>
+      </h2>
       <div className="grid gap-4 md:grid-cols-3">
         <Bar label={t(lang, "applicationsWeek")} actual={applications} goal={applicationGoal} />
         <Bar label={t(lang, "networkingWeek")} actual={outreaches} goal={networkingGoal} />
@@ -86,11 +89,23 @@ export default async function DashboardPage() {
               </Link>
             </li>
           ))}
-          {upcomingMeetings.map((meeting) => (
-            <li key={meeting.id}>
-              {formatScheduledRange(meeting.startsAt ?? meeting.occurredAt, meeting.endsAt, user.timezone, lang)} · {dash(meeting.job?.companyName || meeting.contact?.fullName || "", hide)}
-            </li>
-          ))}
+          {upcomingMeetings.map((meeting) => {
+            const href = meeting.jobId ? `/jobs/${meeting.jobId}` : meeting.contactId ? `/contacts/${meeting.contactId}` : "";
+            const when = formatScheduledRange(meeting.startsAt ?? meeting.occurredAt, meeting.endsAt, user.timezone, lang);
+            const details = upcomingMeetingDetails(meeting, lang, hide);
+            const line = `${when} · ${details}`;
+            return (
+              <li key={meeting.id}>
+                {href ? (
+                  <Link className="text-sky-300" href={href}>
+                    {line}
+                  </Link>
+                ) : (
+                  line
+                )}
+              </li>
+            );
+          })}
           {nextSteps.map((contact) => (
             <li key={contact.id}>
               <Link className="text-sky-300" href={`/contacts/${contact.id}`}>
@@ -102,6 +117,28 @@ export default async function DashboardPage() {
       )}
     </PageFrame>
   );
+}
+
+function upcomingMeetingDetails(
+  meeting: {
+    stage: string | null;
+    channel: string | null;
+    counterpartyName: string;
+    job: { companyName: string; title: string } | null;
+    contact: { fullName: string } | null;
+  },
+  lang: Lang,
+  hide: boolean,
+) {
+  return [
+    dash(meeting.job?.companyName || meeting.contact?.fullName || "", hide),
+    meeting.job?.title ? dash(meeting.job.title, hide) : "",
+    meetingKindLabel(lang, meeting.stage),
+    meeting.channel ? channelLabel(lang, meeting.channel) : "",
+    meeting.counterpartyName ? dash(meeting.counterpartyName, hide) : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 function Bar({ label, actual, goal }: { label: string; actual: number; goal: number }) {

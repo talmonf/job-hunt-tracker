@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { excelSerialToUtcDate, formatDate, formatScheduledRange, wallClockToUtc } from "./dates";
+import {
+  excelSerialToUtcDate,
+  formatDate,
+  formatScheduledRange,
+  formatWeekRange,
+  startOfSundayWeek,
+  wallClockToUtc,
+} from "./dates";
 
 test("excel serial 46271 is 6 September 2026", () => {
   const date = excelSerialToUtcDate(46271);
@@ -21,4 +28,22 @@ test("scheduled meeting range omits year and repeats the date once", () => {
   assert.ok(end);
   assert.equal(formatScheduledRange(start!, end, "Asia/Jerusalem", "en"), "Tues 6/10 14:00 - 14:30");
   assert.equal(formatScheduledRange(start!, end, "Asia/Jerusalem", "he"), "יום ג׳ 6/10 14:00 - 14:30");
+});
+
+test("this week is Sunday to Saturday", () => {
+  const wednesday = wallClockToUtc("2026-09-30T10:00", "Asia/Jerusalem");
+  assert.ok(wednesday);
+  const weekStart = startOfSundayWeek(wednesday!, "Asia/Jerusalem");
+  assert.equal(formatDate(weekStart, "Asia/Jerusalem"), "27/09/2026");
+  assert.equal(formatWeekRange(weekStart, "Asia/Jerusalem", "en"), "Sun 27 Sep - Sat 3 Oct");
+  assert.equal(formatWeekRange(weekStart, "Asia/Jerusalem", "he"), "יום א׳ 27 ספט׳ - שבת 3 אוק׳");
+});
+
+test("week labels match Sunday-Saturday examples", () => {
+  const lateAugust = wallClockToUtc("2026-08-30T00:00", "Asia/Jerusalem");
+  const earlySeptember = wallClockToUtc("2026-09-06T00:00", "Asia/Jerusalem");
+  assert.ok(lateAugust);
+  assert.ok(earlySeptember);
+  assert.equal(formatWeekRange(lateAugust!, "Asia/Jerusalem", "en"), "Sun 30 Aug - Sat 5 Sep");
+  assert.equal(formatWeekRange(earlySeptember!, "Asia/Jerusalem", "en"), "Sun 6 Sep - Sat 12 Sep");
 });

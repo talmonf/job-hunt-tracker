@@ -152,6 +152,7 @@ const dict = {
     attach: "Attach file",
     eventType: "What happened",
     when: "Date and time",
+    applicationSentAt: "Date sent",
     meetingFrom: "From",
     meetingTo: "To",
     scheduled: "Scheduled",
@@ -385,6 +386,7 @@ const dict = {
     attach: "צירוף קובץ",
     eventType: "מה קרה",
     when: "תאריך ושעה",
+    applicationSentAt: "תאריך הגשה",
     meetingFrom: "מתאריך ושעה",
     meetingTo: "עד תאריך ושעה",
     scheduled: "מועד",
@@ -586,6 +588,12 @@ export function eventHappenedLabel(lang: Lang, type: string, stage?: string | nu
   const stageText = stage ? stageLabel(lang, stage) : "";
   if (lang === "he") return stageText ? `פגישת ${stageText} נקבעה` : "פגישה נקבעה";
   return stageText ? `${stageText} meeting scheduled` : "Meeting scheduled";
+}
+
+export function meetingKindLabel(lang: Lang, stage?: string | null): string {
+  const stageText = stage ? stageLabel(lang, stage) : "";
+  if (lang === "he") return stageText ? `ראיון ${stageText}` : "ראיון";
+  return stageText ? `${stageText} interview` : "Interview";
 }
 
 const noteTypeEn: Record<string, string> = {

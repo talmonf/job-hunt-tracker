@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { defaultResultingStatus, eventLoggedAt, eventScheduledStart } from "./events";
-import { eventHappenedLabel } from "./i18n";
+import { eventHappenedLabel, meetingKindLabel } from "./i18n";
 
 test("event types map to job status", () => {
   assert.equal(defaultResultingStatus("interest"), "interest");
@@ -32,4 +32,10 @@ test("meeting labels say the stage was scheduled", () => {
   assert.equal(eventHappenedLabel("en", "meeting", "hr"), "HR / screening meeting scheduled");
   assert.equal(eventHappenedLabel("he", "meeting", "hr"), "פגישת אישיותי / HR נקבעה");
   assert.equal(eventHappenedLabel("en", "application"), "Application sent");
+});
+
+test("upcoming meetings name the interview kind", () => {
+  assert.equal(meetingKindLabel("en", "hr"), "HR / screening interview");
+  assert.equal(meetingKindLabel("en", "technical"), "Technical interview");
+  assert.equal(meetingKindLabel("he", "hr"), "ראיון אישיותי / HR");
 });

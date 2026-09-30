@@ -103,7 +103,7 @@ export function EventForm({
         </div>
       )}
       <div>
-        <span className={labelClass}>{t(lang, "when")}</span>
+        <span className={labelClass}>{type === "application" ? t(lang, "applicationSentAt") : t(lang, "when")}</span>
         <DateTimeField name="occurredAt" defaultValue={event?.occurredAt} required lang={lang} />
       </div>
       {type === "meeting" ? (

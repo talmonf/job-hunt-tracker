@@ -22,6 +22,8 @@ export function formatTime(date: Date, timeZone: string): string {
 
 const weekdayEn = ["Sun", "Mon", "Tues", "Wed", "Thurs", "Fri", "Sat"] as const;
 const weekdayHe = ["יום א׳", "יום ב׳", "יום ג׳", "יום ד׳", "יום ה׳", "יום ו׳", "שבת"] as const;
+const monthEn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
+const monthHe = ["ינו׳", "פבר׳", "מרץ", "אפר׳", "מאי", "יוני", "יולי", "אוג׳", "ספט׳", "אוק׳", "נוב׳", "דצמ׳"] as const;
 
 function weekdayIndex(date: Date, timeZone: string): number {
   const weekday = new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short" }).format(date);
@@ -89,16 +91,38 @@ export function localHour(date: Date, timeZone: string): number {
   return partsInZone(date, timeZone).hour;
 }
 
-export function startOfIsoWeek(now: Date, timeZone: string): Date {
+export function addLocalDays(date: Date, days: number, timeZone: string): Date {
+  const parts = partsInZone(date, timeZone);
+  const noon = wallClockToUtc(`${parts.year}-${pad(parts.month)}-${pad(parts.day)}T12:00`, timeZone);
+  if (!noon) return addDays(date, days);
+  const shifted = partsInZone(new Date(noon.getTime() + days * 86400000), timeZone);
+  return (
+    wallClockToUtc(
+      `${shifted.year}-${pad(shifted.month)}-${pad(shifted.day)}T${pad(parts.hour)}:${pad(parts.minute)}`,
+      timeZone,
+    ) ?? addDays(date, days)
+  );
+}
+
+export function startOfSundayWeek(now: Date, timeZone: string): Date {
   const parts = partsInZone(now, timeZone);
   const noon = wallClockToUtc(`${parts.year}-${pad(parts.month)}-${pad(parts.day)}T12:00`, timeZone);
   if (!noon) return now;
-  const weekday = new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short" }).format(noon);
-  const map: Record<string, number> = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
-  const delta = map[weekday] ?? 0;
-  const startNoon = new Date(noon.getTime() - delta * 86400000);
+  const startNoon = new Date(noon.getTime() - weekdayIndex(noon, timeZone) * 86400000);
   const startParts = partsInZone(startNoon, timeZone);
   return wallClockToUtc(`${startParts.year}-${pad(startParts.month)}-${pad(startParts.day)}T00:00`, timeZone) ?? startNoon;
+}
+
+export function formatWeekRange(weekStart: Date, timeZone: string, lang: "en" | "he" = "en"): string {
+  const weekEnd = addLocalDays(weekStart, 6, timeZone);
+  return `${formatWeekdayDayMonthShort(weekStart, timeZone, lang)} - ${formatWeekdayDayMonthShort(weekEnd, timeZone, lang)}`;
+}
+
+function formatWeekdayDayMonthShort(date: Date, timeZone: string, lang: "en" | "he"): string {
+  const parts = partsInZone(date, timeZone);
+  const weekday = (lang === "he" ? weekdayHe : weekdayEn)[weekdayIndex(date, timeZone)];
+  const month = (lang === "he" ? monthHe : monthEn)[parts.month - 1];
+  return `${weekday} ${parts.day} ${month}`;
 }
 
 function partsInZone(date: Date, timeZone: string) {
