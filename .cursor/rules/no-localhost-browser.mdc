@@ -1,0 +1,17 @@
+---
+description: Do not use IDE browser tools against the local app
+alwaysApply: true
+---
+
+# No localhost browser verification
+
+In this workspace, Cursor browser tools work on public sites but **do not work** against the local Next.js app (`http://localhost:*`, `http://127.0.0.1:*`). Navigating there hangs or aborts. The Events app is also behind login.
+
+**Do not:**
+- Call `browser_navigate` / other IDE browser tools to localhost
+- Start a second `next dev` just to "verify in the browser"
+- Retry after an abort
+
+**Do instead:**
+- Unit tests, or `curl` only if an endpoint is actually unauthenticated
+- Ask the user to check the running app on port 3000 if a visual pass is needed
