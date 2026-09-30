@@ -119,6 +119,8 @@ export function EmptyState({ children }: { children: ReactNode }) {
 export function statusClass(status: string) {
   if (status === "offer") return "text-emerald-400";
   if (status === "rejected") return "text-rose-400";
+  if (status === "not_applicable") return "text-slate-400";
+  if (status === "parked") return "text-slate-500";
   if (status === "interviewing") return "text-amber-300";
   if (status === "applied" || status === "contacted") return "text-sky-300";
   return "text-slate-200";

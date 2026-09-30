@@ -26,6 +26,8 @@ enum JobStatus {
   rejected
   withdrawn
   on_hold
+  parked
+  not_applicable
 }
 
 enum EventType {

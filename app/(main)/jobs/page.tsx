@@ -1,16 +1,16 @@
 import Link from "next/link";
-import type { JobStatus, Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { allParams, firstParam, preserveQuery } from "@/lib/http";
 import { parseDateOnly } from "@/lib/forms";
-import { JOB_STATUSES } from "@/lib/events";
-import { statusLabel, t } from "@/lib/i18n";
+import { JOB_STATUSES, statusesForJobList } from "@/lib/events";
+import { statusLabel, t, type Lang } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { createJob } from "@/lib/actions/jobs";
 import { EmptyState, Modal, PageFrame, statusClass } from "@/components/chrome";
-import { DateField, DateTimeField, MultiSelect, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
+import { DateField, DateTimeField, MultiSelect, SubmitButton, compactFieldClass, compactLabelClass, fieldClass, labelClass } from "@/components/widgets";
 import { JobUrlsEditor } from "@/components/job-urls";
 import { MentionTextarea } from "@/components/mention-textarea";
 
@@ -28,9 +28,8 @@ export default async function JobsPage({
   const search = await searchParams;
   const lang = user.uiLanguage;
   const q = firstParam(search.q);
-  const statuses = allParams(search.status).filter((status): status is JobStatus =>
-    (JOB_STATUSES as readonly string[]).includes(status),
-  );
+  const requestedStatuses = allParams(search.status);
+  const statuses = statusesForJobList(requestedStatuses);
   const sort = SORTS.includes(firstParam(search.sort) as (typeof SORTS)[number]) ? (firstParam(search.sort) as (typeof SORTS)[number]) : "followUpAt";
   const dir = firstParam(search.dir) === "desc" ? "desc" : "asc";
   const interestFrom = parseDateOnly(firstParam(search.interestFrom), user.timezone);
@@ -47,7 +46,7 @@ export default async function JobsPage({
           ],
         }
       : {}),
-    ...(statuses.length ? { status: { in: statuses } } : {}),
+    status: { in: statuses },
     ...(interestFrom || interestTo ? { interestDate: { gte: interestFrom ?? undefined, lte: interestTo ?? undefined } } : {}),
     ...(followFrom || followTo ? { followUpAt: { gte: followFrom ?? undefined, lte: followTo ?? undefined } } : {}),
   };
@@ -83,24 +82,24 @@ export default async function JobsPage({
           {t(lang, "addJob")}
         </Link>
       </div>
-      <form className="mb-4 rounded-lg border border-slate-700 p-3" method="get">
-        <fieldset>
-          <legend className="px-1 text-sm text-slate-200">{t(lang, "filters")}</legend>
+      <form className="mb-2 rounded-md border border-slate-700 px-2 py-1" method="get">
+        <fieldset className="m-0 min-w-0 border-0 p-0" aria-label={t(lang, "filters")}>
           <input type="hidden" name="sort" value={sort} />
           <input type="hidden" name="dir" value={dir} />
           {["created", "updated", "error", "warn"].map((key) =>
             firstParam(search[key]) ? <input key={key} type="hidden" name={key} value={firstParam(search[key])} /> : null,
           )}
-          <div className="mt-2 grid gap-3 md:grid-cols-3">
-            <label>
-              <span className={labelClass}>{t(lang, "search")}</span>
-              <input className={fieldClass} name="q" defaultValue={q} placeholder={t(lang, "nameOrCompany")} />
+          <div className="grid grid-cols-[minmax(0,1fr)_9.5rem_auto] items-end gap-x-2 gap-y-1">
+            <label className="min-w-0">
+              <span className={compactLabelClass}>{t(lang, "search")}</span>
+              <input className={compactFieldClass} name="q" defaultValue={q} placeholder={t(lang, "nameOrCompany")} />
             </label>
-            <label>
-              <span className={labelClass}>{t(lang, "status")}</span>
+            <div className="min-w-0">
+              <span className={compactLabelClass}>{t(lang, "status")}</span>
               <MultiSelect
+                compact
                 name="status"
-                selected={statuses}
+                selected={requestedStatuses.filter((status) => (JOB_STATUSES as readonly string[]).includes(status))}
                 anyLabel={t(lang, "any")}
                 selectAll={t(lang, "selectAll")}
                 deselectAll={t(lang, "deselectAll")}
@@ -108,29 +107,30 @@ export default async function JobsPage({
                 selectedWord={t(lang, "selectedCount")}
                 options={JOB_STATUSES.map((status) => ({ value: status, label: statusLabel(lang, status) }))}
               />
-            </label>
-            <div />
-            <label>
-              <span className={labelClass}>{t(lang, "interestDate")} {t(lang, "from")}</span>
-              <DateField name="interestFrom" defaultValue={firstParam(search.interestFrom)} lang={lang} />
-            </label>
-            <label>
-              <span className={labelClass}>{t(lang, "to")}</span>
-              <DateField name="interestTo" defaultValue={firstParam(search.interestTo)} lang={lang} />
-            </label>
-            <div />
-            <label>
-              <span className={labelClass}>{t(lang, "followUp")} {t(lang, "from")}</span>
-              <DateField name="followFrom" defaultValue={firstParam(search.followFrom)} lang={lang} />
-            </label>
-            <label>
-              <span className={labelClass}>{t(lang, "to")}</span>
-              <DateField name="followTo" defaultValue={firstParam(search.followTo)} lang={lang} />
-            </label>
+            </div>
+            <DateRange
+              label={t(lang, "interestDate")}
+              fromName="interestFrom"
+              toName="interestTo"
+              fromValue={firstParam(search.interestFrom)}
+              toValue={firstParam(search.interestTo)}
+              lang={lang}
+            />
+            <DateRange
+              label={t(lang, "followUp")}
+              fromName="followFrom"
+              toName="followTo"
+              fromValue={firstParam(search.followFrom)}
+              toValue={firstParam(search.followTo)}
+              lang={lang}
+            />
+            <div aria-hidden />
+            <div className="flex justify-end">
+              <button className="rounded bg-sky-500 px-2 py-0.5 text-xs font-semibold leading-tight text-slate-950" type="submit">
+                {t(lang, "apply")}
+              </button>
+            </div>
           </div>
-          <button className="mt-3 rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950" type="submit">
-            {t(lang, "apply")}
-          </button>
         </fieldset>
       </form>
       {jobs.length === 0 ? (
@@ -216,6 +216,39 @@ export default async function JobsPage({
         </Modal>
       ) : null}
     </PageFrame>
+  );
+}
+
+function DateRange({
+  label,
+  fromName,
+  toName,
+  fromValue,
+  toValue,
+  lang,
+}: {
+  label: string;
+  fromName: string;
+  toName: string;
+  fromValue: string;
+  toValue: string;
+  lang: Lang;
+}) {
+  return (
+    <div className="w-fit">
+      <span className={compactLabelClass}>{label}</span>
+      <div className="flex items-center gap-1">
+        <div className="w-[7.25rem]">
+          <DateField compact name={fromName} defaultValue={fromValue} lang={lang} />
+        </div>
+        <span className="text-[11px] leading-none text-slate-500" aria-hidden>
+          –
+        </span>
+        <div className="w-[7.25rem]">
+          <DateField compact name={toName} defaultValue={toValue} lang={lang} />
+        </div>
+      </div>
+    </div>
   );
 }
 

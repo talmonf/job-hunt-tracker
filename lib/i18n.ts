@@ -530,8 +530,10 @@ const statusEn: Record<string, string> = {
   interviewing: "Interviewing",
   offer: "Offer",
   rejected: "Rejected",
+  not_applicable: "Not applicable",
   withdrawn: "Withdrawn",
   on_hold: "On hold",
+  parked: "Parked",
 };
 
 const statusHe: Record<string, string> = {
@@ -541,8 +543,10 @@ const statusHe: Record<string, string> = {
   interviewing: "ראיון",
   offer: "הצעה",
   rejected: "נדחה",
+  not_applicable: "לא מתאים",
   withdrawn: "ויתור",
   on_hold: "בהמתנה",
+  parked: "מוקפא",
 };
 
 const typeEn: Record<string, string> = {

@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { defaultResultingStatus, eventLoggedAt, eventScheduledStart } from "./events";
+import { defaultResultingStatus, eventLoggedAt, eventScheduledStart, statusesForJobList } from "./events";
 import { eventHappenedLabel, meetingKindLabel } from "./i18n";
+
+test("parked jobs stay out of the default list", () => {
+  const defaults = statusesForJobList([]);
+  assert.equal(defaults.includes("parked"), false);
+  assert.equal(defaults.includes("not_applicable"), true);
+  assert.deepEqual(statusesForJobList(["parked"]), ["parked"]);
+  assert.deepEqual(statusesForJobList(["nope", "applied"]), ["applied"]);
+});
 
 test("event types map to job status", () => {
   assert.equal(defaultResultingStatus("interest"), "interest");

@@ -10,6 +10,9 @@ import { t } from "@/lib/i18n";
 export const fieldClass =
   "w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-sm text-slate-100 outline-none focus:border-sky-500";
 export const labelClass = "mb-1 block text-xs text-slate-300";
+export const compactFieldClass =
+  "w-full rounded border border-slate-600 bg-slate-950 px-1.5 py-0.5 text-xs leading-tight text-slate-100 outline-none focus:border-sky-500";
+export const compactLabelClass = "mb-0.5 block text-[11px] leading-none text-slate-400";
 export const primaryButton =
   "rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950 hover:bg-sky-400 disabled:opacity-60";
 export const quietButton = "rounded-md border border-slate-600 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-800";
@@ -77,12 +80,14 @@ export function DateField({
   defaultValue,
   required = false,
   lang = "en",
+  compact = false,
   onCommit,
 }: {
   name: string;
   defaultValue?: string;
   required?: boolean;
   lang?: Lang;
+  compact?: boolean;
   onCommit?: (iso: string) => void;
 }) {
   const [text, setText] = useState(isoDateToDisplay(defaultValue ?? ""));
@@ -116,6 +121,7 @@ export function DateField({
       <DatePicker
         lang={lang}
         text={text}
+        compact={compact}
         onTextChange={setText}
         required={required}
         onPick={(picked) => {
@@ -218,6 +224,7 @@ function DatePicker({
   text,
   onTextChange,
   required = false,
+  compact = false,
   onPick,
   onBlur,
 }: {
@@ -225,6 +232,7 @@ function DatePicker({
   text: string;
   onTextChange: (value: string) => void;
   required?: boolean;
+  compact?: boolean;
   onPick?: (value: string) => void;
   onBlur?: () => void;
 }) {
@@ -278,7 +286,7 @@ function DatePicker({
     <div className="relative" ref={ref}>
       <span className="relative block">
         <input
-          className={`${fieldClass} pe-9`}
+          className={compact ? `${compactFieldClass} pe-5` : `${fieldClass} pe-9`}
           value={text}
           placeholder="dd/mm/yyyy"
           inputMode="numeric"
@@ -293,14 +301,14 @@ function DatePicker({
           }}
         />
         <button
-          className="absolute end-1 top-1/2 -translate-y-1/2 rounded p-1 text-slate-300 hover:bg-slate-800 hover:text-white"
+          className={`absolute top-1/2 -translate-y-1/2 rounded text-slate-300 hover:bg-slate-800 hover:text-white ${compact ? "end-0.5 p-0.5" : "end-1 p-1"}`}
           type="button"
           aria-label={t(lang, "chooseDate")}
           aria-haspopup="dialog"
           aria-expanded={open}
           onClick={() => setOpen((value) => !value)}
         >
-          <CalendarIcon />
+          <CalendarIcon compact={compact} />
         </button>
       </span>
       {open ? (
@@ -371,9 +379,9 @@ function DatePicker({
   );
 }
 
-function CalendarIcon() {
+function CalendarIcon({ compact = false }: { compact?: boolean }) {
   return (
-    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+    <svg className={compact ? "h-3 w-3" : "h-4 w-4"} viewBox="0 0 20 20" fill="currentColor" aria-hidden>
       <path d="M6 2a1 1 0 0 1 1 1v1h6V3a1 1 0 1 1 2 0v1h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1V3a1 1 0 0 1 1-1zm10 7H4v7h12V9z" />
     </svg>
   );
@@ -388,6 +396,7 @@ export function MultiSelect({
   deselectAll,
   done,
   selectedWord,
+  compact = false,
 }: {
   name: string;
   options: { value: string; label: string }[];
@@ -397,6 +406,7 @@ export function MultiSelect({
   deselectAll: string;
   done: string;
   selectedWord: string;
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState(selected);
@@ -407,7 +417,13 @@ export function MultiSelect({
   }, [anyLabel, options, selectedWord, values]);
   return (
     <div className="relative">
-      <button className={`${fieldClass} text-start`} type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
+      <button
+        className={`${compact ? compactFieldClass : fieldClass} truncate text-start`}
+        type="button"
+        title={summary}
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+      >
         {summary}
       </button>
       {open ? (

@@ -8,9 +8,19 @@ export const JOB_STATUSES = [
   "interviewing",
   "offer",
   "rejected",
+  "not_applicable",
   "withdrawn",
   "on_hold",
+  "parked",
 ] as const satisfies readonly JobStatus[];
+
+const HIDDEN_FROM_DEFAULT_JOB_LIST = ["parked"] as const satisfies readonly JobStatus[];
+
+export function statusesForJobList(selected: readonly string[]): JobStatus[] {
+  const picked = selected.filter((status): status is JobStatus => (JOB_STATUSES as readonly string[]).includes(status));
+  if (picked.length > 0) return picked;
+  return JOB_STATUSES.filter((status) => !(HIDDEN_FROM_DEFAULT_JOB_LIST as readonly string[]).includes(status));
+}
 
 export const EVENT_TYPES = ["interest", "outreach", "application", "meeting", "status_change"] as const satisfies readonly EventType[];
 
