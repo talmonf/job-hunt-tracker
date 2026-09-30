@@ -145,43 +145,69 @@ export function DateTimeField({
   const [hour, setHour] = useState(initial.hour);
   const [minute, setMinute] = useState(initial.minute);
   const isoDate = displayDateToIso(text);
+  const timeRequired = required || Boolean(isoDate);
   const iso = isoDate && hour && minute ? `${isoDate}T${hour}:${minute}` : "";
+
+  function applyDateText(next: string) {
+    setText(next);
+    if (!next.trim()) {
+      if (!required) {
+        setHour("");
+        setMinute("");
+      }
+      return;
+    }
+    if (displayDateToIso(next)) {
+      setHour((current) => current || "09");
+      setMinute((current) => current || "00");
+    }
+  }
+
   return (
-    <div className="flex flex-wrap items-end gap-2">
-      <div className="min-w-[12rem] flex-1">
-        <DatePicker lang={lang} text={text} onTextChange={setText} required={required} />
+    <div className="space-y-2">
+      <DatePicker lang={lang} text={text} onTextChange={applyDateText} required={required} onPick={applyDateText} />
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="block" dir="ltr">
+          <span className={labelClass}>{t(lang, "timeHour")}</span>
+          <select
+            className={`${fieldClass} w-[4.75rem]`}
+            value={hour}
+            required={timeRequired}
+            onChange={(event) => {
+              const next = event.target.value;
+              setHour(next);
+              if (next && !minute) setMinute("00");
+            }}
+          >
+            {timeRequired ? null : <option value="" />}
+            {HOURS.map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block" dir="ltr">
+          <span className={labelClass}>{t(lang, "timeMinute")}</span>
+          <select
+            className={`${fieldClass} w-[4.75rem]`}
+            value={minute}
+            required={timeRequired}
+            onChange={(event) => {
+              const next = event.target.value;
+              setMinute(next);
+              if (next && !hour) setHour("09");
+            }}
+          >
+            {timeRequired ? null : <option value="" />}
+            {MINUTES.map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
-      <label className="block" dir="ltr">
-        <span className={labelClass}>{t(lang, "timeHour")}</span>
-        <select
-          className={`${fieldClass} w-[4.75rem]`}
-          value={hour}
-          required={required}
-          onChange={(event) => {
-            const next = event.target.value;
-            setHour(next);
-            if (next && !minute) setMinute("00");
-          }}
-        >
-          {required ? null : <option value="" />}
-          {HOURS.map((value) => (
-            <option key={value} value={value}>
-              {value}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="block" dir="ltr">
-        <span className={labelClass}>{t(lang, "timeMinute")}</span>
-        <select className={`${fieldClass} w-[4.75rem]`} value={minute} required={required} onChange={(event) => setMinute(event.target.value)}>
-          {required ? null : <option value="" />}
-          {MINUTES.map((value) => (
-            <option key={value} value={value}>
-              {value}
-            </option>
-          ))}
-        </select>
-      </label>
       <input type="hidden" name={name} value={iso} />
     </div>
   );

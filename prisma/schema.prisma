@@ -195,7 +195,7 @@ model Job {
   title                  String    @default("")
   description            String    @default("")
   interestDate           DateTime
-  followUpAt             DateTime
+  followUpAt             DateTime?
   reminderLeadDays       Int?
   reminderLeadHours      Int?
   followUpReminderSentAt DateTime?

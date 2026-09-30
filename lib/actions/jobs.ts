@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import type { Channel, EventType, JobStatus, MeetingStage } from "@prisma/client";
 import { prisma } from "../prisma";
 import { requireUser } from "../session";
-import { addDays, wallClockToUtc } from "../dates";
 import { optionalInt, parseDateOnly, parseDateTime, requiredText } from "../forms";
 import { defaultResultingStatus, CHANNELS, EVENT_TYPES, JOB_STATUSES, STAGES } from "../events";
 import { recomputeJobStatus } from "../job-status";
@@ -18,11 +17,7 @@ export async function createJob(formData: FormData) {
   const description = String(formData.get("description") ?? "");
   const interestDate = parseDateOnly(formData.get("interestDate"), user.timezone);
   if (!companyName || !interestDate) redirect(back(formData, "/jobs", "required"));
-  let followUpAt = parseDateTime(formData.get("followUpAt"), user.timezone);
-  if (!followUpAt) {
-    const day = addDays(interestDate, 7);
-    followUpAt = wallClockToUtc(`${day.toISOString().slice(0, 10)}T09:00`, user.timezone) ?? addDays(interestDate, 7);
-  }
+  const followUpAt = parseDateTime(formData.get("followUpAt"), user.timezone);
   const reminder = readReminder(formData);
   if (reminder === "invalid") redirect(back(formData, "/jobs", "required"));
   const job = await prisma.job.create({
@@ -38,9 +33,12 @@ export async function createJob(formData: FormData) {
       status: "interest",
     },
   });
-  await prisma.jobUrl.createMany({
-    data: readUrls(formData).map((url) => ({ jobId: job.id, url })),
-  });
+  const urls = readUrls(formData);
+  if (urls.length) {
+    await prisma.jobUrl.createMany({
+      data: urls.map((url) => ({ jobId: job.id, url })),
+    });
+  }
   await prisma.event.create({
     data: {
       userId: user.id,
@@ -61,11 +59,11 @@ export async function updateJob(formData: FormData) {
   const companyName = requiredText(formData.get("companyName"));
   const interestDate = parseDateOnly(formData.get("interestDate"), user.timezone);
   const followUpAt = parseDateTime(formData.get("followUpAt"), user.timezone);
-  if (!companyName || !interestDate || !followUpAt) redirect(`/jobs/${job.id}?error=required`);
+  if (!companyName || !interestDate) redirect(`/jobs/${job.id}?error=required`);
   const reminder = readReminder(formData);
   if (reminder === "invalid") redirect(`/jobs/${job.id}?error=required`);
   const reminderChanged =
-    job.followUpAt.getTime() !== followUpAt.getTime() ||
+    (job.followUpAt?.getTime() ?? null) !== (followUpAt?.getTime() ?? null) ||
     job.reminderLeadDays !== reminder.days ||
     job.reminderLeadHours !== reminder.hours;
   await prisma.job.update({
@@ -81,6 +79,9 @@ export async function updateJob(formData: FormData) {
       followUpReminderSentAt: reminderChanged ? null : job.followUpReminderSentAt,
     },
   });
+  if (formData.get("urlsManaged") === "1") {
+    await syncJobUrls(job.id, readUrls(formData));
+  }
   redirect(`/jobs/${job.id}?updated=1`);
 }
 
@@ -242,7 +243,28 @@ function readReminder(formData: FormData): { days: number | null; hours: number 
 }
 
 function readUrls(formData: FormData): string[] {
-  return ["url1", "url2", "url3"].map((key) => requiredText(formData.get(key))).filter(Boolean);
+  if (formData.get("urlsManaged") === "1") {
+    return uniqueTexts(formData.getAll("urls"));
+  }
+  return uniqueTexts(["url1", "url2", "url3"].map((key) => formData.get(key)));
+}
+
+function uniqueTexts(values: Array<FormDataEntryValue | null>) {
+  const seen = new Set<string>();
+  const urls: string[] = [];
+  for (const value of values) {
+    const text = requiredText(value);
+    if (!text || seen.has(text)) continue;
+    seen.add(text);
+    urls.push(text);
+  }
+  return urls;
+}
+
+async function syncJobUrls(jobId: string, urls: string[]) {
+  await prisma.jobUrl.deleteMany({ where: { jobId } });
+  if (!urls.length) return;
+  await prisma.jobUrl.createMany({ data: urls.map((url) => ({ jobId, url })) });
 }
 
 async function ownedJob(userId: string, jobId: string) {

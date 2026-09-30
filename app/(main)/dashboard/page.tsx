@@ -85,7 +85,7 @@ export default async function DashboardPage() {
           {followUps.map((job) => (
             <li key={job.id}>
               <Link className="text-sky-300" href={`/jobs/${job.id}`}>
-                {formatDateTime(job.followUpAt, user.timezone)} · {dash(job.companyName, hide)} {job.title ? `· ${dash(job.title, hide)}` : ""}
+                {job.followUpAt ? formatDateTime(job.followUpAt, user.timezone) : "—"} · {dash(job.companyName, hide)} {job.title ? `· ${dash(job.title, hide)}` : ""}
               </Link>
             </li>
           ))}

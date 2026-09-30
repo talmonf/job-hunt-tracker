@@ -3,12 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { dateInputValue, dateTimeInputValue } from "@/lib/dates";
 import { statusLabel, t } from "@/lib/i18n";
-import { dash, maskText } from "@/lib/mask";
+import { dash } from "@/lib/mask";
 import { eventFormValues } from "@/lib/events";
-import { addJobUrl, deleteCv, deleteJob, deleteJobUrl, saveEvent, updateJob, uploadCv } from "@/lib/actions/jobs";
+import { deleteCv, deleteJob, saveEvent, updateJob, uploadCv } from "@/lib/actions/jobs";
 import { toChipLink } from "@/lib/entity-links";
 import { PageFrame, statusClass } from "@/components/chrome";
 import { DateField, DateTimeField, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
+import { JobUrlsEditor } from "@/components/job-urls";
 import { EventForm } from "@/components/event-form";
 import { EventHistoryTable } from "@/components/event-history";
 import { EntityLinksSection } from "@/components/entity-links";
@@ -91,13 +92,17 @@ export default async function JobDetailPage({
             allowUrl={false}
           />
         </div>
-        <label>
+        <div>
           <span className={labelClass}>{t(lang, "interestDate")}</span>
           <DateField name="interestDate" defaultValue={dateInputValue(job.interestDate, user.timezone)} required lang={lang} />
-        </label>
+        </div>
         <div>
           <span className={labelClass}>{t(lang, "followUp")}</span>
-          <DateTimeField name="followUpAt" defaultValue={dateTimeInputValue(job.followUpAt, user.timezone)} required lang={lang} />
+          <DateTimeField
+            name="followUpAt"
+            defaultValue={job.followUpAt ? dateTimeInputValue(job.followUpAt, user.timezone) : ""}
+            lang={lang}
+          />
         </div>
         <label>
           <span className={labelClass}>{t(lang, "reminderLead")} — {t(lang, "days")}</span>
@@ -107,30 +112,13 @@ export default async function JobDetailPage({
           <span className={labelClass}>{t(lang, "hours")}</span>
           <input className={fieldClass} name="reminderLeadHours" defaultValue={job.reminderLeadHours ?? ""} inputMode="numeric" />
         </label>
+        <p className="text-xs text-slate-400 md:col-span-2">{t(lang, "reminderBlank")}</p>
+        <div className="md:col-span-2">
+          <JobUrlsEditor lang={lang} initialUrls={job.urls} />
+        </div>
         <div className="md:col-span-2">
           <SubmitButton label={t(lang, "save")} />
         </div>
-      </form>
-      <p className="mt-2 text-xs text-slate-400">{t(lang, "reminderBlank")}</p>
-
-      <h2 className="mb-2 mt-8 text-lg">{t(lang, "urls")}</h2>
-      <ul className="space-y-2 text-sm">
-        {job.urls.map((url) => (
-          <li key={url.id} className="flex items-center justify-between gap-3">
-            <a className="truncate text-sky-300" href={url.url} target="_blank" rel="noreferrer">
-              {maskText(url.url, hide)}
-            </a>
-            <form action={deleteJobUrl}>
-              <input type="hidden" name="urlId" value={url.id} />
-              <button className="text-rose-300" type="submit">{t(lang, "delete")}</button>
-            </form>
-          </li>
-        ))}
-      </ul>
-      <form action={addJobUrl} className="mt-2 flex gap-2">
-        <input type="hidden" name="jobId" value={job.id} />
-        <input className={fieldClass} name="url" placeholder="https://" />
-        <SubmitButton label={t(lang, "add")} />
       </form>
 
       <EntityLinksSection

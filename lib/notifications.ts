@@ -11,6 +11,7 @@ export async function runNotifications(now = new Date()) {
 
   const jobs = await prisma.job.findMany({
     where: {
+      followUpAt: { not: null },
       followUpReminderSentAt: null,
       OR: [{ reminderLeadDays: { not: null } }, { reminderLeadHours: { not: null } }],
     },
@@ -18,6 +19,7 @@ export async function runNotifications(now = new Date()) {
   });
 
   for (const job of jobs) {
+    if (!job.followUpAt) continue;
     const leadMs = ((job.reminderLeadDays ?? 0) * 24 + (job.reminderLeadHours ?? 0)) * 60 * 60 * 1000;
     if (job.followUpAt.getTime() - leadMs > now.getTime()) continue;
     dueReminders += 1;
@@ -80,7 +82,9 @@ export async function runNotifications(now = new Date()) {
     const he = user.uiLanguage === "he";
     const lines = [
       he ? "תאריכי המשך" : "Follow-ups",
-      ...followUps.map((job) => `- ${formatDateTime(job.followUpAt, user.timezone)} ${job.companyName} ${job.title}`.trim()),
+      ...followUps.map((job) =>
+        `- ${job.followUpAt ? formatDateTime(job.followUpAt, user.timezone) : ""} ${job.companyName} ${job.title}`.trim(),
+      ),
       he ? "פגישות" : "Meetings",
       ...meetings.map((meeting) => {
         const who = meeting.job?.companyName || meeting.contact?.fullName || "";

@@ -11,6 +11,7 @@ import { formatDate, formatDateTime } from "@/lib/dates";
 import { createJob } from "@/lib/actions/jobs";
 import { EmptyState, Modal, PageFrame, statusClass } from "@/components/chrome";
 import { DateField, DateTimeField, MultiSelect, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
+import { JobUrlsEditor } from "@/components/job-urls";
 import { MentionTextarea } from "@/components/mention-textarea";
 
 export const dynamic = "force-dynamic";
@@ -159,7 +160,7 @@ export default async function JobsPage({
                   <td className="px-3 py-2">{dash(job.title, hide)}</td>
                   <td className={`px-3 py-2 ${statusClass(job.status)}`}>{statusLabel(lang, job.status)}</td>
                   <td className="px-3 py-2">{formatDate(job.interestDate, user.timezone)}</td>
-                  <td className="px-3 py-2">{formatDateTime(job.followUpAt, user.timezone)}</td>
+                  <td className="px-3 py-2">{job.followUpAt ? formatDateTime(job.followUpAt, user.timezone) : "—"}</td>
                   <td className="px-3 py-2">{job._count.urls}</td>
                   <td className="px-3 py-2">{job._count.cvs}</td>
                 </tr>
@@ -189,19 +190,14 @@ export default async function JobsPage({
               googleConnected={googleConnected}
               allowUrl={false}
             />
-            <label>
-              <span className={labelClass}>{t(lang, "urls")}</span>
-              <input className={fieldClass} name="url1" placeholder="https://" />
-            </label>
-            <input className={fieldClass} name="url2" placeholder="https://" />
-            <input className={fieldClass} name="url3" placeholder="https://" />
-            <label>
+            <JobUrlsEditor lang={lang} />
+            <div>
               <span className={labelClass}>{t(lang, "interestDate")}</span>
               <DateField name="interestDate" defaultValue={interestDefault} required lang={lang} />
-            </label>
+            </div>
             <div>
               <span className={labelClass}>{t(lang, "followUp")}</span>
-              <DateTimeField name="followUpAt" defaultValue={followDefault} required lang={lang} />
+              <DateTimeField name="followUpAt" defaultValue={followDefault} lang={lang} />
               <span className="mt-1 block text-xs text-slate-400">{t(lang, "followUpHelp")}</span>
             </div>
             <div className="grid grid-cols-2 gap-3">
