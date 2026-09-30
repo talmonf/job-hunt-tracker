@@ -46,6 +46,14 @@ test("status updates include the new status", () => {
   assert.equal(eventHappenedLabel("en", "status_change", null, "rejected"), "Status update (Rejected)");
   assert.equal(eventHappenedLabel("he", "status_change", null, "rejected"), "עדכון סטטוס (נדחה)");
   assert.equal(eventHappenedLabel("en", "status_change"), "Status update");
+  assert.equal(
+    eventHappenedLabel("en", "status_change", null, "applied", "interest"),
+    "Status update (\u2066Interest → Applied\u2069)",
+  );
+  assert.equal(
+    eventHappenedLabel("he", "status_change", null, "parked", "contacted"),
+    "עדכון סטטוס (\u2066פניתי → מוקפא\u2069)",
+  );
 });
 
 test("upcoming meetings name the interview kind", () => {

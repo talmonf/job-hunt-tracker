@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { allParams, firstParam, preserveQuery } from "@/lib/http";
 import { parseDateOnly } from "@/lib/forms";
-import { EVENT_TYPES, eventFormValues, eventLoggedAt, eventScheduledStart } from "@/lib/events";
+import { EVENT_TYPES, JOB_STATUSES, eventFormValues, eventLoggedAt, eventScheduledStart } from "@/lib/events";
 import { eventHappenedLabel, eventTypeLabel, t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
 import { formatDateTime, formatScheduledRange } from "@/lib/dates";
@@ -16,6 +16,7 @@ import { EventSummary } from "@/components/event-summary";
 
 export const dynamic = "force-dynamic";
 
+const PRESET_PARAMS = ["presetJob", "presetType", "presetStatus"];
 const SORTS = ["occurredAt", "type"] as const;
 
 export default async function EventsPage({
@@ -79,9 +80,12 @@ export default async function EventsPage({
       orderBy: { uploadedAt: "desc" },
     }),
   ]);
-  const keep = preserveQuery(search, {}, ["modal", "eventId"]);
+  const keep = preserveQuery(search, {}, ["modal", "eventId", ...PRESET_PARAMS]);
   const closeHref = `/events${keep}`;
   const editing = firstParam(search.modal) === "edit" ? events.find((event) => event.id === firstParam(search.eventId)) : undefined;
+  const presetJobId = jobs.some((job) => job.id === firstParam(search.presetJob)) ? firstParam(search.presetJob) : "";
+  const presetType = (EVENT_TYPES as readonly string[]).includes(firstParam(search.presetType)) ? firstParam(search.presetType) : "";
+  const presetStatus = (JOB_STATUSES as readonly string[]).includes(firstParam(search.presetStatus)) ? firstParam(search.presetStatus) : "";
   const jobOptions = jobs.map((job) => ({
     id: job.id,
     label: dash(`${job.companyName}${job.title ? ` — ${job.title}` : ""}`, hide),
@@ -100,7 +104,7 @@ export default async function EventsPage({
         <h2 className="text-lg font-medium">{t(lang, "events")}</h2>
         <Link
           className="rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950"
-          href={`/events${preserveQuery(search, { modal: "new" }, ["modal", "eventId"])}`}
+          href={`/events${preserveQuery(search, { modal: "new" }, ["modal", "eventId", ...PRESET_PARAMS])}`}
         >
           {t(lang, "logEvent")}
         </Link>
@@ -168,7 +172,7 @@ export default async function EventsPage({
                 const scheduled = eventScheduledStart(event);
                 return (
                 <tr key={event.id} className="border-t border-slate-800">
-                  <td className="px-3 py-2">{eventHappenedLabel(lang, event.type, event.stage, event.resultingStatus)}</td>
+                  <td className="px-3 py-2">{eventHappenedLabel(lang, event.type, event.stage, event.resultingStatus, event.previousStatus)}</td>
                   <td className="whitespace-nowrap px-3 py-2">{formatDateTime(eventLoggedAt(event), user.timezone)}</td>
                   <td className="whitespace-nowrap px-3 py-2">
                     {scheduled ? formatScheduledRange(scheduled, event.endsAt, user.timezone, lang) : "—"}
@@ -199,7 +203,7 @@ export default async function EventsPage({
                     <div className="flex gap-3 whitespace-nowrap">
                       <Link
                         className="text-sky-300"
-                        href={`/events${preserveQuery(search, { modal: "edit", eventId: event.id }, ["modal", "eventId"])}`}
+                        href={`/events${preserveQuery(search, { modal: "edit", eventId: event.id }, ["modal", "eventId", ...PRESET_PARAMS])}`}
                       >
                         {t(lang, "edit")}
                       </Link>
@@ -228,8 +232,10 @@ export default async function EventsPage({
             lang={lang}
             calendarLinked={Boolean(user.calendarRefreshToken)}
             returnTo={`/events${keep}`}
-            defaultJobId={editing?.jobId ?? undefined}
+            defaultJobId={editing ? (editing.jobId ?? undefined) : presetJobId || undefined}
             defaultContactId={editing?.contactId ?? undefined}
+            defaultType={editing ? undefined : presetType || undefined}
+            defaultResultingStatus={editing ? undefined : presetStatus || undefined}
             jobs={jobOptions}
             contacts={contactOptions}
             notes={noteOptions}
@@ -256,7 +262,7 @@ function SortHead({
   search: Record<string, string | string[] | undefined>;
 }) {
   const nextDir = sort === column && dir === "asc" ? "desc" : "asc";
-  const href = `/events${preserveQuery(search, { sort: column, dir: nextDir }, ["modal", "eventId", "created", "updated", "error", "warn"])}`;
+  const href = `/events${preserveQuery(search, { sort: column, dir: nextDir }, ["modal", "eventId", "created", "updated", "error", "warn", ...PRESET_PARAMS])}`;
   const active = sort === column;
   return (
     <th className="px-3 py-2" aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}>

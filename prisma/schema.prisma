@@ -324,6 +324,7 @@ model Event {
   counterpartyName       String        @default("")
   stage                  MeetingStage?
   resultingStatus        JobStatus?
+  previousStatus         JobStatus?
   summary                String        @default("")
   noteId                 String?
   note                   Note?         @relation(fields: [noteId], references: [id], onDelete: SetNull)

@@ -83,6 +83,9 @@ const dict = {
     addContact: "Add contact",
     addUser: "Add user",
     logEvent: "Log event",
+    statusDirectWarn: "Status updated. It's advisable to log an event for status changes. Continuing here still records a status change, marked as created by the system.",
+    systemStatusChange: "Created by the system.",
+    notNow: "Not now",
     history: "History",
     selectAll: "Select all",
     deselectAll: "Deselect all",
@@ -341,6 +344,9 @@ const dict = {
     addContact: "הוספת איש קשר",
     addUser: "הוספת משתמש",
     logEvent: "דיווח אירוע",
+    statusDirectWarn: "הסטטוס עודכן. מומלץ לדווח על שינוי סטטוס כאירוע. המשך מכאן עדיין רושם שינוי סטטוס, ומסמן אותו כנוצר על ידי המערכת.",
+    systemStatusChange: "נוצר על ידי המערכת.",
+    notNow: "לא עכשיו",
     history: "היסטוריה",
     selectAll: "בחירת הכול",
     deselectAll: "ניקוי בחירה",
@@ -640,9 +646,14 @@ export function eventHappenedLabel(
   type: string,
   stage?: string | null,
   resultingStatus?: string | null,
+  previousStatus?: string | null,
 ): string {
   if (type === "status_change") {
     const typeText = eventTypeLabel(lang, type);
+    if (previousStatus && resultingStatus) {
+      const change = `\u2066${statusLabel(lang, previousStatus)} → ${statusLabel(lang, resultingStatus)}\u2069`;
+      return `${typeText} (${change})`;
+    }
     return resultingStatus ? `${typeText} (${statusLabel(lang, resultingStatus)})` : typeText;
   }
   if (type !== "meeting") return eventTypeLabel(lang, type);

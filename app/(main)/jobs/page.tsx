@@ -9,8 +9,9 @@ import { statusLabel, t, type Lang } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { createJob } from "@/lib/actions/jobs";
-import { EmptyState, Modal, PageFrame, statusClass } from "@/components/chrome";
+import { EmptyState, Modal, PageFrame } from "@/components/chrome";
 import { DateField, DateTimeField, MultiSelect, SubmitButton, compactFieldClass, compactLabelClass, fieldClass, labelClass } from "@/components/widgets";
+import { JobStatusEditor } from "@/components/job-status-editor";
 import { JobUrlsEditor } from "@/components/job-urls";
 import { MentionTextarea } from "@/components/mention-textarea";
 
@@ -158,7 +159,9 @@ export default async function JobsPage({
                     </Link>
                   </td>
                   <td className="px-3 py-2">{dash(job.title, hide)}</td>
-                  <td className={`px-3 py-2 ${statusClass(job.status)}`}>{statusLabel(lang, job.status)}</td>
+                  <td className="px-3 py-2">
+                    <JobStatusEditor jobId={job.id} status={job.status} lang={lang} />
+                  </td>
                   <td className="px-3 py-2">{formatDate(job.interestDate, user.timezone)}</td>
                   <td className="px-3 py-2">{job.followUpAt ? formatDateTime(job.followUpAt, user.timezone) : "—"}</td>
                   <td className="px-3 py-2">{job._count.urls}</td>

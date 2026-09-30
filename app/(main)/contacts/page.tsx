@@ -8,7 +8,7 @@ import { t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
 import { createContact } from "@/lib/actions/network";
 import { EmptyState, Modal, PageFrame } from "@/components/chrome";
-import { fieldClass, labelClass } from "@/components/widgets";
+import { compactFieldClass, compactLabelClass } from "@/components/widgets";
 import { ContactFields } from "@/components/contact-fields";
 import { ContactDateEditor, ContactStatusEditor, ContactWillingEditor } from "@/components/contact-inline";
 
@@ -48,26 +48,26 @@ export default async function ContactsPage({
           {t(lang, "addContact")}
         </Link>
       </div>
-      <form className="mb-4 rounded-lg border border-slate-700 p-3" method="get">
+      <form className="mb-3 rounded-lg border border-slate-700 px-3 py-2" method="get">
         <fieldset>
           <legend className="px-1 text-sm">{t(lang, "filters")}</legend>
           <input type="hidden" name="sort" value={sort} />
           <input type="hidden" name="dir" value={dir} />
-          <div className="mt-2 grid gap-3 md:grid-cols-2">
-            <label>
-              <span className={labelClass}>{t(lang, "search")}</span>
-              <input className={fieldClass} name="q" defaultValue={q} placeholder={t(lang, "nameOrWorkplace")} />
+          <div className="mt-1 flex flex-wrap items-end gap-2">
+            <label className="w-52 min-w-0">
+              <span className={compactLabelClass}>{t(lang, "search")}</span>
+              <input className={compactFieldClass} name="q" defaultValue={q} placeholder={t(lang, "nameOrWorkplace")} />
             </label>
-            <label>
-              <span className={labelClass}>{t(lang, "willing")}</span>
-              <select className={fieldClass} name="willing" defaultValue={willing}>
+            <label className="w-44 min-w-0">
+              <span className={compactLabelClass}>{t(lang, "willing")}</span>
+              <select className={compactFieldClass} name="willing" defaultValue={willing}>
                 <option value="">{t(lang, "any")}</option>
                 <option value="yes">{t(lang, "yes")}</option>
                 <option value="no">{t(lang, "no")}</option>
               </select>
             </label>
+            <button className="rounded bg-sky-500 px-2 py-0.5 text-xs font-semibold leading-tight text-slate-950" type="submit">{t(lang, "apply")}</button>
           </div>
-          <button className="mt-3 rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950" type="submit">{t(lang, "apply")}</button>
         </fieldset>
       </form>
       {contacts.length === 0 ? (

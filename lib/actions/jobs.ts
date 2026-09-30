@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { Channel, EventType, JobStatus, MeetingStage } from "@prisma/client";
 import { prisma } from "../prisma";
@@ -7,6 +8,7 @@ import { requireUser } from "../session";
 import { optionalInt, parseDateOnly, parseDateTime, requiredText } from "../forms";
 import { defaultResultingStatus, CHANNELS, EVENT_TYPES, JOB_STATUSES, STAGES } from "../events";
 import { recomputeJobStatus } from "../job-status";
+import { t } from "../i18n";
 import { removeStored, saveUpload } from "../files";
 import { deleteCalendarEvent, syncMeetingToCalendar } from "../calendar";
 
@@ -50,6 +52,44 @@ export async function createJob(formData: FormData) {
     },
   });
   redirect("/jobs?created=1");
+}
+
+export async function setJobStatus(formData: FormData) {
+  const user = await requireUser();
+  const job = await ownedJob(user.id, requiredText(formData.get("jobId")));
+  const status = requiredText(formData.get("status")) as JobStatus;
+  if (!job || !JOB_STATUSES.includes(status)) return false;
+  if (job.status !== status) {
+    await prisma.job.update({ where: { id: job.id }, data: { status } });
+  }
+  revalidatePath(`/jobs/${job.id}`);
+  revalidatePath("/dashboard");
+  return true;
+}
+
+export async function confirmDirectStatusChange(formData: FormData) {
+  const user = await requireUser();
+  const job = await ownedJob(user.id, requiredText(formData.get("jobId")));
+  const fromStatus = requiredText(formData.get("fromStatus")) as JobStatus;
+  const status = requiredText(formData.get("status")) as JobStatus;
+  if (!job || fromStatus === status || !JOB_STATUSES.includes(fromStatus) || !JOB_STATUSES.includes(status)) return false;
+  await prisma.event.create({
+    data: {
+      userId: user.id,
+      jobId: job.id,
+      type: "status_change",
+      occurredAt: new Date(),
+      previousStatus: fromStatus,
+      resultingStatus: status,
+      summary: t(user.uiLanguage, "systemStatusChange"),
+    },
+  });
+  await recomputeJobStatus(job.id);
+  revalidatePath("/jobs");
+  revalidatePath(`/jobs/${job.id}`);
+  revalidatePath("/events");
+  revalidatePath("/dashboard");
+  return true;
 }
 
 export async function updateJob(formData: FormData) {

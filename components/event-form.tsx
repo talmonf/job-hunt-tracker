@@ -16,6 +16,8 @@ export function EventForm({
   calendarLinked,
   defaultJobId,
   defaultContactId,
+  defaultType,
+  defaultResultingStatus,
   lockLinks = false,
   returnTo,
   event,
@@ -29,6 +31,8 @@ export function EventForm({
   calendarLinked: boolean;
   defaultJobId?: string;
   defaultContactId?: string;
+  defaultType?: string;
+  defaultResultingStatus?: string;
   lockLinks?: boolean;
   returnTo?: string;
   event?: {
@@ -48,7 +52,7 @@ export function EventForm({
     onCalendar: boolean;
   };
 }) {
-  const [type, setType] = useState(event?.type || "interest");
+  const [type, setType] = useState(event?.type || defaultType || "interest");
   const [jobId, setJobId] = useState(defaultJobId || "");
   const visibleCvs = cvs.filter((cv) => !cv.jobId || cv.jobId === jobId);
   return (
@@ -151,7 +155,7 @@ export function EventForm({
       {type === "status_change" ? (
         <label>
           <span className={labelClass}>{t(lang, "resultingStatus")}</span>
-          <select className={fieldClass} name="resultingStatus" defaultValue={event?.resultingStatus || "rejected"}>
+          <select className={fieldClass} name="resultingStatus" defaultValue={event?.resultingStatus || defaultResultingStatus || "rejected"}>
             {JOB_STATUSES.map((status) => (
               <option key={status} value={status}>
                 {statusLabel(lang, status)}
