@@ -394,14 +394,23 @@ model Notification {
 }
 
 enum TagColor {
-  sky
-  emerald
-  amber
+  red
   rose
-  violet
-  cyan
-  orange
+  pink
   fuchsia
+  purple
+  violet
+  indigo
+  blue
+  sky
+  cyan
+  teal
+  emerald
+  green
+  lime
+  yellow
+  amber
+  orange
 }
 
 model Tag {

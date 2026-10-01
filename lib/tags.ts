@@ -1,6 +1,24 @@
 import type { TagColor } from "@prisma/client";
 
-export const TAG_COLORS = ["sky", "emerald", "amber", "rose", "violet", "cyan", "orange", "fuchsia"] as const satisfies readonly TagColor[];
+export const TAG_COLORS = [
+  "red",
+  "rose",
+  "pink",
+  "fuchsia",
+  "purple",
+  "violet",
+  "indigo",
+  "blue",
+  "sky",
+  "cyan",
+  "teal",
+  "emerald",
+  "green",
+  "lime",
+  "yellow",
+  "amber",
+  "orange",
+] as const satisfies readonly TagColor[];
 
 export type TagRef = {
   id: string;
@@ -9,25 +27,43 @@ export type TagRef = {
 };
 
 export const TAG_CHIP_CLASS: Record<TagColor, string> = {
-  sky: "bg-sky-500/15 text-sky-200",
-  emerald: "bg-emerald-500/15 text-emerald-200",
-  amber: "bg-amber-500/15 text-amber-200",
+  red: "bg-red-500/15 text-red-200",
   rose: "bg-rose-500/15 text-rose-200",
-  violet: "bg-violet-500/15 text-violet-200",
-  cyan: "bg-cyan-500/15 text-cyan-200",
-  orange: "bg-orange-500/15 text-orange-200",
+  pink: "bg-pink-500/15 text-pink-200",
   fuchsia: "bg-fuchsia-500/15 text-fuchsia-200",
+  purple: "bg-purple-500/15 text-purple-200",
+  violet: "bg-violet-500/15 text-violet-200",
+  indigo: "bg-indigo-500/15 text-indigo-200",
+  blue: "bg-blue-500/15 text-blue-200",
+  sky: "bg-sky-500/15 text-sky-200",
+  cyan: "bg-cyan-500/15 text-cyan-200",
+  teal: "bg-teal-500/15 text-teal-200",
+  emerald: "bg-emerald-500/15 text-emerald-200",
+  green: "bg-green-500/15 text-green-200",
+  lime: "bg-lime-500/15 text-lime-200",
+  yellow: "bg-yellow-500/15 text-yellow-200",
+  amber: "bg-amber-500/15 text-amber-200",
+  orange: "bg-orange-500/15 text-orange-200",
 };
 
 export const TAG_SWATCH_CLASS: Record<TagColor, string> = {
-  sky: "bg-sky-400",
-  emerald: "bg-emerald-400",
-  amber: "bg-amber-400",
+  red: "bg-red-400",
   rose: "bg-rose-400",
-  violet: "bg-violet-400",
-  cyan: "bg-cyan-400",
-  orange: "bg-orange-400",
+  pink: "bg-pink-400",
   fuchsia: "bg-fuchsia-400",
+  purple: "bg-purple-400",
+  violet: "bg-violet-400",
+  indigo: "bg-indigo-400",
+  blue: "bg-blue-400",
+  sky: "bg-sky-400",
+  cyan: "bg-cyan-400",
+  teal: "bg-teal-400",
+  emerald: "bg-emerald-400",
+  green: "bg-green-400",
+  lime: "bg-lime-400",
+  yellow: "bg-yellow-400",
+  amber: "bg-amber-400",
+  orange: "bg-orange-400",
 };
 
 export function assignmentTags(rows: { tag: TagRef }[]): TagRef[] {

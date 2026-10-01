@@ -1,4 +1,5 @@
 -- Numbered migrations (newest first — add new lines at the top after each migration).
+[x] 010_tag_colors.sql
 [x] 009_ai.sql
 [x] 008_tags.sql
 [x] 007_event_previous_status.sql
