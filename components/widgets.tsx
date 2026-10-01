@@ -15,6 +15,8 @@ export const compactFieldClass =
 export const compactLabelClass = "mb-0.5 block text-[11px] leading-none text-slate-400";
 export const primaryButton =
   "rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950 hover:bg-sky-400 disabled:opacity-60";
+export const thinPrimaryButton =
+  "w-fit self-start rounded-md bg-sky-500 px-2.5 py-0.5 text-sm font-semibold leading-tight text-slate-950 hover:bg-sky-400 disabled:opacity-60";
 export const quietButton = "rounded-md border border-slate-600 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-800";
 const dateInputClass =
   "box-border w-[calc(10ch+2.75rem+2px)] rounded-md border border-slate-600 bg-slate-950 py-1.5 ps-2 pe-9 text-sm text-slate-100 outline-none focus:border-sky-500";
@@ -53,11 +55,11 @@ export function AttributeSelect({
   );
 }
 
-export function SubmitButton({ label, pending: forced }: { label: string; pending?: boolean }) {
+export function SubmitButton({ label, pending: forced, thin = false }: { label: string; pending?: boolean; thin?: boolean }) {
   const { pending: formPending } = useFormStatus();
   const pending = forced ?? formPending;
   return (
-    <button className={`${primaryButton} inline-flex items-center gap-2`} disabled={pending} type="submit" aria-busy={pending}>
+    <button className={`${thin ? thinPrimaryButton : primaryButton} inline-flex items-center gap-2`} disabled={pending} type="submit" aria-busy={pending}>
       {pending ? (
         <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
       ) : null}

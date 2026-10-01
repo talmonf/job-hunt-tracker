@@ -275,6 +275,8 @@ model Contact {
   userId             String
   user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   fullName           String
+  firstName          String    @default("")
+  lastName           String    @default("")
   role               String    @default("")
   workplace          String    @default("")
   howWeMet           String    @default("")

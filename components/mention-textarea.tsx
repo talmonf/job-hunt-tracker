@@ -12,6 +12,8 @@ export function MentionTextarea({
   name,
   label,
   defaultValue,
+  value: controlledValue,
+  onValueChange,
   rows = 5,
   localContacts,
   googleConnected,
@@ -21,27 +23,35 @@ export function MentionTextarea({
   name: string;
   label: string;
   defaultValue?: string;
+  value?: string;
+  onValueChange?: (value: string) => void;
   rows?: number;
   localContacts: LocalPerson[];
   googleConnected: boolean;
   allowUrl?: boolean;
 }) {
-  const [value, setValue] = useState(defaultValue ?? "");
+  const [uncontrolled, setUncontrolled] = useState(defaultValue ?? "");
+  const text = controlledValue ?? uncontrolled;
   const [mentionOpen, setMentionOpen] = useState(false);
   const areaRef = useRef<HTMLTextAreaElement>(null);
 
-  const trigger = useMemo(() => mentionQuery(value, areaRef.current?.selectionStart ?? value.length), [value]);
+  const trigger = useMemo(() => mentionQuery(text, areaRef.current?.selectionStart ?? text.length), [text]);
+
+  function setText(next: string) {
+    if (controlledValue === undefined) setUncontrolled(next);
+    onValueChange?.(next);
+  }
 
   function insert(person: PickedPerson) {
     const target = pickedTarget(person);
     if (!target) return;
     const token = mentionToken(person.displayName, target);
     const el = areaRef.current;
-    const cursor = el?.selectionStart ?? value.length;
-    const current = mentionQuery(value, cursor);
+    const cursor = el?.selectionStart ?? text.length;
+    const current = mentionQuery(text, cursor);
     const from = current ? current.from : cursor;
-    const next = `${value.slice(0, from)}${token} ${value.slice(cursor)}`;
-    setValue(next);
+    const next = `${text.slice(0, from)}${token} ${text.slice(cursor)}`;
+    setText(next);
     setMentionOpen(false);
     requestAnimationFrame(() => {
       el?.focus();
@@ -58,9 +68,9 @@ export function MentionTextarea({
         className={fieldClass}
         name={name}
         rows={rows}
-        value={value}
+        value={text}
         onChange={(event) => {
-          setValue(event.target.value);
+          setText(event.target.value);
           setMentionOpen(Boolean(mentionQuery(event.target.value, event.target.selectionStart)));
         }}
         onKeyDown={(event) => {

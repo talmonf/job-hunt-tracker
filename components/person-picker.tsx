@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Lang } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
 import { isHttpUrl, kindFromUrl, labelFromUrl, type EntityLinkKind } from "@/lib/entity-links";
+import type { GooglePerson } from "@/lib/google-person";
 import { fieldClass, labelClass, primaryButton, quietButton } from "./widgets";
 
 export type LocalPerson = {
@@ -21,16 +22,16 @@ export type PickedPerson = {
   title: string;
   workplace?: string;
   googleResourceName?: string;
+  givenName?: string;
+  familyName?: string;
+  linkedinUrl?: string;
+  emails?: string[];
+  phones?: string[];
   url?: string;
   contactId?: string;
 };
 
-type GoogleHit = {
-  resourceName: string;
-  displayName: string;
-  title: string;
-  workplace: string;
-};
+type GoogleHit = GooglePerson;
 
 export function PersonPicker({
   lang,
@@ -38,6 +39,7 @@ export function PersonPicker({
   googleConnected,
   allowUrl = false,
   googleOnly = false,
+  hideUrl = false,
   onPick,
 }: {
   lang: Lang;
@@ -45,6 +47,7 @@ export function PersonPicker({
   googleConnected: boolean;
   allowUrl?: boolean;
   googleOnly?: boolean;
+  hideUrl?: boolean;
   onPick: (person: PickedPerson) => void;
 }) {
   const [query, setQuery] = useState("");
@@ -110,6 +113,9 @@ export function PersonPicker({
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder={t(lang, "searchPeople")}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") event.preventDefault();
+          }}
         />
       </label>
       {!googleOnly ? (
@@ -155,6 +161,11 @@ export function PersonPicker({
                   title: person.title,
                   workplace: person.workplace,
                   googleResourceName: person.resourceName,
+                  givenName: person.givenName,
+                  familyName: person.familyName,
+                  linkedinUrl: person.linkedinUrl,
+                  emails: person.emails,
+                  phones: person.phones,
                 })
               }
             >
@@ -164,35 +175,37 @@ export function PersonPicker({
           ))}
         </ResultGroup>
       ) : null}
-      <div className="grid gap-2 md:grid-cols-3">
-        <label className="md:col-span-3">
-          <span className={labelClass}>{allowUrl ? t(lang, "pasteUrl") : t(lang, "pasteLinkedIn")}</span>
-          <input
-            className={fieldClass}
-            value={url}
-            onChange={(event) => setUrl(event.target.value)}
-            placeholder="https://"
-          />
-        </label>
-        <label>
-          <span className={labelClass}>{t(lang, "personName")}</span>
-          <input className={fieldClass} value={name} onChange={(event) => setName(event.target.value)} />
-        </label>
-        <label>
-          <span className={labelClass}>{t(lang, "personTitle")}</span>
-          <input className={fieldClass} value={title} onChange={(event) => setTitle(event.target.value)} />
-        </label>
-        <div className="flex items-end">
-          <button
-            className={isHttpUrl(url) ? primaryButton : quietButton}
-            type="button"
-            disabled={!kindFromUrl(url) || (kindFromUrl(url) === "url" && !allowUrl)}
-            onClick={submitUrl}
-          >
-            {t(lang, "addLink")}
-          </button>
+      {hideUrl ? null : (
+        <div className="grid gap-2 md:grid-cols-3">
+          <label className="md:col-span-3">
+            <span className={labelClass}>{allowUrl ? t(lang, "pasteUrl") : t(lang, "pasteLinkedIn")}</span>
+            <input
+              className={fieldClass}
+              value={url}
+              onChange={(event) => setUrl(event.target.value)}
+              placeholder="https://"
+            />
+          </label>
+          <label>
+            <span className={labelClass}>{t(lang, "personName")}</span>
+            <input className={fieldClass} value={name} onChange={(event) => setName(event.target.value)} />
+          </label>
+          <label>
+            <span className={labelClass}>{t(lang, "personTitle")}</span>
+            <input className={fieldClass} value={title} onChange={(event) => setTitle(event.target.value)} />
+          </label>
+          <div className="flex items-end">
+            <button
+              className={isHttpUrl(url) ? primaryButton : quietButton}
+              type="button"
+              disabled={!kindFromUrl(url) || (kindFromUrl(url) === "url" && !allowUrl)}
+              onClick={submitUrl}
+            >
+              {t(lang, "addLink")}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

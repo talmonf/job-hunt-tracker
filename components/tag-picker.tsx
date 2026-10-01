@@ -128,7 +128,7 @@ export function TagPicker({
           ) : (
             <p className="text-sm text-slate-400">{t(lang, "noTagsYet")}</p>
           )}
-          <Link className="text-xs text-sky-300" href="/settings">
+          <Link className="text-xs text-sky-300" href="/settings?section=tags#tags" target="_blank" rel="noopener noreferrer">
             {t(lang, "manageTags")}
           </Link>
         </div>
@@ -140,7 +140,7 @@ export function TagPicker({
     <div>
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="text-xs text-slate-300">{t(lang, "tags")}</span>
-        <Link className="text-xs text-sky-300" href="/settings">
+        <Link className="text-xs text-sky-300" href="/settings?section=tags#tags" target="_blank" rel="noopener noreferrer">
           {t(lang, "manageTags")}
         </Link>
       </div>

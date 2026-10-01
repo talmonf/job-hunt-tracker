@@ -240,7 +240,7 @@ function TagEditor({
   );
 }
 
-export function TagSettings({ lang, tags: initial }: { lang: Lang; tags: TagRow[] }) {
+export function TagSettings({ lang, tags: initial, open = false }: { lang: Lang; tags: TagRow[]; open?: boolean }) {
   const [tags, setTags] = useState(initial);
   const [color, setColor] = useState<TagColor>(() => firstFreeTagColor(initial.map((tag) => tag.color)));
   const [pending, setPending] = useState(false);
@@ -267,7 +267,7 @@ export function TagSettings({ lang, tags: initial }: { lang: Lang; tags: TagRow[
   }
 
   return (
-    <SettingsSection title={t(lang, "tags")} badge={String(tags.length)}>
+    <SettingsSection id="tags" defaultOpen={open} title={t(lang, "tags")} badge={String(tags.length)}>
       <p className="mb-3 text-sm text-slate-400">{t(lang, "tagsIntro")}</p>
       <ul className="flex flex-wrap items-center gap-2">
         {tags.map((tag) => (

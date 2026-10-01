@@ -7,7 +7,8 @@ import { requireUser } from "../session";
 import { parseDateOnly, requiredText } from "../forms";
 import { normalizeContactStatus } from "../contact-status";
 import { NOTE_TYPES } from "../notes";
-import { isHttpUrl } from "../entity-links";
+import { isGoogleResourceName, isHttpUrl } from "../entity-links";
+import { joinPersonName } from "../person-name";
 import type { NoteType } from "@prisma/client";
 import { replaceRecordTags } from "../tag-assign";
 
@@ -98,9 +99,11 @@ async function noteFields(formData: FormData, userId: string) {
 
 export async function createContact(formData: FormData) {
   const user = await requireUser();
-  const fullName = requiredText(formData.get("fullName"));
-  if (!fullName) redirect("/contacts?error=required");
-  const contact = await prisma.contact.create({ data: { userId: user.id, ...contactData(formData, user.timezone), fullName } });
+  const name = contactName(formData);
+  if (!name.fullName) redirect("/contacts?error=required");
+  const contact = await prisma.contact.create({
+    data: { userId: user.id, ...contactData(formData, user.timezone), ...name, googleResourceName: googleResourceFromForm(formData) ?? null },
+  });
   await replaceRecordTags("contact", contact.id, user.id, formData);
   redirect(`/contacts/${contact.id}?created=1`);
 }
@@ -108,10 +111,14 @@ export async function createContact(formData: FormData) {
 export async function updateContact(formData: FormData) {
   const user = await requireUser();
   const id = requiredText(formData.get("contactId"));
-  const fullName = requiredText(formData.get("fullName"));
+  const name = contactName(formData);
   const existing = await prisma.contact.findFirst({ where: { id, userId: user.id } });
-  if (!existing || !fullName) redirect("/contacts?error=required");
-  await prisma.contact.update({ where: { id }, data: { ...contactData(formData, user.timezone), fullName } });
+  if (!existing || !name.fullName) redirect("/contacts?error=required");
+  const googleResourceName = googleResourceFromForm(formData);
+  await prisma.contact.update({
+    where: { id },
+    data: { ...contactData(formData, user.timezone), ...name, ...(googleResourceName !== undefined ? { googleResourceName } : {}) },
+  });
   await replaceRecordTags("contact", id, user.id, formData);
   redirect(`/contacts/${id}?updated=1`);
 }
@@ -148,6 +155,19 @@ export async function patchContact(formData: FormData) {
   revalidatePath("/contacts");
   revalidatePath(`/contacts/${id}`);
   revalidatePath("/dashboard");
+}
+
+function contactName(formData: FormData) {
+  const firstName = requiredText(formData.get("firstName"));
+  const lastName = requiredText(formData.get("lastName"));
+  return { firstName, lastName, fullName: joinPersonName(firstName, lastName) };
+}
+
+function googleResourceFromForm(formData: FormData): string | null | undefined {
+  if (!formData.has("googleResourceName")) return undefined;
+  const value = requiredText(formData.get("googleResourceName"));
+  if (!value || !isGoogleResourceName(value)) return null;
+  return value;
 }
 
 function contactData(formData: FormData, timeZone: string) {

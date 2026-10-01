@@ -151,6 +151,7 @@ export default async function ContactsPage({
               linkedinUrl: item.linkedinUrl,
             }))}
             googleConnected={Boolean(user.contactsRefreshToken)}
+            googleAtStart
             tags={catalog}
             hide={hide}
           />

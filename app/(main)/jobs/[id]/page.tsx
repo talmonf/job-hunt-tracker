@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
-import { dateInputValue, dateTimeInputValue } from "@/lib/dates";
+import { dateInputValue, dateTimeInputValue, formatDate, formatDateTime } from "@/lib/dates";
 import { jobAttributeLabel, t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
 import { assignmentTags, rankByOverlap } from "@/lib/tags";
@@ -10,7 +10,7 @@ import { EMPLOYMENT_TYPES, ENGAGEMENTS, WORK_ARRANGEMENTS } from "@/lib/events";
 import { deleteCv, deleteJob, updateJob, uploadCv } from "@/lib/actions/jobs";
 import { toChipLink } from "@/lib/entity-links";
 import { PageFrame } from "@/components/chrome";
-import { AttributeSelect, DateField, DateTimeField, SubmitButton, compactFieldClass, compactLabelClass, fieldClass, labelClass } from "@/components/widgets";
+import { AttributeSelect, DateField, DateTimeField, SubmitButton, compactLabelClass, fieldClass, labelClass } from "@/components/widgets";
 import { JobStatusEditor } from "@/components/job-status-editor";
 import { JobUrlsEditor } from "@/components/job-urls";
 import { EventHistoryTable } from "@/components/event-history";
@@ -24,6 +24,9 @@ import { FillJobDetails } from "@/components/fill-job-details";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
+
+const reminderFieldClass =
+  "w-full rounded border border-slate-600 bg-transparent px-1.5 py-0.5 text-xs leading-tight text-slate-100 outline-none [color-scheme:dark] focus:border-sky-500";
 
 export default async function JobDetailPage({
   params,
@@ -112,24 +115,39 @@ export default async function JobDetailPage({
   const heading = dash(job.title ? `${job.companyName} — ${job.title}` : job.companyName, hide);
   const jobReturn = `/jobs/${job.id}`;
   const logHref = `/events?modal=new&presetJob=${encodeURIComponent(job.id)}&presetNow=1&returnTo=${encodeURIComponent(jobReturn)}`;
-  const detailSummary = (
+  const detailItems = [
+    job.location?.trim() ? { label: t(lang, "location"), value: dash(job.location, hide) } : null,
+    job.employmentType ? { label: t(lang, "employmentType"), value: jobAttributeLabel(lang, job.employmentType) } : null,
+    job.workArrangement ? { label: t(lang, "workArrangement"), value: jobAttributeLabel(lang, job.workArrangement) } : null,
+    job.engagement ? { label: t(lang, "engagement"), value: jobAttributeLabel(lang, job.engagement) } : null,
+  ].filter((item): item is { label: string; value: string } => item !== null);
+  const detailSummary = detailItems.length ? (
     <span className="flex flex-wrap gap-x-4 gap-y-1">
-      <span>
-        <span className="text-slate-500">{t(lang, "location")} </span>
-        {dash(job.location, hide)}
-      </span>
-      <span>
-        <span className="text-slate-500">{t(lang, "employmentType")} </span>
-        {job.employmentType ? jobAttributeLabel(lang, job.employmentType) : "—"}
-      </span>
-      <span>
-        <span className="text-slate-500">{t(lang, "workArrangement")} </span>
-        {job.workArrangement ? jobAttributeLabel(lang, job.workArrangement) : "—"}
-      </span>
-      <span>
-        <span className="text-slate-500">{t(lang, "engagement")} </span>
-        {job.engagement ? jobAttributeLabel(lang, job.engagement) : "—"}
-      </span>
+      {detailItems.map((item) => (
+        <span key={item.label}>
+          <span className="text-slate-500">{item.label} </span>
+          {item.value}
+        </span>
+      ))}
+    </span>
+  ) : undefined;
+  const reminderParts = [
+    job.reminderLeadDays != null ? `${job.reminderLeadDays} ${t(lang, "days")}` : null,
+    job.reminderLeadHours != null ? `${job.reminderLeadHours} ${t(lang, "hours")}` : null,
+  ].filter((part): part is string => part !== null);
+  const followItems = [
+    { label: t(lang, "interestDate"), value: formatDate(job.interestDate, user.timezone) },
+    job.followUpAt ? { label: t(lang, "followUp"), value: formatDateTime(job.followUpAt, user.timezone) } : null,
+    reminderParts.length ? { label: t(lang, "reminderLead"), value: reminderParts.join(", ") } : null,
+  ].filter((item): item is { label: string; value: string } => item !== null);
+  const followSummary = (
+    <span className="flex flex-wrap gap-x-4 gap-y-1">
+      {followItems.map((item) => (
+        <span key={item.label}>
+          <span className="text-slate-500">{item.label} </span>
+          {item.value}
+        </span>
+      ))}
     </span>
   );
   return (
@@ -137,7 +155,14 @@ export default async function JobDetailPage({
       lang={lang}
       backHref="/jobs"
       title={heading}
-      titleAside={<JobStatusEditor jobId={job.id} status={job.status} lang={lang} fit />}
+      titleAside={
+        <div className="flex flex-wrap items-center gap-2">
+          <JobStatusEditor jobId={job.id} status={job.status} lang={lang} fit />
+          <Link className="rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950" href={logHref}>
+            {t(lang, "logEvent")}
+          </Link>
+        </div>
+      }
       description={t(lang, "jobDetailIntro")}
       search={search}
     >
@@ -200,31 +225,36 @@ export default async function JobDetailPage({
             </div>
           </div>
         </SettingsSection>
-        <div className="flex min-w-0 flex-wrap items-end gap-x-3 gap-y-2">
-          <label className="shrink-0">
-            <span className={compactLabelClass}>{t(lang, "interestDate")}</span>
-            <DateField name="interestDate" defaultValue={dateInputValue(job.interestDate, user.timezone)} required compact lang={lang} />
-          </label>
-          <DateTimeField
-            name="followUpAt"
-            defaultValue={job.followUpAt ? dateTimeInputValue(job.followUpAt, user.timezone) : ""}
-            lang={lang}
-            compact
-            dateLabel={t(lang, "followUp")}
-          />
-          <label className="shrink-0">
-            <span className={compactLabelClass}>{t(lang, "reminderLead")} — {t(lang, "days")}</span>
-            <input className={`${compactFieldClass} w-24`} name="reminderLeadDays" defaultValue={job.reminderLeadDays ?? ""} inputMode="numeric" />
-          </label>
-          <label className="shrink-0">
-            <span className={compactLabelClass}>{t(lang, "hours")}</span>
-            <input className={`${compactFieldClass} w-20`} name="reminderLeadHours" defaultValue={job.reminderLeadHours ?? ""} inputMode="numeric" />
-          </label>
-          <p className="self-end pb-0.5 text-xs text-slate-400">{t(lang, "reminderBlank")}</p>
-        </div>
-        <div>
-          <SubmitButton label={t(lang, "save")} />
-        </div>
+        <SettingsSection title={t(lang, "followUp")} summary={followSummary} defaultOpen>
+          <div className="flex min-w-0 flex-wrap items-end gap-x-3 gap-y-2">
+            <label className="shrink-0">
+              <span className={compactLabelClass}>{t(lang, "interestDate")}</span>
+              <DateField name="interestDate" defaultValue={dateInputValue(job.interestDate, user.timezone)} required compact lang={lang} />
+            </label>
+            <DateTimeField
+              name="followUpAt"
+              defaultValue={job.followUpAt ? dateTimeInputValue(job.followUpAt, user.timezone) : ""}
+              lang={lang}
+              compact
+              dateLabel={t(lang, "followUp")}
+            />
+            <div className="flex items-end gap-2">
+              <span className="pb-1 text-xs text-slate-300">{t(lang, "reminderLead")}</span>
+              <label className="shrink-0">
+                <span className={compactLabelClass}>{t(lang, "days")}</span>
+                <input className={`${reminderFieldClass} w-16`} name="reminderLeadDays" defaultValue={job.reminderLeadDays ?? ""} inputMode="numeric" />
+              </label>
+              <label className="shrink-0">
+                <span className={compactLabelClass}>{t(lang, "hours")}</span>
+                <input className={`${reminderFieldClass} w-16`} name="reminderLeadHours" defaultValue={job.reminderLeadHours ?? ""} inputMode="numeric" />
+              </label>
+            </div>
+            <p className="self-end pb-0.5 text-xs text-slate-400">{t(lang, "reminderBlank")}</p>
+            <div className="ms-auto">
+              <SubmitButton label={t(lang, "save")} />
+            </div>
+          </div>
+        </SettingsSection>
       </form>
 
       <RelatedByTags
@@ -252,42 +282,38 @@ export default async function JobDetailPage({
         <JobUrlsEditor lang={lang} initialUrls={job.urls} form="job-form" hideLabel />
       </SettingsSection>
 
-      <h2 className="mb-2 mt-8 text-lg">{t(lang, "cvCount")}</h2>
-      <ul className="space-y-2 text-sm">
-        {job.cvs.map((cv) => (
-          <li key={cv.id} className="flex items-center justify-between gap-3">
-            <a className="text-sky-300" href={`/files/cv/${cv.id}`}>
-              {dash(cv.filename, hide)}
-            </a>
-            <form action={deleteCv}>
-              <input type="hidden" name="cvId" value={cv.id} />
-              <button className="text-rose-300" type="submit">{t(lang, "delete")}</button>
-            </form>
-          </li>
-        ))}
-      </ul>
-      <form action={uploadCv} className="mt-2 flex items-center gap-2">
-        <input type="hidden" name="jobId" value={job.id} />
-        <input name="file" type="file" />
-        <SubmitButton label={t(lang, "uploadCv")} />
-      </form>
+      <SettingsSection className="mt-8" title={t(lang, "cvCount")} badge={job.cvs.length ? String(job.cvs.length) : undefined}>
+        <ul className="space-y-2 text-sm">
+          {job.cvs.map((cv) => (
+            <li key={cv.id} className="flex items-center justify-between gap-3">
+              <a className="text-sky-300" href={`/files/cv/${cv.id}`}>
+                {dash(cv.filename, hide)}
+              </a>
+              <form action={deleteCv}>
+                <input type="hidden" name="cvId" value={cv.id} />
+                <button className="text-rose-300" type="submit">{t(lang, "delete")}</button>
+              </form>
+            </li>
+          ))}
+        </ul>
+        <form action={uploadCv} className="mt-2 flex items-center gap-2">
+          <input type="hidden" name="jobId" value={job.id} />
+          <input name="file" type="file" />
+          <SubmitButton label={t(lang, "uploadCv")} />
+        </form>
+      </SettingsSection>
 
-      <div className="mt-8">
-        <Link className="rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950" href={logHref}>
-          {t(lang, "logEvent")}
-        </Link>
-      </div>
-
-      <h2 className="mb-2 mt-8 text-lg">{t(lang, "history")}</h2>
-      <EventHistoryTable
-        lang={lang}
-        timezone={user.timezone}
-        hide={hide}
-        events={job.events}
-        editHref={(eventId) => `/events?modal=edit&eventId=${encodeURIComponent(eventId)}&returnTo=${encodeURIComponent(jobReturn)}`}
-        returnTo={jobReturn}
-        liveJobId={job.id}
-      />
+      <SettingsSection className="mt-8" title={t(lang, "history")} badge={job.events.length ? String(job.events.length) : undefined}>
+        <EventHistoryTable
+          lang={lang}
+          timezone={user.timezone}
+          hide={hide}
+          events={job.events}
+          editHref={(eventId) => `/events?modal=edit&eventId=${encodeURIComponent(eventId)}&returnTo=${encodeURIComponent(jobReturn)}`}
+          returnTo={jobReturn}
+          liveJobId={job.id}
+        />
+      </SettingsSection>
       <div className="mt-8">
         <form action={deleteJob}>
           <input type="hidden" name="jobId" value={job.id} />

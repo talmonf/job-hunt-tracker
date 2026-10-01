@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { googleConfigured, smtpConfigured } from "@/lib/mail";
 import { t } from "@/lib/i18n";
+import { firstParam } from "@/lib/http";
 import {
   disconnectCalendar,
   disconnectGoogleContacts,
@@ -28,6 +29,7 @@ export default async function SettingsPage({
   const user = await requireUser();
   const search = await searchParams;
   const lang = user.uiLanguage;
+  const section = firstParam(search.section);
   const [goals, tags, keys, usage, platform, packs] = await Promise.all([
     prisma.userGoals.findUnique({ where: { userId: user.id } }),
     prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" }, select: { id: true, name: true, color: true } }),
@@ -128,7 +130,7 @@ export default async function SettingsPage({
         </form>
       </SettingsSection>
 
-      <TagSettings lang={lang} tags={tags} />
+      <TagSettings lang={lang} tags={tags} open={section === "tags"} />
 
       <AiSettings
         lang={lang}
