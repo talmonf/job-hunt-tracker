@@ -192,9 +192,11 @@ export function ContactFields({
 
   if (layout === "page" && contact) {
     return (
-      <form action={action} className="grid gap-3" onSubmit={guardName}>
+      <form action={action} onSubmit={guardName}>
         <input type="hidden" name="contactId" value={contact.id} />
-        <TagPicker lang={lang} hide={hide} tags={tags} selected={selectedTagIds} compact />
+        <div className="mb-3">
+          <TagPicker lang={lang} hide={hide} tags={tags} selected={selectedTagIds} compact />
+        </div>
         <SettingsSection title={t(lang, "detailsSection")} summary={detailSummary}>
           <div className="grid gap-3 md:grid-cols-2">
             {nameFields}
@@ -266,7 +268,7 @@ export function ContactFields({
             </div>
           </div>
         </SettingsSection>
-        <SettingsSection title={t(lang, "nextAction")} summary={actionSummary} defaultOpen>
+        <SettingsSection title={t(lang, "nextAction")} summary={actionSummary}>
           <div className="flex min-w-0 flex-wrap items-end gap-x-3 gap-y-2">
             <label className="shrink-0">
               <span className={compactLabelClass}>{t(lang, "contactedAt")}</span>

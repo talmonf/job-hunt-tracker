@@ -13,6 +13,8 @@ export function RelatedByTags({
   employments,
   notes,
   contacts,
+  className = "mt-8",
+  showCount = false,
 }: {
   lang: Lang;
   hide: boolean;
@@ -21,6 +23,8 @@ export function RelatedByTags({
   employments: { id: string; label: string; overlap: TagRef[] }[];
   notes: { id: string; label: string; overlap: TagRef[] }[];
   contacts: { id: string; label: string; overlap: TagRef[] }[];
+  className?: string;
+  showCount?: boolean;
 }) {
   const groups = [
     { title: t(lang, "jobs"), rows: jobs, href: (id: string) => `/jobs/${id}` },
@@ -29,13 +33,21 @@ export function RelatedByTags({
     { title: t(lang, "employment"), rows: employments, href: (id: string) => `/profile?modal=employment&id=${id}` },
   ];
   const visible = groups.filter((group) => group.rows.length > 0);
-  const summary = !hasTags
-    ? t(lang, "relatedTagsEmpty")
-    : visible.length
-      ? visible.map((group) => `${group.title} ${group.rows.length}`).join(" · ")
-      : t(lang, "relatedNone");
+  const total = jobs.length + employments.length + notes.length + contacts.length;
+  const summary = showCount
+    ? undefined
+    : !hasTags
+      ? t(lang, "relatedTagsEmpty")
+      : visible.length
+        ? visible.map((group) => `${group.title} ${group.rows.length}`).join(" · ")
+        : t(lang, "relatedNone");
   return (
-    <SettingsSection className="mt-8" title={t(lang, "relatedByTags")} summary={summary}>
+    <SettingsSection
+      className={className}
+      title={t(lang, "relatedByTags")}
+      summary={summary}
+      badge={showCount ? String(total) : undefined}
+    >
       {hasTags && visible.length === 0 ? <p className="text-sm text-slate-400">{t(lang, "relatedNone")}</p> : null}
       <div className="grid gap-4">
         {visible.map((group) => (

@@ -169,6 +169,8 @@ export default async function ContactDetailPage({
         hide={hide}
       />
       <RelatedByTags
+        className=""
+        showCount
         lang={lang}
         hide={hide}
         hasTags={contactTagIds.length > 0}
@@ -187,7 +189,7 @@ export default async function ContactDetailPage({
         title={t(lang, "people")}
         collapsible
       />
-      <SettingsSection className="mt-8" title={t(lang, "history")} badge={contact.events.length ? String(contact.events.length) : undefined}>
+      <SettingsSection title={t(lang, "history")} badge={contact.events.length ? String(contact.events.length) : undefined}>
         <EventHistoryTable
           lang={lang}
           timezone={user.timezone}
@@ -197,7 +199,7 @@ export default async function ContactDetailPage({
           returnTo={contactReturn}
         />
       </SettingsSection>
-      <div className="mt-8">
+      <div>
         <form action={deleteContact}>
           <input type="hidden" name="contactId" value={contact.id} />
           <button className="text-sm text-rose-300" type="submit">{t(lang, "delete")}</button>
