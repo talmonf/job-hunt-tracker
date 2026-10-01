@@ -47,12 +47,16 @@ export function normalizeGooglePerson(person: GooglePersonPayload): GooglePerson
   const givenName = name?.givenName?.trim() ?? "";
   const familyName = name?.familyName?.trim() ?? "";
   const bilingual = bilingualNameFromGoogle(person.names);
+  const email = emailFrom(person.emailAddresses);
+  const mobile = mobileFrom(person.phoneNumbers);
   const displayName = (
     name?.displayName ||
     name?.unstructuredName ||
     [givenName, familyName].filter(Boolean).join(" ") ||
     [bilingual.firstName, bilingual.lastName].filter(Boolean).join(" ") ||
-    [bilingual.firstNameHe, bilingual.lastNameHe].filter(Boolean).join(" ")
+    [bilingual.firstNameHe, bilingual.lastNameHe].filter(Boolean).join(" ") ||
+    email ||
+    mobile
   ).trim();
   if (!displayName) return null;
   const org = person.organizations?.find((item) => item.current) ?? person.organizations?.[0];
@@ -67,8 +71,8 @@ export function normalizeGooglePerson(person: GooglePersonPayload): GooglePerson
     title,
     workplace,
     linkedinUrl: linkedInUrlFrom(person.urls),
-    mobile: mobileFrom(person.phoneNumbers),
-    email: emailFrom(person.emailAddresses),
+    mobile,
+    email,
     address: addressFrom(person.addresses),
   };
 }

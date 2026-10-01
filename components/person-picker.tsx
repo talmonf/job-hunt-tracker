@@ -61,6 +61,7 @@ export function PersonPicker({
   const [name, setName] = useState("");
   const [title, setTitle] = useState("");
   const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState(false);
   const q = query.trim().toLowerCase();
 
   const locals = useMemo(() => {
@@ -76,21 +77,34 @@ export function PersonPicker({
   useEffect(() => {
     if (!googleConnected || q.length < 2) {
       setGoogleHits([]);
+      setSearching(false);
+      setSearchError(false);
       return;
     }
+    const controller = new AbortController();
     const handle = window.setTimeout(async () => {
       setSearching(true);
+      setSearchError(false);
       try {
-        const response = await fetch(`/api/google-contacts/search?q=${encodeURIComponent(query.trim())}`);
-        const json = (await response.json()) as { people?: GoogleHit[] };
+        const response = await fetch(`/api/google-contacts/search?q=${encodeURIComponent(query.trim())}`, {
+          signal: controller.signal,
+        });
+        const json = (await response.json()) as { people?: GoogleHit[]; error?: string };
+        if (controller.signal.aborted) return;
         setGoogleHits(json.people ?? []);
+        setSearchError(Boolean(json.error) && (json.people ?? []).length === 0);
       } catch {
+        if (controller.signal.aborted) return;
         setGoogleHits([]);
+        setSearchError(true);
       } finally {
-        setSearching(false);
+        if (!controller.signal.aborted) setSearching(false);
       }
     }, 250);
-    return () => window.clearTimeout(handle);
+    return () => {
+      window.clearTimeout(handle);
+      controller.abort();
+    };
   }, [googleConnected, q, query]);
 
   function submitUrl() {
@@ -152,8 +166,14 @@ export function PersonPicker({
         </ResultGroup>
       ) : null}
       {googleConnected ? (
-        <ResultGroup label={t(lang, "googleResults")} empty={!searching && googleHits.length === 0 && q.length >= 2}>
+        <ResultGroup
+          label={t(lang, "googleResults")}
+          empty={!searching && !searchError && googleHits.length === 0 && q.length >= 2}
+        >
           {searching ? <p className="px-2 py-1 text-xs text-slate-400">{t(lang, "continuing")}</p> : null}
+          {searchError && !searching ? (
+            <p className="px-2 py-1 text-xs text-rose-300">{t(lang, "errorGoogleContacts")}</p>
+          ) : null}
           {googleHits.map((person) => (
             <button
               key={person.resourceName}

@@ -42,7 +42,7 @@ export function kindFromUrl(value: string): "linkedin" | "url" | null {
 }
 
 export function googlePersonId(resourceName: string): string {
-  return resourceName.trim().replace(/^people\//, "");
+  return resourceName.trim().replace(/^(?:people|otherContacts)\//, "");
 }
 
 export function googleContactsUrl(resourceName: string): string {
@@ -51,7 +51,7 @@ export function googleContactsUrl(resourceName: string): string {
 }
 
 export function isGoogleResourceName(value: string): boolean {
-  return /^people\/[A-Za-z0-9._~-]+$/.test(value.trim());
+  return /^(?:people|otherContacts)\/[A-Za-z0-9._~-]+$/.test(value.trim());
 }
 
 export function chipHref(link: ChipLink): string {

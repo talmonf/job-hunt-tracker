@@ -90,6 +90,21 @@ test("google person fields used by the contact form", () => {
   assert.equal(person.lastNameHe, "");
 });
 
+test("keeps other contacts and people who only have an email", () => {
+  const other = normalizeGooglePerson({
+    resourceName: "otherContacts/c999",
+    names: [{ displayName: "Chily Cohen" }],
+  });
+  assert.equal(other?.resourceName, "otherContacts/c999");
+  assert.equal(other?.displayName, "Chily Cohen");
+  const emailOnly = normalizeGooglePerson({
+    resourceName: "people/c1",
+    emailAddresses: [{ value: "chily@example.com" }],
+  });
+  assert.equal(emailOnly?.displayName, "chily@example.com");
+  assert.equal(emailOnly?.email, "chily@example.com");
+});
+
 test("formats a non-Israeli address as city, state, country", () => {
   assert.equal(
     formatContactAddress({ city: "Austin", region: "Texas", country: "United States", countryCode: "US" }),

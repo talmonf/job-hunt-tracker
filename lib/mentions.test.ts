@@ -17,6 +17,7 @@ import {
 
 test("google person urls drop the people/ prefix", () => {
   assert.equal(googleContactsUrl("people/c123"), "https://contacts.google.com/person/c123");
+  assert.equal(googleContactsUrl("otherContacts/c123"), "https://contacts.google.com/person/c123");
   assert.equal(googleContactsUrl("c123"), "https://contacts.google.com/person/c123");
 });
 

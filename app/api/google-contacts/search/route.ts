@@ -12,6 +12,10 @@ export async function GET(request: Request) {
   const query = new URL(request.url).searchParams.get("q") ?? "";
   const token = await contactsAccessToken(user.contactsRefreshToken);
   if (!token) return NextResponse.json({ people: [], connected: true, error: "token" }, { status: 502 });
-  const people = await searchGooglePeople(token, query);
-  return NextResponse.json({ people, connected: true });
+  try {
+    const result = await searchGooglePeople(token, query);
+    return NextResponse.json({ people: result.people, connected: true, error: result.error });
+  } catch {
+    return NextResponse.json({ people: [], connected: true, error: "google" }, { status: 502 });
+  }
 }
