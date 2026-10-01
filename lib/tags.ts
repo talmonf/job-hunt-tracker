@@ -147,6 +147,21 @@ export function firstFreeTagColor(used: Iterable<TagColor>): TagColor {
   return TAG_COLORS.find((color) => !taken.has(color)) ?? TAG_COLORS[0];
 }
 
+export type TagMatchMode = "any" | "all";
+
+export function parseTagMatch(value: string): TagMatchMode {
+  return value === "all" ? "all" : "any";
+}
+
+/** No ids means no tag constraint. "all" requires every id; otherwise any id matches. */
+export function tagFilter(tagIds: string[], match: TagMatchMode) {
+  if (tagIds.length === 0) return {};
+  if (match === "all") {
+    return { AND: tagIds.map((tagId) => ({ tags: { some: { tagId } } })) };
+  }
+  return { tags: { some: { tagId: { in: tagIds } } } };
+}
+
 export function assignmentTags(rows: { tag: TagRef }[]): TagRef[] {
   return rows
     .map((row) => row.tag)

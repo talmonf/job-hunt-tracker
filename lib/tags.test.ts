@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { firstFreeTagColor, rankByOverlap, suggestTagColors, type TagRef } from "./tags";
+import { firstFreeTagColor, parseTagMatch, rankByOverlap, suggestTagColors, tagFilter, type TagRef } from "./tags";
 
 const platform: TagRef = { id: "platform", name: "platform", color: "sky" };
 const leadership: TagRef = { id: "leadership", name: "leadership", color: "amber" };
@@ -37,6 +37,23 @@ test("new tags suggest five colors that are not already used", () => {
 
 test("a palette color stays visible when it is outside the five suggestions", () => {
   assert.deepEqual(suggestTagColors([], "orange"), ["orange", "lime", "green", "blue", "purple"]);
+});
+
+test("an empty tag selection applies no tag filter", () => {
+  assert.deepEqual(tagFilter([], "any"), {});
+  assert.deepEqual(tagFilter([], "all"), {});
+});
+
+test("selected tags match any tag unless the match is all", () => {
+  assert.equal(parseTagMatch(""), "any");
+  assert.equal(parseTagMatch("all"), "all");
+  assert.equal(parseTagMatch("other"), "any");
+  assert.deepEqual(tagFilter(["platform", "leadership"], "any"), {
+    tags: { some: { tagId: { in: ["platform", "leadership"] } } },
+  });
+  assert.deepEqual(tagFilter(["platform", "leadership"], "all"), {
+    AND: [{ tags: { some: { tagId: "platform" } } }, { tags: { some: { tagId: "leadership" } } }],
+  });
 });
 
 test("overlap ranking is empty when nothing is selected", () => {

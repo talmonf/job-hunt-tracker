@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { allParams, firstParam, preserveQuery } from "@/lib/http";
-import { assignmentTags } from "@/lib/tags";
+import { assignmentTags, parseTagMatch, tagFilter, TAG_CHIP_CLASS, TAG_SWATCH_CLASS, type TagMatchMode, type TagRef } from "@/lib/tags";
 import { parseDateOnly } from "@/lib/forms";
 import { EMPLOYMENT_TYPES, ENGAGEMENTS, JOB_STATUSES, WORK_ARRANGEMENTS, statusesForJobList } from "@/lib/events";
 import { jobAttributeLabel, statusLabel, t, type Lang } from "@/lib/i18n";
@@ -41,10 +41,11 @@ export default async function JobsPage({
   const followFrom = parseDateOnly(firstParam(search.followFrom), user.timezone);
   const followTo = parseDateOnly(firstParam(search.followTo) ? `${firstParam(search.followTo)}T23:59` : "", user.timezone);
   const catalog = await prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } });
-  const tagIds = allParams(search.tag).filter((id) => catalog.some((tag) => tag.id === id));
+  const tagIds = [...new Set(allParams(search.tag).filter((id) => catalog.some((tag) => tag.id === id)))];
+  const tagMatch = parseTagMatch(firstParam(search.tagMatch));
   const where: Prisma.JobWhereInput = {
     userId: user.id,
-    ...(tagIds.length ? { tags: { some: { tagId: { in: tagIds } } } } : {}),
+    ...tagFilter(tagIds, tagMatch),
     ...(q
       ? {
           OR: [
@@ -97,12 +98,12 @@ export default async function JobsPage({
           {["created", "updated", "error", "warn"].map((key) =>
             firstParam(search[key]) ? <input key={key} type="hidden" name={key} value={firstParam(search[key])} /> : null,
           )}
-          <div className="grid grid-cols-[minmax(0,1fr)_9.5rem_auto] items-end gap-x-2 gap-y-1">
-            <label className="min-w-0">
+          <div className="flex flex-nowrap items-end gap-x-2">
+            <label className="w-36 shrink-0">
               <span className={compactLabelClass}>{t(lang, "search")}</span>
               <input className={compactFieldClass} name="q" defaultValue={q} placeholder={t(lang, "nameOrCompany")} />
             </label>
-            <div className="min-w-0">
+            <div className="w-[9.5rem] shrink-0">
               <span className={compactLabelClass}>{t(lang, "status")}</span>
               <MultiSelect
                 compact
@@ -132,28 +133,12 @@ export default async function JobsPage({
               toValue={firstParam(search.followTo)}
               lang={lang}
             />
-            <div aria-hidden />
-            <div className="flex justify-end">
+            {catalog.length ? <TagFilter lang={lang} hide={hide} tags={catalog} selected={tagIds} match={tagMatch} /> : null}
+            <div className="ms-auto shrink-0">
               <button className="rounded bg-sky-500 px-2 py-0.5 text-xs font-semibold leading-tight text-slate-950" type="submit">
                 {t(lang, "apply")}
               </button>
             </div>
-            {catalog.length ? (
-              <div className="col-span-full w-44">
-                <span className={compactLabelClass}>{t(lang, "tags")}</span>
-                <MultiSelect
-                  compact
-                  name="tag"
-                  selected={tagIds}
-                  anyLabel={t(lang, "any")}
-                  selectAll={t(lang, "selectAll")}
-                  deselectAll={t(lang, "deselectAll")}
-                  done={t(lang, "done")}
-                  selectedWord={t(lang, "selectedCount")}
-                  options={catalog.map((tag) => ({ value: tag.id, label: maskText(tag.name, hide) }))}
-                />
-              </div>
-            ) : null}
           </div>
         </fieldset>
       </form>
@@ -265,6 +250,59 @@ export default async function JobsPage({
   );
 }
 
+function TagFilter({
+  lang,
+  hide,
+  tags,
+  selected,
+  match,
+}: {
+  lang: Lang;
+  hide: boolean;
+  tags: TagRef[];
+  selected: string[];
+  match: TagMatchMode;
+}) {
+  const modes = [
+    { value: "any" as const, label: t(lang, "tagMatchAny"), hint: t(lang, "tagMatchAnyHint") },
+    { value: "all" as const, label: t(lang, "tagMatchAll"), hint: t(lang, "tagMatchAllHint") },
+  ];
+  return (
+    <div className="min-w-0 flex-1">
+      <span className={compactLabelClass}>{t(lang, "tags")}</span>
+      <div className="flex items-center gap-1">
+        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto" role="group" aria-label={t(lang, "tags")}>
+          {tags.map((tag) => {
+            const name = maskText(tag.name, hide);
+            return (
+              <label key={tag.id} title={name} className="shrink-0 cursor-pointer rounded-full has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-sky-400">
+                <input className="peer sr-only" type="checkbox" name="tag" value={tag.id} defaultChecked={selected.includes(tag.id)} />
+                <span className="inline-flex items-center gap-1 rounded-full border border-slate-600 px-2 py-0.5 text-xs text-slate-400 peer-checked:hidden">
+                  <span className={`h-1.5 w-1.5 rounded-full ${TAG_SWATCH_CLASS[tag.color]}`} aria-hidden />
+                  {name}
+                </span>
+                <span className={`hidden items-center gap-1 rounded-full px-2 py-0.5 text-xs ring-1 ring-white/70 peer-checked:inline-flex ${TAG_CHIP_CLASS[tag.color]}`}>
+                  {name}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+        <div className="flex shrink-0 overflow-hidden rounded border border-slate-600" role="radiogroup" aria-label={t(lang, "tagMatch")}>
+          {modes.map((mode) => (
+            <label key={mode.value} title={mode.hint} className="cursor-pointer">
+              <input className="peer sr-only" type="radio" name="tagMatch" value={mode.value} defaultChecked={match === mode.value} aria-label={mode.hint} />
+              <span className="block px-1.5 py-0.5 text-[11px] leading-tight text-slate-400 peer-checked:bg-sky-500 peer-checked:font-semibold peer-checked:text-slate-950 peer-focus-visible:outline peer-focus-visible:outline-1 peer-focus-visible:outline-sky-300">
+                {mode.label}
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DateRange({
   label,
   fromName,
@@ -281,7 +319,7 @@ function DateRange({
   lang: Lang;
 }) {
   return (
-    <div className="w-fit">
+    <div className="w-fit shrink-0">
       <span className={compactLabelClass}>{label}</span>
       <div className="flex items-center gap-1">
         <DateField compact name={fromName} defaultValue={fromValue} lang={lang} />
