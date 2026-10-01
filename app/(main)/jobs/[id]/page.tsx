@@ -309,7 +309,7 @@ export default async function JobDetailPage({
           timezone={user.timezone}
           hide={hide}
           events={job.events}
-          editHref={(eventId) => `/events?modal=edit&eventId=${encodeURIComponent(eventId)}&returnTo=${encodeURIComponent(jobReturn)}`}
+          editHref={`/events?modal=edit&eventId={id}&returnTo=${encodeURIComponent(jobReturn)}`}
           returnTo={jobReturn}
           liveJobId={job.id}
         />

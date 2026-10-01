@@ -137,7 +137,7 @@ export default async function ContactDetailPage({
         timezone={user.timezone}
         hide={hide}
         events={contact.events}
-        editHref={(eventId) => `/contacts/${contact.id}?editEvent=${eventId}`}
+        editHref={`/contacts/${contact.id}?editEvent={id}`}
         returnTo={`/contacts/${contact.id}`}
       />
       <form action={deleteContact} className="mt-6">

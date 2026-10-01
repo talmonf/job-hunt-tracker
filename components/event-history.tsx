@@ -53,7 +53,7 @@ export function EventHistoryTable({
   timezone: string;
   hide: boolean;
   events: HistoryEvent[];
-  editHref: (eventId: string) => string;
+  editHref: string;
   returnTo: string;
   liveJobId?: string;
 }) {
@@ -105,7 +105,7 @@ export function EventHistoryTable({
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex gap-3 whitespace-nowrap">
-                    <Link className="text-sky-300" href={editHref(event.id)}>
+                    <Link className="text-sky-300" href={editHref.replace("{id}", encodeURIComponent(event.id))}>
                       {t(lang, "edit")}
                     </Link>
                     <ConfirmSubmit
