@@ -57,9 +57,58 @@ export async function updateTag(userId: string, formData: FormData): Promise<Tag
   }
 }
 
-export async function deleteTag(userId: string, formData: FormData): Promise<{ ok: true } | { ok: false; error: "required" }> {
+export type TagUsage = {
+  jobs: string[];
+  contacts: string[];
+  notes: string[];
+  employments: string[];
+};
+
+export type TagDeleteResult =
+  | { ok: true }
+  | { ok: false; error: "required" | "confirm" }
+  | { ok: false; error: "used"; usage: TagUsage };
+
+function placeLabel(title: string, place: string) {
+  const role = title.trim();
+  const where = place.trim();
+  if (role && where) return `${role} — ${where}`;
+  return role || where || "—";
+}
+
+export async function tagUsage(userId: string, id: string): Promise<TagUsage | null> {
+  const tag = await prisma.tag.findFirst({
+    where: { id, userId },
+    select: {
+      jobs: { select: { job: { select: { title: true, companyName: true } } } },
+      contacts: { select: { contact: { select: { fullName: true } } } },
+      notes: { select: { note: { select: { title: true } } } },
+      employments: { select: { employment: { select: { title: true, company: true } } } },
+    },
+  });
+  if (!tag) return null;
+  const sort = (a: string, b: string) => a.localeCompare(b, undefined, { sensitivity: "base" });
+  return {
+    jobs: tag.jobs.map((row) => placeLabel(row.job.title, row.job.companyName)).sort(sort),
+    contacts: tag.contacts.map((row) => row.contact.fullName.trim() || "—").sort(sort),
+    notes: tag.notes.map((row) => row.note.title.trim() || "—").sort(sort),
+    employments: tag.employments.map((row) => placeLabel(row.employment.title, row.employment.company)).sort(sort),
+  };
+}
+
+export function tagIsUsed(usage: TagUsage) {
+  return usage.jobs.length + usage.contacts.length + usage.notes.length + usage.employments.length > 0;
+}
+
+export async function deleteTag(userId: string, formData: FormData): Promise<TagDeleteResult> {
   const id = requiredText(formData.get("id"));
   if (!id) return { ok: false, error: "required" };
+  const usage = await tagUsage(userId, id);
+  if (!usage) return { ok: true };
+  if (formData.get("confirm") !== "1") {
+    if (tagIsUsed(usage)) return { ok: false, error: "used", usage };
+    return { ok: false, error: "confirm" };
+  }
   await prisma.tag.deleteMany({ where: { id, userId } });
   return { ok: true };
 }

@@ -66,6 +66,19 @@ export const TAG_SWATCH_CLASS: Record<TagColor, string> = {
   orange: "bg-orange-400",
 };
 
+export function suggestTagColors(used: Iterable<TagColor>, selected: TagColor, limit = 5): TagColor[] {
+  const taken = new Set(used);
+  const unused = TAG_COLORS.filter((color) => !taken.has(color));
+  const picks = unused.slice(0, limit);
+  if (picks.includes(selected)) return picks;
+  return [selected, ...picks].slice(0, limit);
+}
+
+export function firstFreeTagColor(used: Iterable<TagColor>): TagColor {
+  const taken = new Set(used);
+  return TAG_COLORS.find((color) => !taken.has(color)) ?? TAG_COLORS[0];
+}
+
 export function assignmentTags(rows: { tag: TagRef }[]): TagRef[] {
   return rows
     .map((row) => row.tag)

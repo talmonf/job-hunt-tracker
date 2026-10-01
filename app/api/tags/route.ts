@@ -32,6 +32,8 @@ export async function DELETE(request: Request) {
   const userId = await activeUserId();
   if (!userId) return NextResponse.json({ error: "auth" }, { status: 401 });
   const result = await deleteTag(userId, await request.formData());
+  if (!result.ok && result.error === "used") return NextResponse.json({ error: "used", usage: result.usage }, { status: 409 });
+  if (!result.ok && result.error === "confirm") return NextResponse.json({ error: "confirm" }, { status: 409 });
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json({ ok: true });
 }
