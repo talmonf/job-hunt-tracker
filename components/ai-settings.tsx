@@ -54,9 +54,20 @@ export function AiSettings({
   stripeReady: boolean;
 }) {
   const saved = new Map(keys.map((row) => [row.provider, row]));
+  const creditsReady = AI_PROVIDERS.some((provider) => platformKey(provider));
+  const configured = keys.length > 0 || (paySource === "credits" && creditsReady);
   return (
-    <section className="mb-8">
-      <h2 className="mb-1 text-lg">{t(lang, "aiTitle")}</h2>
+    <details className="group mb-8 rounded-md border border-slate-700">
+      <summary className="flex cursor-pointer list-none items-center gap-3 px-3 py-2 hover:bg-slate-800/40 [&::-webkit-details-marker]:hidden">
+        <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4 shrink-0 fill-current text-slate-400 transition-transform ltr:group-open:rotate-90 rtl:rotate-180 rtl:group-open:rotate-90">
+          <path d="M7.2 4.5a1 1 0 0 1 1.4 0l5 5.2a1 1 0 0 1 0 1.4l-5 5.2a1 1 0 0 1-1.4-1.4L11.4 10 7.2 5.9a1 1 0 0 1 0-1.4Z" />
+        </svg>
+        <h2 className="text-lg">{t(lang, "aiTitle")}</h2>
+        <span className={`ms-auto rounded-full px-2 py-0.5 text-xs ${configured ? "bg-emerald-950 text-emerald-300" : "bg-amber-950 text-amber-200"}`}>
+          {configured ? t(lang, "aiConfigured") : t(lang, "aiNotConfigured")}
+        </span>
+      </summary>
+      <div className="border-t border-slate-700 px-3 pb-3 pt-3">
       <p className="mb-3 text-sm text-slate-400">{t(lang, "aiIntro")}</p>
       <p className="mb-3 text-sm">{t(lang, "balance")}: {formatIls(balanceAgorot)}</p>
       <form action={savePaySource} className="mb-4 flex flex-wrap items-end gap-3">
@@ -194,6 +205,7 @@ export function AiSettings({
           </form>
         </div>
       ) : null}
-    </section>
+      </div>
+    </details>
   );
 }
