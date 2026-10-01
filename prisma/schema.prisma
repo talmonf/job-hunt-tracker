@@ -108,6 +108,8 @@ model User {
   calendarEmail        String?
   contactsRefreshToken String?
   contactsEmail        String?
+  aiPaySource          AiPaySource @default(key)
+  creditBalance        Int         @default(0)
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
 
@@ -125,6 +127,12 @@ model User {
   notifications Notification[]
   entityLinks   EntityLink[]
   tags          Tag[]
+  aiKeys        AiProviderKey[]
+  aiUsage       AiUsage[]
+  creditLedger  CreditLedger[]
+  profileLabels ProfileLabel[]
+  flavors       Flavor[]
+  profileImports ProfileImport[]
 }
 
 model UserGoals {
@@ -160,6 +168,8 @@ model Employment {
   descriptionEn String    @default("")
   descriptionHe String    @default("")
   tags          EmploymentTag[]
+  bullets       EmploymentBullet[]
+  flavors       FlavorEmployment[]
 }
 
 model Education {
@@ -202,9 +212,10 @@ model ProfileFile {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   filename   String
   objectKey  String
-  mime       String
-  byteSize   Int
-  uploadedAt DateTime @default(now())
+  mime          String
+  byteSize      Int
+  extractedText String   @default("")
+  uploadedAt    DateTime @default(now())
 }
 
 model Job {
@@ -447,4 +458,164 @@ model EmploymentTag {
 
   @@id([employmentId, tagId])
   @@index([tagId])
+}
+
+enum AiProvider {
+  anthropic
+  google
+  openai
+  openrouter
+}
+
+enum AiPaySource {
+  key
+  credits
+}
+
+enum ProfileLabelKind {
+  skill
+  theme
+}
+
+enum ImportStatus {
+  pending
+  accepted
+  discarded
+}
+
+model AiProviderKey {
+  id         String     @id @default(cuid())
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider   AiProvider
+  ciphertext String
+  lastFour   String
+  model      String
+  updatedAt  DateTime   @updatedAt
+
+  @@unique([userId, provider])
+}
+
+model AiUsage {
+  id               String      @id @default(cuid())
+  userId           String
+  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  feature          String
+  provider         AiProvider
+  model            String
+  inputTokens      Int
+  outputTokens     Int
+  paySource        AiPaySource
+  estimatedAgorot  Int
+  debitAgorot      Int         @default(0)
+  createdAt        DateTime    @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model AiPlatform {
+  id             String @id @default("default")
+  markupPercent  Int    @default(20)
+  usdToIls       Float  @default(3.7)
+}
+
+model CreditPack {
+  id           String  @id @default(cuid())
+  nameEn       String
+  nameHe       String
+  creditAgorot Int
+  priceAgorot  Int
+  active       Boolean @default(true)
+  sortOrder    Int     @default(0)
+}
+
+model CreditLedger {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  delta           Int
+  kind            String
+  note            String   @default("")
+  stripeSessionId String?  @unique
+  createdAt       DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model ProfileLabel {
+  id      String           @id @default(cuid())
+  userId  String
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind    ProfileLabelKind
+  name    String
+  flavors FlavorLabel[]
+
+  @@unique([userId, kind, name])
+  @@index([userId])
+}
+
+model EmploymentBullet {
+  id           String   @id @default(cuid())
+  employmentId String
+  employment   Employment @relation(fields: [employmentId], references: [id], onDelete: Cascade)
+  userId       String
+  position     Int
+  textEn       String   @default("")
+  textHe       String   @default("")
+  flavors      FlavorBullet[]
+
+  @@index([employmentId, position])
+}
+
+model Flavor {
+  id          String             @id @default(cuid())
+  userId      String
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  employments FlavorEmployment[]
+  bullets     FlavorBullet[]
+  labels      FlavorLabel[]
+
+  @@index([userId])
+}
+
+model FlavorEmployment {
+  flavorId     String
+  employmentId String
+  flavor       Flavor     @relation(fields: [flavorId], references: [id], onDelete: Cascade)
+  employment   Employment @relation(fields: [employmentId], references: [id], onDelete: Cascade)
+
+  @@id([flavorId, employmentId])
+  @@index([employmentId])
+}
+
+model FlavorBullet {
+  flavorId String
+  bulletId String
+  flavor   Flavor           @relation(fields: [flavorId], references: [id], onDelete: Cascade)
+  bullet   EmploymentBullet @relation(fields: [bulletId], references: [id], onDelete: Cascade)
+
+  @@id([flavorId, bulletId])
+  @@index([bulletId])
+}
+
+model FlavorLabel {
+  flavorId String
+  labelId  String
+  flavor   Flavor       @relation(fields: [flavorId], references: [id], onDelete: Cascade)
+  label    ProfileLabel @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([flavorId, labelId])
+  @@index([labelId])
+}
+
+model ProfileImport {
+  id        String       @id @default(cuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status    ImportStatus @default(pending)
+  payload   Json
+  createdAt DateTime     @default(now())
+
+  @@index([userId, status])
 }

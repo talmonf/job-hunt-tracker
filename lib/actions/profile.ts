@@ -27,14 +27,15 @@ export async function saveEmployment(formData: FormData) {
   const title = requiredText(formData.get("title"));
   const company = requiredText(formData.get("company"));
   if (!title || !company) redirect("/profile?error=required");
+  const bullets = bulletRows(formData);
   const data = {
     title,
     company,
     startDate: parseDateOnly(formData.get("startDate"), user.timezone),
     endDate: parseDateOnly(formData.get("endDate"), user.timezone),
     isCurrent: formData.get("isCurrent") === "1",
-    descriptionEn: String(formData.get("descriptionEn") ?? ""),
-    descriptionHe: String(formData.get("descriptionHe") ?? ""),
+    descriptionEn: bullets.map((row) => row.textEn).filter(Boolean).join("\n"),
+    descriptionHe: bullets.map((row) => row.textHe).filter(Boolean).join("\n"),
   };
   const id = requiredText(formData.get("id"));
   let savedId = id;
@@ -46,8 +47,27 @@ export async function saveEmployment(formData: FormData) {
     const created = await prisma.employment.create({ data: { userId: user.id, ...data } });
     savedId = created.id;
   }
+  await prisma.employmentBullet.deleteMany({ where: { employmentId: savedId, userId: user.id } });
+  if (bullets.length) {
+    await prisma.employmentBullet.createMany({
+      data: bullets.map((row, position) => ({ ...row, position, employmentId: savedId, userId: user.id })),
+    });
+  }
   await replaceRecordTags("employment", savedId, user.id, formData);
   redirect("/profile?updated=1");
+}
+
+function bulletRows(formData: FormData) {
+  const english = formData.getAll("bulletEn").map((value) => String(value ?? "").trim());
+  const hebrew = formData.getAll("bulletHe").map((value) => String(value ?? "").trim());
+  const count = Math.max(english.length, hebrew.length);
+  const rows: { textEn: string; textHe: string }[] = [];
+  for (let index = 0; index < count; index += 1) {
+    const textEn = english[index] ?? "";
+    const textHe = hebrew[index] ?? "";
+    if (textEn || textHe) rows.push({ textEn, textHe });
+  }
+  return rows;
 }
 
 export async function deleteEmployment(formData: FormData) {

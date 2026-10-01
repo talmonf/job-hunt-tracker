@@ -18,12 +18,17 @@ import {
   saveVolunteer,
   uploadProfileFile,
 } from "@/lib/actions/profile";
+import { prepareProfileImport } from "@/lib/actions/ai";
+import { AI_PROVIDERS } from "@/lib/ai/providers";
+import { normalizeProposal } from "@/lib/ai/proposal";
 import { Modal, PageFrame } from "@/components/chrome";
+import { ProfileReview } from "@/components/profile-review";
 import { DateField, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
 import { TagChips } from "@/components/tag-chip";
 import { TagPicker } from "@/components/tag-picker";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export default async function ProfilePage({
   searchParams,
@@ -34,18 +39,25 @@ export default async function ProfilePage({
   const hide = await hidePersonalInfo();
   const search = await searchParams;
   const lang = user.uiLanguage;
-  const [profile, employments, educations, volunteers, certificates, files, catalog] = await Promise.all([
+  const [profile, employments, educations, volunteers, certificates, files, catalog, labels, flavors, draftRow] = await Promise.all([
     prisma.profile.findUnique({ where: { userId: user.id } }),
     prisma.employment.findMany({
       where: { userId: user.id },
       orderBy: { startDate: "desc" },
-      include: { tags: { include: { tag: true } } },
+      include: { tags: { include: { tag: true } }, bullets: { orderBy: { position: "asc" } } },
     }),
     prisma.education.findMany({ where: { userId: user.id }, orderBy: { startDate: "desc" } }),
     prisma.volunteerRole.findMany({ where: { userId: user.id }, orderBy: { startDate: "desc" } }),
     prisma.certificate.findMany({ where: { userId: user.id }, orderBy: { issuedOn: "desc" } }),
     prisma.profileFile.findMany({ where: { userId: user.id }, orderBy: { uploadedAt: "desc" } }),
     prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
+    prisma.profileLabel.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
+    prisma.flavor.findMany({
+      where: { userId: user.id },
+      orderBy: { name: "asc" },
+      include: { employments: true, bullets: true, labels: { include: { label: true } } },
+    }),
+    prisma.profileImport.findFirst({ where: { userId: user.id, status: "pending" }, orderBy: { createdAt: "desc" } }),
   ]);
   const modal = firstParam(search.modal);
   const editId = firstParam(search.id);
@@ -73,6 +85,14 @@ export default async function ProfilePage({
           <article key={row.id} className="rounded-md border border-slate-700 p-3 text-sm">
             <div className="font-medium">{dash(row.title, hide)} · {dash(row.company, hide)}</div>
             <div className="text-slate-400">{row.startDate ? formatDate(row.startDate, user.timezone) : "—"} – {row.isCurrent ? t(lang, "currentRole") : row.endDate ? formatDate(row.endDate, user.timezone) : "—"}</div>
+            <BulletList
+              hide={hide}
+              lines={
+                row.bullets.length
+                  ? row.bullets.map((bullet) => (lang === "he" && bullet.textHe ? bullet.textHe : bullet.textEn || bullet.textHe))
+                  : (lang === "he" && row.descriptionHe ? row.descriptionHe : row.descriptionEn || row.descriptionHe).split("\n").filter(Boolean)
+              }
+            />
             {row.tags.length ? (
               <div className="mt-2">
                 <TagChips tags={assignmentTags(row.tags)} hide={hide} />
@@ -109,23 +129,87 @@ export default async function ProfilePage({
         ))}
       </Section>
 
+      {labels.length ? (
+        <section className="mt-8">
+          <h2 className="mb-2 text-lg">{t(lang, "labels")}</h2>
+          <ul className="flex flex-wrap gap-2 text-sm">
+            {labels.map((label) => (
+              <li key={label.id} className="rounded-full border border-slate-600 px-2 py-1">
+                {label.kind === "theme" ? t(lang, "theme") : t(lang, "skill")}: {dash(label.name, hide)}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+      {flavors.length ? (
+        <section className="mt-8">
+          <h2 className="mb-2 text-lg">{t(lang, "flavors")}</h2>
+          <div className="grid gap-2">
+            {flavors.map((flavor) => (
+              <article key={flavor.id} className="rounded-md border border-slate-700 p-3 text-sm">
+                <div className="font-medium">{dash(flavor.name, hide)}</div>
+                <p className="text-slate-400">
+                  {flavor.employments.length} {t(lang, "employment")} · {flavor.bullets.length} {t(lang, "bullets")} · {flavor.labels.map((row) => row.label.name).join(", ")}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <h2 className="mb-2 mt-8 text-lg">{t(lang, "sourceFile")}</h2>
       <p className="mb-2 text-sm text-slate-400">{t(lang, "sourceHint")}</p>
-      <ul className="mb-2 space-y-1 text-sm">
-        {files.map((file) => (
-          <li key={file.id} className="flex justify-between gap-3">
-            <a className="text-sky-300" href={`/files/profile/${file.id}`}>{dash(file.filename, hide)}</a>
-            <form action={deleteProfileFile}>
-              <input type="hidden" name="id" value={file.id} />
-              <button className="text-rose-300" type="submit">{t(lang, "delete")}</button>
-            </form>
-          </li>
-        ))}
-      </ul>
+      <form action={prepareProfileImport} className="mb-3 grid gap-3">
+        <div className="flex flex-wrap gap-3">
+          <label>
+            <span className={labelClass}>{t(lang, "outputLanguage")}</span>
+            <select className={fieldClass} name="language" defaultValue={lang}>
+              <option value="en">{t(lang, "languageEn")}</option>
+              <option value="he">{t(lang, "languageHe")}</option>
+              <option value="both">{t(lang, "languageBoth")}</option>
+            </select>
+          </label>
+          <label>
+            <span className={labelClass}>{t(lang, "provider")}</span>
+            <select className={fieldClass} name="provider" defaultValue="openrouter">
+              {AI_PROVIDERS.map((provider) => (
+                <option key={provider} value={provider}>{provider}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span className={labelClass}>{t(lang, "paySource")}</span>
+            <select className={fieldClass} name="paySource" defaultValue={user.aiPaySource}>
+              <option value="key">{t(lang, "payWithKey")}</option>
+              <option value="credits">{t(lang, "payWithCredits")}</option>
+            </select>
+          </label>
+        </div>
+        <ul className="space-y-1 text-sm">
+          {files.map((file) => (
+            <li key={file.id} className="flex items-center justify-between gap-3">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" name="fileId" value={file.id} />
+                <a className="text-sky-300" href={`/files/profile/${file.id}`}>{dash(file.filename, hide)}</a>
+              </label>
+              <button className="text-rose-300" type="submit" form={`delete-file-${file.id}`}>{t(lang, "delete")}</button>
+            </li>
+          ))}
+        </ul>
+        <SubmitButton label={t(lang, "importSelected")} />
+      </form>
+      {files.map((file) => (
+        <form key={file.id} id={`delete-file-${file.id}`} action={deleteProfileFile}>
+          <input type="hidden" name="id" value={file.id} />
+        </form>
+      ))}
       <form action={uploadProfileFile} className="flex items-center gap-2">
-        <input name="file" type="file" />
+        <input name="file" type="file" accept="application/pdf,.pdf" />
         <SubmitButton label={t(lang, "attach")} />
       </form>
+      {draftRow && (!firstParam(search.draft) || firstParam(search.draft) === draftRow.id) ? (
+        <ProfileReview proposal={normalizeProposal(draftRow.payload, false)} draftId={draftRow.id} lang={lang} />
+      ) : null}
 
       {modal === "employment" ? (
         <Modal title={t(lang, "employment")} closeHref={closeHref} closeLabel={t(lang, "close")}>
@@ -148,6 +232,17 @@ export default async function ProfilePage({
         </Modal>
       ) : null}
     </PageFrame>
+  );
+}
+
+function BulletList({ lines, hide }: { lines: string[]; hide: boolean }) {
+  if (!lines.length) return null;
+  return (
+    <ul className="mt-2 list-disc ps-5 text-slate-300">
+      {lines.map((line, index) => (
+        <li key={index}>{dash(line, hide)}</li>
+      ))}
+    </ul>
   );
 }
 
@@ -191,6 +286,7 @@ function EmploymentForm({
     isCurrent: boolean;
     descriptionEn: string;
     descriptionHe: string;
+    bullets: { textEn: string; textHe: string }[];
     tags: { tag: TagRef }[];
   };
   timeZone: string;
@@ -206,8 +302,16 @@ function EmploymentForm({
       <label><span className={labelClass}>{t(lang, "start")}</span><DateField name="startDate" defaultValue={row?.startDate ? dateInputValue(row.startDate, timeZone) : ""} lang={lang} /></label>
       <label><span className={labelClass}>{t(lang, "end")}</span><DateField name="endDate" defaultValue={row?.endDate ? dateInputValue(row.endDate, timeZone) : ""} lang={lang} /></label>
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="isCurrent" value="1" defaultChecked={row?.isCurrent} /> {t(lang, "currentRole")}</label>
-      <label><span className={labelClass}>{t(lang, "bodyEn")}</span><textarea className={fieldClass} name="descriptionEn" rows={3} defaultValue={row?.descriptionEn ?? ""} /></label>
-      <label><span className={labelClass}>{t(lang, "bodyHe")}</span><textarea className={fieldClass} name="descriptionHe" rows={3} defaultValue={row?.descriptionHe ?? ""} /></label>
+      {(row?.bullets.length ? row.bullets : [{ textEn: row?.descriptionEn ?? "", textHe: row?.descriptionHe ?? "" }]).map((bullet, index) => (
+        <div key={index} className="grid gap-2 md:grid-cols-2">
+          <label><span className={labelClass}>{t(lang, "bulletEn")}</span><input className={fieldClass} name="bulletEn" defaultValue={bullet.textEn} /></label>
+          <label><span className={labelClass}>{t(lang, "bulletHe")}</span><input className={fieldClass} name="bulletHe" defaultValue={bullet.textHe} /></label>
+        </div>
+      ))}
+      <div className="grid gap-2 md:grid-cols-2">
+        <label><span className={labelClass}>{t(lang, "bulletEn")}</span><input className={fieldClass} name="bulletEn" /></label>
+        <label><span className={labelClass}>{t(lang, "bulletHe")}</span><input className={fieldClass} name="bulletHe" /></label>
+      </div>
       <TagPicker lang={lang} hide={hide} tags={tags} selected={row ? assignmentTags(row.tags).map((tag) => tag.id) : []} />
       <SubmitButton label={t(lang, "save")} />
     </form>

@@ -68,6 +68,16 @@ export function Flash({ lang, search }: { lang: Lang; search: Record<string, str
                         ? t(lang, "errorGoogleContacts")
                         : error === "tagName"
                           ? t(lang, "errorTagName")
+                          : error === "aiKey"
+                            ? t(lang, "errorAiKey")
+                            : error === "aiBalance"
+                              ? t(lang, "errorAiBalance")
+                              : error === "aiProvider"
+                                ? t(lang, "errorAiProvider")
+                                : error === "aiPdf"
+                                  ? t(lang, "errorAiPdf")
+                                  : error === "stripe"
+                                    ? t(lang, "errorStripe")
                       : error
                         ? t(lang, "errorGeneric")
                         : "";

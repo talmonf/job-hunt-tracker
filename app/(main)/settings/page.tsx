@@ -14,10 +14,12 @@ import {
 } from "@/lib/actions/settings";
 import { createTag, deleteTag, updateTag } from "@/lib/actions/tags";
 import { TAG_COLORS, TAG_SWATCH_CLASS } from "@/lib/tags";
+import { AiSettings } from "@/components/ai-settings";
 import { PageFrame } from "@/components/chrome";
 import { ConfirmSubmit, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export default async function SettingsPage({
   searchParams,
@@ -27,14 +29,30 @@ export default async function SettingsPage({
   const user = await requireUser();
   const search = await searchParams;
   const lang = user.uiLanguage;
-  const [goals, tags] = await Promise.all([
+  const [goals, tags, keys, usage, platform, packs] = await Promise.all([
     prisma.userGoals.findUnique({ where: { userId: user.id } }),
     prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
+    prisma.aiProviderKey.findMany({ where: { userId: user.id }, select: { provider: true, lastFour: true, model: true } }),
+    prisma.aiUsage.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 30 }),
+    prisma.aiPlatform.findUnique({ where: { id: "default" } }),
+    prisma.creditPack.findMany({ orderBy: { sortOrder: "asc" } }),
   ]);
   const networkingDaily = goals?.networkingPerDay ?? (goals?.networkingPerWeek != null ? goals.networkingPerWeek / 5 : 0);
   const searchMinutes = goals?.searchMinutesOverride ?? ((goals?.applicationsPerDay ?? 0) + networkingDaily) * 30;
   return (
     <PageFrame lang={lang} title={t(lang, "settings")} description={t(lang, "settingsIntro")} search={search}>
+      <AiSettings
+        lang={lang}
+        paySource={user.aiPaySource}
+        balanceAgorot={user.creditBalance}
+        keys={keys}
+        usage={usage}
+        isAdmin={user.role === "admin"}
+        markupPercent={platform?.markupPercent ?? 20}
+        usdToIls={platform?.usdToIls ?? 3.7}
+        packs={packs}
+        stripeReady={Boolean(process.env.STRIPE_SECRET_KEY && process.env.AUTH_URL)}
+      />
       <h2 className="mb-1 text-lg">{t(lang, "tags")}</h2>
       <p className="mb-3 text-sm text-slate-400">{t(lang, "tagsIntro")}</p>
       <ul className="mb-4 space-y-3">

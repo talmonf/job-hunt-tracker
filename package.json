@@ -8,7 +8,7 @@
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "test": "tsx --test lib/password.test.ts lib/dates.test.ts lib/events.test.ts lib/contact-status.test.ts lib/mentions.test.ts lib/tags.test.ts"
+    "test": "tsx --test lib/password.test.ts lib/dates.test.ts lib/events.test.ts lib/contact-status.test.ts lib/mentions.test.ts lib/tags.test.ts lib/ai/money.test.ts lib/ai/parse-profile.test.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -25,6 +25,8 @@
     "nodemailer": "^6.10.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "stripe": "^23.0.0",
+    "unpdf": "^1.8.1",
     "ws": "^8.22.0"
   },
   "devDependencies": {

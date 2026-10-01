@@ -14,7 +14,8 @@ export default auth((req) => {
     pathname === "/signup" ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/cron") ||
-    pathname.startsWith("/api/login-language");
+    pathname.startsWith("/api/login-language") ||
+    pathname.startsWith("/api/stripe/webhook");
 
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-pathname", pathname);

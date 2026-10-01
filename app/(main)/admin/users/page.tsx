@@ -3,6 +3,8 @@ import { hidePersonalInfo, requireAdmin } from "@/lib/session";
 import { firstParam, preserveQuery } from "@/lib/http";
 import { ruleText, t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
+import { grantCredits } from "@/lib/actions/ai";
+import { formatIls } from "@/lib/ai/money";
 import { createUser, resetUserPassword, setUserActive } from "@/lib/actions/admin";
 import { EmptyState, Modal, PageFrame } from "@/components/chrome";
 import { PasswordFieldLabeled, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
@@ -61,6 +63,7 @@ export default async function UsersPage({
                 <th className="px-3 py-2">{t(lang, "email")}</th>
                 <th className="px-3 py-2">{t(lang, "roleLabel")}</th>
                 <th className="px-3 py-2">{t(lang, "status")}</th>
+                <th className="px-3 py-2">{t(lang, "balance")}</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -71,6 +74,7 @@ export default async function UsersPage({
                   <td className="px-3 py-2">{dash(user.email, hide)}</td>
                   <td className="px-3 py-2">{user.role === "admin" ? t(lang, "adminRole") : t(lang, "userRole")}</td>
                   <td className="px-3 py-2">{user.isActive ? t(lang, "active") : t(lang, "inactive")}</td>
+                  <td className="px-3 py-2">{formatIls(user.creditBalance)}</td>
                   <td className="px-3 py-2">
                     <div className="flex gap-3">
                       {user.id !== admin.id ? (
@@ -81,6 +85,11 @@ export default async function UsersPage({
                         </form>
                       ) : null}
                       <a className="text-sky-300" href={`/admin/users${preserveQuery(search, { modal: "reset", id: user.id }, ["modal", "id"])}`}>{t(lang, "resetPassword")}</a>
+                      <form action={grantCredits} className="flex items-center gap-2">
+                        <input type="hidden" name="id" value={user.id} />
+                        <input className="w-20 rounded-md border border-slate-600 bg-slate-950 px-2 py-1" name="amountIls" inputMode="decimal" placeholder={t(lang, "amountIls")} aria-label={t(lang, "amountIls")} />
+                        <button className="text-sky-300" type="submit">{t(lang, "grantCredits")}</button>
+                      </form>
                     </div>
                   </td>
                 </tr>
