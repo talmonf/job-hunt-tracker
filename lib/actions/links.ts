@@ -5,6 +5,7 @@ import type { EntityLinkKind } from "@prisma/client";
 import { prisma } from "../prisma";
 import { requireUser } from "../session";
 import { requiredText } from "../forms";
+import { displayPersonName } from "../person-name";
 import {
   isEntityLinkKind,
   isGoogleResourceName,
@@ -55,12 +56,20 @@ export async function linkContactGoogle(formData: FormData) {
   if (!contact || !isGoogleResourceName(resourceName)) redirect("/contacts?error=required");
   const title = requiredText(formData.get("title"));
   const workplace = requiredText(formData.get("workplace"));
+  const name = {
+    firstName: contact.firstName || requiredText(formData.get("firstName")),
+    lastName: contact.lastName || requiredText(formData.get("lastName")),
+    firstNameHe: contact.firstNameHe || requiredText(formData.get("firstNameHe")),
+    lastNameHe: contact.lastNameHe || requiredText(formData.get("lastNameHe")),
+  };
   await prisma.contact.update({
     where: { id: contact.id },
     data: {
       googleResourceName: resourceName,
       role: contact.role || title,
       workplace: contact.workplace || workplace,
+      ...name,
+      fullName: displayPersonName(name) || contact.fullName,
     },
   });
   redirect(`/contacts/${contact.id}?updated=1`);

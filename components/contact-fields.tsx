@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { CONTACT_STATUSES, isContactStatus, normalizeContactStatus } from "@/lib/contact-status";
 import { contactStatusLabel, t } from "@/lib/i18n";
 import type { Lang } from "@/lib/i18n";
 import type { ChipLink } from "@/lib/entity-links";
 import type { TagRef } from "@/lib/tags";
-import { contactDetailsFromPerson, joinPersonName, namePartsFromPerson, splitPersonName } from "@/lib/person-name";
+import { assignNameByScript, contactDetailsFromPerson, displayPersonName, emptyBilingualName, type BilingualName } from "@/lib/person-name";
 import { DateField, SubmitButton, compactFieldClass, compactLabelClass, fieldClass, labelClass, quietButton } from "./widgets";
 import { MentionTextarea } from "./mention-textarea";
 import { MentionText } from "./mention-text";
@@ -43,6 +43,8 @@ export function ContactFields({
     fullName: string;
     firstName?: string;
     lastName?: string;
+    firstNameHe?: string;
+    lastNameHe?: string;
     role: string;
     workplace: string;
     howWeMet: string;
@@ -68,6 +70,9 @@ export function ContactFields({
   const initialNames = initialPersonName(contact);
   const [firstName, setFirstName] = useState(initialNames.firstName);
   const [lastName, setLastName] = useState(initialNames.lastName);
+  const [firstNameHe, setFirstNameHe] = useState(initialNames.firstNameHe);
+  const [lastNameHe, setLastNameHe] = useState(initialNames.lastNameHe);
+  const [nameError, setNameError] = useState(false);
   const [role, setRole] = useState(contact?.role ?? "");
   const [workplace, setWorkplace] = useState(contact?.workplace ?? "");
   const [linkedinUrl, setLinkedinUrl] = useState(contact?.linkedinUrl ?? "");
@@ -78,13 +83,11 @@ export function ContactFields({
 
   function applyGoogle(person: PickedPerson) {
     if (person.kind !== "google_contact" || !person.googleResourceName) return;
-    const names = namePartsFromPerson({
-      givenName: person.givenName ?? "",
-      familyName: person.familyName ?? "",
-      displayName: person.displayName,
-    });
-    setFirstName(names.firstName);
-    setLastName(names.lastName);
+    setFirstName(person.firstName ?? "");
+    setLastName(person.lastName ?? "");
+    setFirstNameHe(person.firstNameHe ?? "");
+    setLastNameHe(person.lastNameHe ?? "");
+    setNameError(false);
     setRole(person.title);
     setWorkplace(person.workplace ?? "");
     setLinkedinUrl(person.linkedinUrl ?? "");
@@ -93,17 +96,67 @@ export function ContactFields({
     setGoogleOpen(false);
   }
 
-  const linkedName = joinPersonName(firstName, lastName);
+  const linkedName = displayPersonName({ firstName, lastName, firstNameHe, lastNameHe });
+  function guardName(event: FormEvent<HTMLFormElement>) {
+    if ([firstName, lastName, firstNameHe, lastNameHe].some((value) => value.trim())) return;
+    event.preventDefault();
+    setNameError(true);
+  }
   const nameFields = (
     <>
       <label>
-        <span className={labelClass}>{t(lang, "firstName")}</span>
-        <input className={fieldClass} name="firstName" value={firstName} onChange={(event) => setFirstName(event.target.value)} required />
+        <span className={labelClass}>{t(lang, "firstNameEn")}</span>
+        <input
+          className={fieldClass}
+          dir="ltr"
+          name="firstName"
+          value={firstName}
+          onChange={(event) => {
+            setFirstName(event.target.value);
+            setNameError(false);
+          }}
+        />
       </label>
       <label>
-        <span className={labelClass}>{t(lang, "lastName")}</span>
-        <input className={fieldClass} name="lastName" value={lastName} onChange={(event) => setLastName(event.target.value)} />
+        <span className={labelClass}>{t(lang, "lastNameEn")}</span>
+        <input
+          className={fieldClass}
+          dir="ltr"
+          name="lastName"
+          value={lastName}
+          onChange={(event) => {
+            setLastName(event.target.value);
+            setNameError(false);
+          }}
+        />
       </label>
+      <label>
+        <span className={labelClass}>{t(lang, "firstNameHe")}</span>
+        <input
+          className={fieldClass}
+          dir="rtl"
+          name="firstNameHe"
+          value={firstNameHe}
+          onChange={(event) => {
+            setFirstNameHe(event.target.value);
+            setNameError(false);
+          }}
+        />
+      </label>
+      <label>
+        <span className={labelClass}>{t(lang, "lastNameHe")}</span>
+        <input
+          className={fieldClass}
+          dir="rtl"
+          name="lastNameHe"
+          value={lastNameHe}
+          onChange={(event) => {
+            setLastNameHe(event.target.value);
+            setNameError(false);
+          }}
+        />
+      </label>
+      {nameError ? <p className="text-sm text-rose-300 md:col-span-2">{t(lang, "errorRequired")}</p> : null}
       <label>
         <span className={labelClass}>{t(lang, "role")}</span>
         <input className={fieldClass} name="role" value={role} onChange={(event) => setRole(event.target.value)} />
@@ -119,7 +172,7 @@ export function ContactFields({
 
   if (layout === "page" && contact) {
     return (
-      <form action={action} className="grid gap-3">
+      <form action={action} className="grid gap-3" onSubmit={guardName}>
         <input type="hidden" name="contactId" value={contact.id} />
         <TagPicker lang={lang} hide={hide} tags={tags} selected={selectedTagIds} compact />
         <SettingsSection title={t(lang, "detailsSection")} summary={detailSummary}>
@@ -221,7 +274,7 @@ export function ContactFields({
   }
 
   return (
-    <form action={action} className="grid gap-3 md:grid-cols-2">
+    <form action={action} className="grid gap-3 md:grid-cols-2" onSubmit={guardName}>
       {contact ? <input type="hidden" name="contactId" value={contact.id} /> : null}
       {googleAtStart ? (
         <div className="rounded-md border border-slate-700 p-3 md:col-span-2">
@@ -324,10 +377,14 @@ export function ContactFields({
   );
 }
 
-function initialPersonName(contact?: { fullName: string; firstName?: string; lastName?: string }) {
-  if (!contact) return { firstName: "", lastName: "" };
-  if ((contact.firstName ?? "").trim() || (contact.lastName ?? "").trim()) {
-    return { firstName: contact.firstName ?? "", lastName: contact.lastName ?? "" };
-  }
-  return splitPersonName(contact.fullName);
+function initialPersonName(contact?: { fullName: string } & Partial<BilingualName>): BilingualName {
+  if (!contact) return emptyBilingualName();
+  const stored = {
+    firstName: contact.firstName ?? "",
+    lastName: contact.lastName ?? "",
+    firstNameHe: contact.firstNameHe ?? "",
+    lastNameHe: contact.lastNameHe ?? "",
+  };
+  if (Object.values(stored).some((value) => value.trim())) return stored;
+  return assignNameByScript(contact.fullName);
 }

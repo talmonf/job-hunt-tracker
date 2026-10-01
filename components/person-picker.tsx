@@ -24,6 +24,10 @@ export type PickedPerson = {
   googleResourceName?: string;
   givenName?: string;
   familyName?: string;
+  firstName?: string;
+  lastName?: string;
+  firstNameHe?: string;
+  lastNameHe?: string;
   linkedinUrl?: string;
   emails?: string[];
   phones?: string[];
@@ -163,6 +167,10 @@ export function PersonPicker({
                   googleResourceName: person.resourceName,
                   givenName: person.givenName,
                   familyName: person.familyName,
+                  firstName: person.firstName,
+                  lastName: person.lastName,
+                  firstNameHe: person.firstNameHe,
+                  lastNameHe: person.lastNameHe,
                   linkedinUrl: person.linkedinUrl,
                   emails: person.emails,
                   phones: person.phones,

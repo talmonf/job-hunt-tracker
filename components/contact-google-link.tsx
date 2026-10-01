@@ -34,6 +34,10 @@ export function ContactGoogleLink({
     data.set("googleResourceName", person.googleResourceName);
     data.set("title", person.title);
     data.set("workplace", person.workplace ?? "");
+    data.set("firstName", person.firstName ?? "");
+    data.set("lastName", person.lastName ?? "");
+    data.set("firstNameHe", person.firstNameHe ?? "");
+    data.set("lastNameHe", person.lastNameHe ?? "");
     await linkContactGoogle(data);
   }
 

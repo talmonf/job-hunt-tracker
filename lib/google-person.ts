@@ -1,6 +1,7 @@
 import { isGoogleResourceName, isLinkedInUrl } from "./entity-links";
+import { bilingualNameFromGoogle, type BilingualName, type GoogleNameFields } from "./person-name";
 
-export type GooglePerson = {
+export type GooglePerson = BilingualName & {
   resourceName: string;
   displayName: string;
   givenName: string;
@@ -14,7 +15,7 @@ export type GooglePerson = {
 
 export type GooglePersonPayload = {
   resourceName?: string;
-  names?: { displayName?: string; unstructuredName?: string; givenName?: string; familyName?: string }[];
+  names?: GoogleNameFields[];
   organizations?: { title?: string; name?: string; current?: boolean }[];
   occupations?: { value?: string }[];
   urls?: { value?: string }[];
@@ -25,10 +26,17 @@ export type GooglePersonPayload = {
 export function normalizeGooglePerson(person: GooglePersonPayload): GooglePerson | null {
   const resourceName = person.resourceName?.trim() ?? "";
   if (!isGoogleResourceName(resourceName)) return null;
-  const name = person.names?.[0];
+  const name = primaryGoogleName(person.names);
   const givenName = name?.givenName?.trim() ?? "";
   const familyName = name?.familyName?.trim() ?? "";
-  const displayName = (name?.displayName || name?.unstructuredName || [givenName, familyName].filter(Boolean).join(" ")).trim();
+  const bilingual = bilingualNameFromGoogle(person.names);
+  const displayName = (
+    name?.displayName ||
+    name?.unstructuredName ||
+    [givenName, familyName].filter(Boolean).join(" ") ||
+    [bilingual.firstName, bilingual.lastName].filter(Boolean).join(" ") ||
+    [bilingual.firstNameHe, bilingual.lastNameHe].filter(Boolean).join(" ")
+  ).trim();
   if (!displayName) return null;
   const org = person.organizations?.find((item) => item.current) ?? person.organizations?.[0];
   const title = (org?.title || person.occupations?.[0]?.value || "").trim();
@@ -39,12 +47,18 @@ export function normalizeGooglePerson(person: GooglePersonPayload): GooglePerson
     displayName,
     givenName,
     familyName,
+    ...bilingual,
     title,
     workplace,
     linkedinUrl,
     emails: uniqueValues((person.emailAddresses ?? []).map((item) => item.value)),
     phones: uniqueValues((person.phoneNumbers ?? []).map((item) => item.canonicalForm || item.value)),
   };
+}
+
+function primaryGoogleName(names: GoogleNameFields[] | undefined): GoogleNameFields | undefined {
+  if (!names?.length) return undefined;
+  return names.find((item) => item.metadata?.primary) ?? names[0];
 }
 
 function uniqueValues(values: (string | undefined)[]): string[] {

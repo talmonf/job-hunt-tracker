@@ -8,7 +8,7 @@ import { parseDateOnly, requiredText } from "../forms";
 import { normalizeContactStatus } from "../contact-status";
 import { NOTE_TYPES } from "../notes";
 import { isGoogleResourceName, isHttpUrl } from "../entity-links";
-import { joinPersonName } from "../person-name";
+import { displayPersonName } from "../person-name";
 import type { NoteType } from "@prisma/client";
 import { replaceRecordTags } from "../tag-assign";
 
@@ -175,9 +175,13 @@ function statusFromForm(formData: FormData): string | undefined {
 }
 
 function contactName(formData: FormData) {
-  const firstName = requiredText(formData.get("firstName"));
-  const lastName = requiredText(formData.get("lastName"));
-  return { firstName, lastName, fullName: joinPersonName(firstName, lastName) };
+  const name = {
+    firstName: requiredText(formData.get("firstName")),
+    lastName: requiredText(formData.get("lastName")),
+    firstNameHe: requiredText(formData.get("firstNameHe")),
+    lastNameHe: requiredText(formData.get("lastNameHe")),
+  };
+  return { ...name, fullName: displayPersonName(name) };
 }
 
 function googleResourceFromForm(formData: FormData): string | null | undefined {

@@ -277,6 +277,8 @@ model Contact {
   fullName           String
   firstName          String    @default("")
   lastName           String    @default("")
+  firstNameHe        String    @default("")
+  lastNameHe         String    @default("")
   role               String    @default("")
   workplace          String    @default("")
   howWeMet           String    @default("")

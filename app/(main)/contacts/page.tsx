@@ -38,6 +38,10 @@ export default async function ContactsPage({
       ? {
           OR: [
             { fullName: { contains: q, mode: "insensitive" } },
+            { firstName: { contains: q, mode: "insensitive" } },
+            { lastName: { contains: q, mode: "insensitive" } },
+            { firstNameHe: { contains: q, mode: "insensitive" } },
+            { lastNameHe: { contains: q, mode: "insensitive" } },
             { workplace: { contains: q, mode: "insensitive" } },
           ],
         }

@@ -5,7 +5,7 @@ import { excelSerialToUtcDate, wallClockToUtc, addDays, formatDate } from "./dat
 import { recomputeJobStatus } from "./job-status";
 import { normalizeContactStatus } from "./contact-status";
 import { contactStatusLabel } from "./i18n";
-import { splitPersonName } from "./person-name";
+import { assignNameByScript } from "./person-name";
 
 const SHEET_GOALS = "הגדרת יעדים";
 const SHEET_JOBS = "ניהול הגשת מועמדויות";
@@ -301,11 +301,13 @@ async function importContacts(userId: string, sheet: ExcelJS.Worksheet, timeZone
     if (!fullName) continue;
     const workplace = textOf(row.getCell(header.columns.workplace ?? 3).value).trim();
     const importKey = `mentme:contact:${fullName.toLowerCase()}:${workplace.toLowerCase()}`;
-    const names = splitPersonName(fullName);
+    const names = assignNameByScript(fullName);
     const data = {
       fullName,
       firstName: names.firstName,
       lastName: names.lastName,
+      firstNameHe: names.firstNameHe,
+      lastNameHe: names.lastNameHe,
       role: textOf(row.getCell(header.columns.role ?? 2).value),
       workplace,
       howWeMet: textOf(row.getCell(header.columns.source ?? 4).value),

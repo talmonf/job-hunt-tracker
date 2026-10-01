@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { normalizeGooglePerson } from "./google-person";
-import { contactDetailsFromPerson, joinPersonName, namePartsFromPerson, splitPersonName } from "./person-name";
+import {
+  assignNameByScript,
+  bilingualNameFromGoogle,
+  contactDetailsFromPerson,
+  joinPersonName,
+  namePartsFromPerson,
+  splitPersonName,
+} from "./person-name";
 
 test("splits and joins a person name on the first space", () => {
   assert.deepEqual(splitPersonName("  Benny   Ben Sasson "), { firstName: "Benny", lastName: "Ben Sasson" });
@@ -21,6 +28,52 @@ test("prefers Google given and family names", () => {
   );
 });
 
+test("sorts a display name into English or Hebrew fields", () => {
+  assert.deepEqual(assignNameByScript("Benny Ben Sasson"), {
+    firstName: "Benny",
+    lastName: "Ben Sasson",
+    firstNameHe: "",
+    lastNameHe: "",
+  });
+  assert.deepEqual(assignNameByScript("בני בן ששון"), {
+    firstName: "",
+    lastName: "",
+    firstNameHe: "בני",
+    lastNameHe: "בן ששון",
+  });
+});
+
+test("fills English and Hebrew names from Google when both exist", () => {
+  assert.deepEqual(
+    bilingualNameFromGoogle([
+      {
+        givenName: "Benny",
+        familyName: "Ben Sasson",
+        phoneticGivenName: "בני",
+        phoneticFamilyName: "בן ששון",
+      },
+    ]),
+    { firstName: "Benny", lastName: "Ben Sasson", firstNameHe: "בני", lastNameHe: "בן ששון" },
+  );
+  assert.deepEqual(
+    bilingualNameFromGoogle([
+      { givenName: "בני", familyName: "בן ששון", metadata: { primary: true } },
+      { givenName: "Benny", familyName: "Ben Sasson" },
+    ]),
+    { firstName: "Benny", lastName: "Ben Sasson", firstNameHe: "בני", lastNameHe: "בן ששון" },
+  );
+  assert.deepEqual(
+    bilingualNameFromGoogle([{ displayName: "בני בן ששון", phoneticFullName: "Benny Ben Sasson" }]),
+    { firstName: "Benny", lastName: "Ben Sasson", firstNameHe: "בני", lastNameHe: "בן ששון" },
+  );
+  assert.deepEqual(bilingualNameFromGoogle([{ givenName: "Benny", familyName: "Ben Sasson" }]), {
+    firstName: "Benny",
+    lastName: "Ben Sasson",
+    firstNameHe: "",
+    lastNameHe: "",
+  });
+});
+
 test("google person fields used by the contact form", () => {
   const person = normalizeGooglePerson({
     resourceName: "people/c123",
@@ -35,4 +88,8 @@ test("google person fields used by the contact form", () => {
   assert.equal(person.title, "Advisor");
   assert.equal(person.linkedinUrl, "https://www.linkedin.com/in/benny-ben-sasson-cyber-management/");
   assert.equal(contactDetailsFromPerson(person), "benny@example.com\n050-0000000");
+  assert.equal(person.firstName, "Benny");
+  assert.equal(person.lastName, "Ben Sasson");
+  assert.equal(person.firstNameHe, "");
+  assert.equal(person.lastNameHe, "");
 });
