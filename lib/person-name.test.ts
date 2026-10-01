@@ -1,14 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { normalizeGooglePerson } from "./google-person";
-import {
-  assignNameByScript,
-  bilingualNameFromGoogle,
-  contactDetailsFromPerson,
-  joinPersonName,
-  namePartsFromPerson,
-  splitPersonName,
-} from "./person-name";
+import { formatContactAddress, normalizeGooglePerson } from "./google-person";
+import { assignNameByScript, bilingualNameFromGoogle, joinPersonName, namePartsFromPerson, splitPersonName } from "./person-name";
 
 test("splits and joins a person name on the first space", () => {
   assert.deepEqual(splitPersonName("  Benny   Ben Sasson "), { firstName: "Benny", lastName: "Ben Sasson" });
@@ -79,17 +72,29 @@ test("google person fields used by the contact form", () => {
     resourceName: "people/c123",
     names: [{ displayName: "Benny Ben Sasson", givenName: "Benny", familyName: "Ben Sasson" }],
     organizations: [{ name: "MentMe", title: "Advisor", current: true }],
-    urls: [{ value: "https://example.com" }, { value: "https://www.linkedin.com/in/benny-ben-sasson-cyber-management/" }],
-    emailAddresses: [{ value: "benny@example.com" }, { value: "benny@example.com" }],
-    phoneNumbers: [{ value: "050-0000000" }],
+    urls: [{ value: "https://example.com" }, { value: "www.linkedin.com/in/benny-ben-sasson-cyber-management/" }],
+    emailAddresses: [{ value: "other@example.com" }, { value: "benny@example.com", metadata: { primary: true } }],
+    phoneNumbers: [{ value: "03-0000000", type: "work" }, { value: "050-0000000", type: "mobile" }],
+    addresses: [{ city: "תל אביב", country: "Israel", countryCode: "IL" }],
   });
   assert.ok(person);
   assert.equal(person.workplace, "MentMe");
   assert.equal(person.title, "Advisor");
   assert.equal(person.linkedinUrl, "https://www.linkedin.com/in/benny-ben-sasson-cyber-management/");
-  assert.equal(contactDetailsFromPerson(person), "benny@example.com\n050-0000000");
+  assert.equal(person.email, "benny@example.com");
+  assert.equal(person.mobile, "050-0000000");
+  assert.equal(person.address, "תל אביב");
   assert.equal(person.firstName, "Benny");
   assert.equal(person.lastName, "Ben Sasson");
   assert.equal(person.firstNameHe, "");
   assert.equal(person.lastNameHe, "");
+});
+
+test("formats a non-Israeli address as city, state, country", () => {
+  assert.equal(
+    formatContactAddress({ city: "Austin", region: "Texas", country: "United States", countryCode: "US" }),
+    "Austin, Texas, United States",
+  );
+  assert.equal(formatContactAddress({ city: "London", country: "United Kingdom" }), "London, United Kingdom");
+  assert.equal(formatContactAddress({ formattedValue: "חיפה\nישראל", countryCode: "IL" }), "חיפה");
 });

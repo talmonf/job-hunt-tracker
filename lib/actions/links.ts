@@ -70,6 +70,10 @@ export async function linkContactGoogle(formData: FormData) {
       workplace: contact.workplace || workplace,
       ...name,
       fullName: displayPersonName(name) || contact.fullName,
+      mobile: contact.mobile || requiredText(formData.get("mobile")),
+      email: contact.email || requiredText(formData.get("email")),
+      address: contact.address || requiredText(formData.get("address")),
+      linkedinUrl: contact.linkedinUrl || linkedInFromForm(formData),
     },
   });
   redirect(`/contacts/${contact.id}?updated=1`);
@@ -83,6 +87,11 @@ export async function unlinkContactGoogle(formData: FormData) {
   if (!contact) redirect("/contacts");
   await prisma.contact.update({ where: { id: contact.id }, data: { googleResourceName: null } });
   redirect(`/contacts/${contact.id}?updated=1`);
+}
+
+function linkedInFromForm(formData: FormData): string {
+  const value = requiredText(formData.get("linkedinUrl"));
+  return isHttpUrl(value) ? value : "";
 }
 
 function readParent(formData: FormData): ParentIds {

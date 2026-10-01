@@ -288,6 +288,9 @@ model Contact {
   contactedAt        DateTime?
   nextActionDate     DateTime?
   nextAction         String    @default("")
+  mobile             String    @default("")
+  email              String    @default("")
+  address            String    @default("")
   contactDetails     String    @default("")
   willingToRecommend Boolean   @default(false)
   googleResourceName String?

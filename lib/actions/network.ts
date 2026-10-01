@@ -201,6 +201,9 @@ function contactData(formData: FormData, timeZone: string) {
     contactedAt: parseDateOnly(formData.get("contactedAt"), timeZone),
     nextActionDate: parseDateOnly(formData.get("nextActionDate"), timeZone),
     nextAction: requiredText(formData.get("nextAction")),
+    mobile: requiredText(formData.get("mobile")),
+    email: requiredText(formData.get("email")),
+    address: requiredText(formData.get("address")),
     contactDetails: String(formData.get("contactDetails") ?? ""),
     linkedinUrl: (() => {
       const value = requiredText(formData.get("linkedinUrl"));

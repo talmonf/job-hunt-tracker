@@ -43,6 +43,9 @@ export default async function ContactsPage({
             { firstNameHe: { contains: q, mode: "insensitive" } },
             { lastNameHe: { contains: q, mode: "insensitive" } },
             { workplace: { contains: q, mode: "insensitive" } },
+            { mobile: { contains: q, mode: "insensitive" } },
+            { email: { contains: q, mode: "insensitive" } },
+            { address: { contains: q, mode: "insensitive" } },
           ],
         }
       : {}),

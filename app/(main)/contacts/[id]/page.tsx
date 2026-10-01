@@ -103,6 +103,9 @@ export default async function ContactDetailPage({
   const detailItems = [
     contact.role.trim() ? { label: t(lang, "role"), value: dash(contact.role, hide) } : null,
     contact.workplace.trim() ? { label: t(lang, "workplace"), value: dash(contact.workplace, hide) } : null,
+    contact.mobile.trim() ? { label: t(lang, "mobile"), value: dash(contact.mobile, hide) } : null,
+    contact.email.trim() ? { label: t(lang, "email"), value: dash(contact.email, hide) } : null,
+    contact.address.trim() ? { label: t(lang, "address"), value: dash(contact.address, hide) } : null,
     contact.howWeMet.trim() ? { label: t(lang, "howWeMet"), value: dash(contact.howWeMet, hide) } : null,
     contact.lastChannel.trim() ? { label: t(lang, "channel"), value: dash(contact.lastChannel, hide) } : null,
   ].filter((item): item is { label: string; value: string } => item !== null);

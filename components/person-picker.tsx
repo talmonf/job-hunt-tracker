@@ -29,8 +29,9 @@ export type PickedPerson = {
   firstNameHe?: string;
   lastNameHe?: string;
   linkedinUrl?: string;
-  emails?: string[];
-  phones?: string[];
+  mobile?: string;
+  email?: string;
+  address?: string;
   url?: string;
   contactId?: string;
 };
@@ -172,8 +173,9 @@ export function PersonPicker({
                   firstNameHe: person.firstNameHe,
                   lastNameHe: person.lastNameHe,
                   linkedinUrl: person.linkedinUrl,
-                  emails: person.emails,
-                  phones: person.phones,
+                  mobile: person.mobile,
+                  email: person.email,
+                  address: person.address,
                 })
               }
             >

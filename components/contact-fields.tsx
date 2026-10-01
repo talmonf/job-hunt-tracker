@@ -6,7 +6,7 @@ import { contactStatusLabel, t } from "@/lib/i18n";
 import type { Lang } from "@/lib/i18n";
 import type { ChipLink } from "@/lib/entity-links";
 import type { TagRef } from "@/lib/tags";
-import { assignNameByScript, contactDetailsFromPerson, displayPersonName, emptyBilingualName, type BilingualName } from "@/lib/person-name";
+import { assignNameByScript, displayPersonName, emptyBilingualName, type BilingualName } from "@/lib/person-name";
 import { DateField, SubmitButton, compactFieldClass, compactLabelClass, fieldClass, labelClass, quietButton } from "./widgets";
 import { MentionTextarea } from "./mention-textarea";
 import { MentionText } from "./mention-text";
@@ -54,6 +54,9 @@ export function ContactFields({
     nextAction: string;
     contactDetails: string;
     willingToRecommend: boolean;
+    mobile?: string;
+    email?: string;
+    address?: string;
     linkedinUrl?: string;
     googleResourceName?: string | null;
   };
@@ -75,6 +78,9 @@ export function ContactFields({
   const [nameError, setNameError] = useState(false);
   const [role, setRole] = useState(contact?.role ?? "");
   const [workplace, setWorkplace] = useState(contact?.workplace ?? "");
+  const [mobile, setMobile] = useState(contact?.mobile ?? "");
+  const [email, setEmail] = useState(contact?.email ?? "");
+  const [address, setAddress] = useState(contact?.address ?? "");
   const [linkedinUrl, setLinkedinUrl] = useState(contact?.linkedinUrl ?? "");
   const [contactDetails, setContactDetails] = useState(contact?.contactDetails ?? "");
   const [googleResourceName, setGoogleResourceName] = useState(googleAtStart ? (contact?.googleResourceName ?? "") : "");
@@ -90,8 +96,10 @@ export function ContactFields({
     setNameError(false);
     setRole(person.title);
     setWorkplace(person.workplace ?? "");
+    setMobile(person.mobile ?? "");
+    setEmail(person.email ?? "");
+    setAddress(person.address ?? "");
     setLinkedinUrl(person.linkedinUrl ?? "");
-    setContactDetails(contactDetailsFromPerson({ emails: person.emails ?? [], phones: person.phones ?? [] }));
     setGoogleResourceName(person.googleResourceName);
     setGoogleOpen(false);
   }
@@ -164,6 +172,18 @@ export function ContactFields({
       <label>
         <span className={labelClass}>{t(lang, "workplace")}</span>
         <input className={fieldClass} name="workplace" value={workplace} onChange={(event) => setWorkplace(event.target.value)} />
+      </label>
+      <label>
+        <span className={labelClass}>{t(lang, "mobile")}</span>
+        <input className={fieldClass} dir="ltr" name="mobile" value={mobile} onChange={(event) => setMobile(event.target.value)} />
+      </label>
+      <label>
+        <span className={labelClass}>{t(lang, "email")}</span>
+        <input className={fieldClass} dir="ltr" name="email" value={email} onChange={(event) => setEmail(event.target.value)} />
+      </label>
+      <label className="md:col-span-2">
+        <span className={labelClass}>{t(lang, "address")}</span>
+        <input className={fieldClass} name="address" value={address} onChange={(event) => setAddress(event.target.value)} />
       </label>
       <label><span className={labelClass}>{t(lang, "howWeMet")}</span><input className={fieldClass} name="howWeMet" defaultValue={contact?.howWeMet ?? ""} /></label>
       <label><span className={labelClass}>{t(lang, "channel")}</span><input className={fieldClass} name="lastChannel" defaultValue={contact?.lastChannel ?? ""} /></label>

@@ -38,6 +38,10 @@ export function ContactGoogleLink({
     data.set("lastName", person.lastName ?? "");
     data.set("firstNameHe", person.firstNameHe ?? "");
     data.set("lastNameHe", person.lastNameHe ?? "");
+    data.set("mobile", person.mobile ?? "");
+    data.set("email", person.email ?? "");
+    data.set("address", person.address ?? "");
+    data.set("linkedinUrl", person.linkedinUrl ?? "");
     await linkContactGoogle(data);
   }
 

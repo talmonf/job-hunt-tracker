@@ -163,6 +163,3 @@ export function namePartsFromPerson(person: {
   return splitPersonName(person.displayName);
 }
 
-export function contactDetailsFromPerson(person: { emails: string[]; phones: string[] }): string {
-  return [...person.emails, ...person.phones].map((item) => item.trim()).filter(Boolean).join("\n");
-}

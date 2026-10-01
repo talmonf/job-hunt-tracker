@@ -3,7 +3,7 @@ import { googleAccessToken } from "./calendar";
 import { isGoogleResourceName } from "./entity-links";
 import { normalizeGooglePerson, type GooglePerson, type GooglePersonPayload } from "./google-person";
 
-const CONTACT_READ_MASK = "names,organizations,occupations,urls,emailAddresses,phoneNumbers";
+const CONTACT_READ_MASK = "names,organizations,occupations,urls,emailAddresses,phoneNumbers,addresses";
 const OTHER_READ_MASK = "names,emailAddresses,phoneNumbers";
 
 export type { GooglePerson };
