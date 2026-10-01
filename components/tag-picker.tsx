@@ -1,11 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { t, type Lang } from "@/lib/i18n";
 import { maskText } from "@/lib/mask";
 import { TAG_CHIP_CLASS, type TagRef } from "@/lib/tags";
 import { fieldClass, quietButton } from "./widgets";
+
+export const JOB_TAGS_ADD_EVENT = "job-tags-add";
+
+export type JobTagsAddDetail = {
+  ids: string[];
+  tags?: TagRef[];
+};
 
 export function TagPicker({
   lang,
@@ -21,13 +28,39 @@ export function TagPicker({
   compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [catalog, setCatalog] = useState(tags);
   const [ids, setIds] = useState(selected);
-  const byId = useMemo(() => new Map(tags.map((tag) => [tag.id, tag])), [tags]);
+  useEffect(() => {
+    function onAdd(event: Event) {
+      if (!(event instanceof CustomEvent)) return;
+      const detail = event.detail as JobTagsAddDetail | undefined;
+      if (!detail) return;
+      if (detail.tags?.length) {
+        setCatalog((current) => {
+          const known = new Set(current.map((tag) => tag.id));
+          const extra = detail.tags!.filter((tag) => !known.has(tag.id));
+          return extra.length ? [...current, ...extra] : current;
+        });
+      }
+      if (detail.ids?.length) {
+        setIds((current) => {
+          const next = [...current];
+          for (const id of detail.ids) {
+            if (!next.includes(id)) next.push(id);
+          }
+          return next.length === current.length ? current : next;
+        });
+      }
+    }
+    window.addEventListener(JOB_TAGS_ADD_EVENT, onAdd);
+    return () => window.removeEventListener(JOB_TAGS_ADD_EVENT, onAdd);
+  }, []);
+  const byId = useMemo(() => new Map(catalog.map((tag) => [tag.id, tag])), [catalog]);
   const chosen = ids.flatMap((id) => {
     const tag = byId.get(id);
     return tag ? [tag] : [];
   });
-  const rest = tags.filter((tag) => !ids.includes(tag.id));
+  const rest = catalog.filter((tag) => !ids.includes(tag.id));
   const fields = (
     <>
       <input type="hidden" name="tagsManaged" value="1" />
@@ -54,7 +87,7 @@ export function TagPicker({
               </button>
             </span>
           ))}
-          {tags.length ? (
+          {catalog.length ? (
             <div className="relative">
               <button
                 className="rounded-md border border-slate-600 px-2 py-0.5 text-xs text-slate-200 hover:bg-slate-800"
@@ -111,7 +144,7 @@ export function TagPicker({
           {t(lang, "manageTags")}
         </Link>
       </div>
-      {tags.length === 0 ? <p className="text-sm text-slate-400">{t(lang, "noTagsYet")}</p> : null}
+      {catalog.length === 0 ? <p className="text-sm text-slate-400">{t(lang, "noTagsYet")}</p> : null}
       {chosen.length ? (
         <div className="mb-2 flex flex-wrap gap-1">
           {chosen.map((tag) => (

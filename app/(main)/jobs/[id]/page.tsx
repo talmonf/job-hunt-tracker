@@ -20,8 +20,10 @@ import { MentionTextarea } from "@/components/mention-textarea";
 import { TagPicker } from "@/components/tag-picker";
 import { RelatedByTags } from "@/components/related-tags";
 import { SettingsSection } from "@/components/settings-section";
+import { FillJobDetails } from "@/components/fill-job-details";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export default async function JobDetailPage({
   params,
@@ -194,6 +196,7 @@ export default async function JobDetailPage({
                 googleConnected={googleConnected}
                 allowUrl={false}
               />
+              <FillJobDetails lang={lang} />
             </div>
           </div>
         </SettingsSection>
