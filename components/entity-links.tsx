@@ -7,6 +7,7 @@ import { t } from "@/lib/i18n";
 import { addEntityLink, deleteEntityLink } from "@/lib/actions/links";
 import { ContactChip } from "./contact-chip";
 import { PersonPicker, type LocalPerson, type PickedPerson } from "./person-picker";
+import { SettingsSection } from "./settings-section";
 import { quietButton } from "./widgets";
 
 export function EntityLinksSection({
@@ -19,6 +20,8 @@ export function EntityLinksSection({
   localContacts,
   googleConnected,
   allowUrl = false,
+  title,
+  collapsible = false,
 }: {
   lang: Lang;
   hide: boolean;
@@ -29,6 +32,8 @@ export function EntityLinksSection({
   localContacts: LocalPerson[];
   googleConnected: boolean;
   allowUrl?: boolean;
+  title?: string;
+  collapsible?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -46,10 +51,11 @@ export function EntityLinksSection({
     await addEntityLink(data);
   }
 
-  return (
-    <section className="mt-8">
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <h2 className="text-lg">{t(lang, "peopleLinks")}</h2>
+  const heading = title ?? t(lang, "peopleLinks");
+  const body = (
+    <>
+      <div className={collapsible ? "mb-2 flex justify-end" : "mb-2 flex items-center justify-between gap-3"}>
+        {collapsible ? null : <h2 className="text-lg">{heading}</h2>}
         <button className={quietButton} type="button" onClick={() => setOpen((value) => !value)}>
           {t(lang, "addPerson")}
         </button>
@@ -84,6 +90,14 @@ export function EntityLinksSection({
           />
         </div>
       ) : null}
-    </section>
+    </>
   );
+  if (collapsible) {
+    return (
+      <SettingsSection title={heading} badge={String(links.length)}>
+        {body}
+      </SettingsSection>
+    );
+  }
+  return <section className="mt-8">{body}</section>;
 }

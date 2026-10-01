@@ -10,9 +10,13 @@ type Row = { key: string; url: string };
 export function JobUrlsEditor({
   lang,
   initialUrls,
+  form,
+  hideLabel = false,
 }: {
   lang: Lang;
   initialUrls?: { id?: string; url: string }[];
+  form?: string;
+  hideLabel?: boolean;
 }) {
   const [rows, setRows] = useState<Row[]>(() =>
     (initialUrls ?? []).map((item, index) => ({ key: item.id ?? `url-${index}`, url: item.url })),
@@ -28,14 +32,15 @@ export function JobUrlsEditor({
 
   return (
     <div>
-      <span className={labelClass}>{t(lang, "urls")}</span>
-      <input type="hidden" name="urlsManaged" value="1" />
+      {hideLabel ? null : <span className={labelClass}>{t(lang, "urls")}</span>}
+      <input type="hidden" name="urlsManaged" value="1" form={form} />
       <ul className="space-y-2">
         {rows.map((row) => (
           <li key={row.key} className="flex items-center gap-2">
             <input
               className={fieldClass}
               name="urls"
+              form={form}
               value={row.url}
               onChange={(event) => {
                 const url = event.target.value;
@@ -56,6 +61,7 @@ export function JobUrlsEditor({
         <input
           className={fieldClass}
           name="urls"
+          form={form}
           value={draft}
           placeholder="https://"
           onChange={(event) => setDraft(event.target.value)}

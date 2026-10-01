@@ -1,24 +1,25 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { dateInputValue, dateTimeInputValue } from "@/lib/dates";
-import { jobAttributeLabel, statusLabel, t } from "@/lib/i18n";
+import { jobAttributeLabel, t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
 import { assignmentTags, rankByOverlap } from "@/lib/tags";
-import { EMPLOYMENT_TYPES, ENGAGEMENTS, WORK_ARRANGEMENTS, eventFormValues } from "@/lib/events";
-import { deleteCv, deleteJob, saveEvent, updateJob, uploadCv } from "@/lib/actions/jobs";
+import { EMPLOYMENT_TYPES, ENGAGEMENTS, WORK_ARRANGEMENTS } from "@/lib/events";
+import { deleteCv, deleteJob, updateJob, uploadCv } from "@/lib/actions/jobs";
 import { toChipLink } from "@/lib/entity-links";
-import { PageFrame, statusClass } from "@/components/chrome";
-import { AttributeSelect, DateField, DateTimeField, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
+import { PageFrame } from "@/components/chrome";
+import { AttributeSelect, DateField, DateTimeField, SubmitButton, compactFieldClass, compactLabelClass, fieldClass, labelClass } from "@/components/widgets";
+import { JobStatusEditor } from "@/components/job-status-editor";
 import { JobUrlsEditor } from "@/components/job-urls";
-import { EventForm } from "@/components/event-form";
 import { EventHistoryTable } from "@/components/event-history";
 import { EntityLinksSection } from "@/components/entity-links";
 import { MentionText } from "@/components/mention-text";
 import { MentionTextarea } from "@/components/mention-textarea";
 import { TagPicker } from "@/components/tag-picker";
 import { RelatedByTags } from "@/components/related-tags";
-import { firstParam } from "@/lib/http";
+import { SettingsSection } from "@/components/settings-section";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export default async function JobDetailPage({
   const hide = await hidePersonalInfo();
   const { id } = await params;
   const search = await searchParams;
-  const [job, notes, contacts, employments, catalog] = await Promise.all([
+  const [job, notes, contacts, employments, catalog, otherJobs] = await Promise.all([
     prisma.job.findFirst({
       where: { id, userId: user.id },
       include: {
@@ -59,6 +60,10 @@ export default async function JobDetailPage({
       include: { tags: { include: { tag: true } } },
     }),
     prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
+    prisma.job.findMany({
+      where: { userId: user.id, NOT: { id } },
+      include: { tags: { include: { tag: true } } },
+    }),
   ]);
   if (!job) notFound();
   const lang = user.uiLanguage;
@@ -72,9 +77,18 @@ export default async function JobDetailPage({
   }));
   const people = job.entityLinks.map(toChipLink);
   const googleConnected = Boolean(user.contactsRefreshToken);
-  const editing = job.events.find((event) => event.id === firstParam(search.editEvent));
   const jobTags = assignmentTags(job.tags);
   const jobTagIds = jobTags.map((tag) => tag.id);
+  const relatedJobs = rankByOverlap(
+    otherJobs,
+    (row) => assignmentTags(row.tags),
+    jobTagIds,
+    (row) => `${row.companyName} ${row.title}`,
+  ).map((row) => ({
+    id: row.item.id,
+    label: row.item.title ? `${row.item.companyName} — ${row.item.title}` : row.item.companyName,
+    overlap: row.overlap,
+  }));
   const relatedEmployments = rankByOverlap(
     employments,
     (row) => assignmentTags(row.tags),
@@ -93,92 +107,119 @@ export default async function JobDetailPage({
     jobTagIds,
     (row) => row.fullName,
   ).map((row) => ({ id: row.item.id, label: row.item.fullName, overlap: row.overlap }));
+  const heading = dash(job.title ? `${job.companyName} — ${job.title}` : job.companyName, hide);
+  const jobReturn = `/jobs/${job.id}`;
+  const logHref = `/events?modal=new&presetJob=${encodeURIComponent(job.id)}&presetNow=1&returnTo=${encodeURIComponent(jobReturn)}`;
+  const detailSummary = (
+    <span className="flex flex-wrap gap-x-4 gap-y-1">
+      <span>
+        <span className="text-slate-500">{t(lang, "location")} </span>
+        {dash(job.location, hide)}
+      </span>
+      <span>
+        <span className="text-slate-500">{t(lang, "employmentType")} </span>
+        {job.employmentType ? jobAttributeLabel(lang, job.employmentType) : "—"}
+      </span>
+      <span>
+        <span className="text-slate-500">{t(lang, "workArrangement")} </span>
+        {job.workArrangement ? jobAttributeLabel(lang, job.workArrangement) : "—"}
+      </span>
+      <span>
+        <span className="text-slate-500">{t(lang, "engagement")} </span>
+        {job.engagement ? jobAttributeLabel(lang, job.engagement) : "—"}
+      </span>
+    </span>
+  );
   return (
-    <PageFrame lang={lang} backHref="/jobs" title={dash(job.companyName, hide)} description={t(lang, "jobDetailIntro")} search={search}>
-      <p className={`mb-4 text-sm ${statusClass(job.status)}`}>
-        {t(lang, "status")}: {statusLabel(lang, job.status)}
-      </p>
-      <form action={updateJob} className="grid gap-3 md:grid-cols-2">
+    <PageFrame
+      lang={lang}
+      backHref="/jobs"
+      title={heading}
+      titleAside={<JobStatusEditor jobId={job.id} status={job.status} lang={lang} fit />}
+      description={t(lang, "jobDetailIntro")}
+      search={search}
+    >
+      <form id="job-form" action={updateJob} className="grid gap-3">
         <input type="hidden" name="jobId" value={job.id} />
-        <label>
-          <span className={labelClass}>{t(lang, "company")}</span>
-          <input className={fieldClass} name="companyName" defaultValue={job.companyName} required />
-        </label>
-        <label>
-          <span className={labelClass}>{t(lang, "title")}</span>
-          <input className={fieldClass} name="title" defaultValue={job.title} />
-        </label>
-        <label>
-          <span className={labelClass}>{t(lang, "location")}</span>
-          <input className={fieldClass} name="location" defaultValue={job.location} />
-        </label>
-        <AttributeSelect
-          lang={lang}
-          name="employmentType"
-          label={t(lang, "employmentType")}
-          options={EMPLOYMENT_TYPES}
-          value={job.employmentType ?? ""}
-        />
-        <AttributeSelect
-          lang={lang}
-          name="workArrangement"
-          label={t(lang, "workArrangement")}
-          options={WORK_ARRANGEMENTS}
-          value={job.workArrangement ?? ""}
-        />
-        <AttributeSelect
-          lang={lang}
-          name="engagement"
-          label={t(lang, "engagement")}
-          options={ENGAGEMENTS}
-          value={job.engagement ?? ""}
-        />
-        <div className="md:col-span-2">
-          {job.description ? (
-            <div className="mb-3">
-              <p className={`${labelClass}`}>{t(lang, "preview")}</p>
-              <MentionText text={job.description} hide={hide} lookup={{ contacts: localContacts, links: people }} />
+        <TagPicker lang={lang} hide={hide} tags={catalog} selected={jobTagIds} compact />
+        <SettingsSection title={t(lang, "jobDetails")} summary={detailSummary}>
+          <div className="grid gap-3 md:grid-cols-2">
+            <label>
+              <span className={labelClass}>{t(lang, "company")}</span>
+              <input className={fieldClass} name="companyName" defaultValue={job.companyName} required />
+            </label>
+            <label>
+              <span className={labelClass}>{t(lang, "title")}</span>
+              <input className={fieldClass} name="title" defaultValue={job.title} />
+            </label>
+            <label>
+              <span className={labelClass}>{t(lang, "location")}</span>
+              <input className={fieldClass} name="location" defaultValue={job.location} />
+            </label>
+            <AttributeSelect
+              lang={lang}
+              name="employmentType"
+              label={t(lang, "employmentType")}
+              options={EMPLOYMENT_TYPES}
+              value={job.employmentType ?? ""}
+            />
+            <AttributeSelect
+              lang={lang}
+              name="workArrangement"
+              label={t(lang, "workArrangement")}
+              options={WORK_ARRANGEMENTS}
+              value={job.workArrangement ?? ""}
+            />
+            <AttributeSelect
+              lang={lang}
+              name="engagement"
+              label={t(lang, "engagement")}
+              options={ENGAGEMENTS}
+              value={job.engagement ?? ""}
+            />
+            <div className="md:col-span-2">
+              {job.description ? (
+                <div className="mb-3">
+                  <p className={labelClass}>{t(lang, "preview")}</p>
+                  <MentionText text={job.description} hide={hide} lookup={{ contacts: localContacts, links: people }} />
+                </div>
+              ) : null}
+              <MentionTextarea
+                lang={lang}
+                name="description"
+                label={t(lang, "description")}
+                defaultValue={job.description}
+                rows={5}
+                localContacts={localContacts}
+                googleConnected={googleConnected}
+                allowUrl={false}
+              />
             </div>
-          ) : null}
-          <MentionTextarea
-            lang={lang}
-            name="description"
-            label={t(lang, "description")}
-            defaultValue={job.description}
-            rows={5}
-            localContacts={localContacts}
-            googleConnected={googleConnected}
-            allowUrl={false}
-          />
-        </div>
-        <div>
-          <span className={labelClass}>{t(lang, "interestDate")}</span>
-          <DateField name="interestDate" defaultValue={dateInputValue(job.interestDate, user.timezone)} required lang={lang} />
-        </div>
-        <div>
-          <span className={labelClass}>{t(lang, "followUp")}</span>
+          </div>
+        </SettingsSection>
+        <div className="flex min-w-0 flex-wrap items-end gap-x-3 gap-y-2">
+          <label className="shrink-0">
+            <span className={compactLabelClass}>{t(lang, "interestDate")}</span>
+            <DateField name="interestDate" defaultValue={dateInputValue(job.interestDate, user.timezone)} required compact lang={lang} />
+          </label>
           <DateTimeField
             name="followUpAt"
             defaultValue={job.followUpAt ? dateTimeInputValue(job.followUpAt, user.timezone) : ""}
             lang={lang}
+            compact
+            dateLabel={t(lang, "followUp")}
           />
+          <label className="shrink-0">
+            <span className={compactLabelClass}>{t(lang, "reminderLead")} — {t(lang, "days")}</span>
+            <input className={`${compactFieldClass} w-24`} name="reminderLeadDays" defaultValue={job.reminderLeadDays ?? ""} inputMode="numeric" />
+          </label>
+          <label className="shrink-0">
+            <span className={compactLabelClass}>{t(lang, "hours")}</span>
+            <input className={`${compactFieldClass} w-20`} name="reminderLeadHours" defaultValue={job.reminderLeadHours ?? ""} inputMode="numeric" />
+          </label>
+          <p className="self-end pb-0.5 text-xs text-slate-400">{t(lang, "reminderBlank")}</p>
         </div>
-        <label>
-          <span className={labelClass}>{t(lang, "reminderLead")} — {t(lang, "days")}</span>
-          <input className={fieldClass} name="reminderLeadDays" defaultValue={job.reminderLeadDays ?? ""} inputMode="numeric" />
-        </label>
-        <label>
-          <span className={labelClass}>{t(lang, "hours")}</span>
-          <input className={fieldClass} name="reminderLeadHours" defaultValue={job.reminderLeadHours ?? ""} inputMode="numeric" />
-        </label>
-        <p className="text-xs text-slate-400 md:col-span-2">{t(lang, "reminderBlank")}</p>
-        <div className="md:col-span-2">
-          <JobUrlsEditor lang={lang} initialUrls={job.urls} />
-        </div>
-        <div className="md:col-span-2">
-          <TagPicker lang={lang} hide={hide} tags={catalog} selected={jobTagIds} />
-        </div>
-        <div className="md:col-span-2">
+        <div>
           <SubmitButton label={t(lang, "save")} />
         </div>
       </form>
@@ -187,6 +228,7 @@ export default async function JobDetailPage({
         lang={lang}
         hide={hide}
         jobHasTags={jobTagIds.length > 0}
+        jobs={relatedJobs}
         employments={relatedEmployments}
         notes={relatedNotes}
         contacts={relatedContacts}
@@ -199,7 +241,13 @@ export default async function JobDetailPage({
         jobId={job.id}
         localContacts={localContacts}
         googleConnected={googleConnected}
+        title={t(lang, "people")}
+        collapsible
       />
+
+      <SettingsSection title={t(lang, "urls")} badge={String(job.urls.length)}>
+        <JobUrlsEditor lang={lang} initialUrls={job.urls} form="job-form" hideLabel />
+      </SettingsSection>
 
       <h2 className="mb-2 mt-8 text-lg">{t(lang, "cvCount")}</h2>
       <ul className="space-y-2 text-sm">
@@ -221,20 +269,11 @@ export default async function JobDetailPage({
         <SubmitButton label={t(lang, "uploadCv")} />
       </form>
 
-      <h2 className="mb-2 mt-8 text-lg">{t(lang, "logEvent")}</h2>
-      <EventForm
-        action={saveEvent}
-        lang={lang}
-        calendarLinked={Boolean(user.calendarRefreshToken)}
-        lockLinks
-        defaultJobId={job.id}
-        defaultContactId={editing?.contactId ?? undefined}
-        jobs={[]}
-        contacts={[]}
-        notes={notes.map((item) => ({ id: item.id, label: dash(item.title, hide) }))}
-        cvs={job.cvs.map((cv) => ({ id: cv.id, label: dash(cv.filename, hide) }))}
-        event={editing ? eventFormValues(editing, user.timezone) : undefined}
-      />
+      <div className="mt-8">
+        <Link className="rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950" href={logHref}>
+          {t(lang, "logEvent")}
+        </Link>
+      </div>
 
       <h2 className="mb-2 mt-8 text-lg">{t(lang, "history")}</h2>
       <EventHistoryTable
@@ -242,8 +281,8 @@ export default async function JobDetailPage({
         timezone={user.timezone}
         hide={hide}
         events={job.events}
-        editHref={(eventId) => `/jobs/${job.id}?editEvent=${eventId}`}
-        returnTo={`/jobs/${job.id}`}
+        editHref={(eventId) => `/events?modal=edit&eventId=${encodeURIComponent(eventId)}&returnTo=${encodeURIComponent(jobReturn)}`}
+        returnTo={jobReturn}
       />
       <div className="mt-8">
         <form action={deleteJob}>

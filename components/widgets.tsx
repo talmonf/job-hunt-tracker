@@ -22,6 +22,8 @@ const compactDateInputClass =
   "box-border w-[calc(10ch+1.625rem+2px)] rounded border border-slate-600 bg-slate-950 py-0.5 ps-1.5 pe-5 text-xs leading-tight text-slate-100 outline-none focus:border-sky-500";
 const timeSelectClass =
   "w-[4.25rem] rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-sm text-slate-100 outline-none focus:border-sky-500";
+const compactTimeSelectClass =
+  "w-[3.25rem] rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-xs leading-tight text-slate-100 outline-none focus:border-sky-500";
 
 export function AttributeSelect({
   lang,
@@ -174,11 +176,15 @@ export function DateTimeField({
   defaultValue,
   required = false,
   lang = "en",
+  compact = false,
+  dateLabel,
 }: {
   name: string;
   defaultValue?: string;
   required?: boolean;
   lang?: Lang;
+  compact?: boolean;
+  dateLabel?: string;
 }) {
   const initial = splitDateTime(defaultValue ?? "", required);
   const [text, setText] = useState(initial.date);
@@ -203,13 +209,18 @@ export function DateTimeField({
     }
   }
 
+  const activeLabel = compact ? compactLabelClass : labelClass;
+  const activeTime = compact ? compactTimeSelectClass : timeSelectClass;
   return (
-    <div className="flex flex-wrap items-end gap-2">
-      <DatePicker lang={lang} text={text} onTextChange={applyDateText} required={required} onPick={applyDateText} />
+    <div className={`flex flex-wrap items-end ${compact ? "gap-1" : "gap-2"}`}>
+      <div className="shrink-0">
+        {dateLabel ? <span className={activeLabel}>{dateLabel}</span> : null}
+        <DatePicker lang={lang} text={text} compact={compact} onTextChange={applyDateText} required={required} onPick={applyDateText} />
+      </div>
       <label className="block" dir="ltr">
-        <span className={labelClass}>{t(lang, "timeHour")}</span>
+        <span className={activeLabel}>{t(lang, "timeHour")}</span>
         <select
-          className={timeSelectClass}
+          className={activeTime}
           value={hour}
           required={timeRequired}
           onChange={(event) => {
@@ -227,9 +238,9 @@ export function DateTimeField({
         </select>
       </label>
       <label className="block" dir="ltr">
-        <span className={labelClass}>{t(lang, "timeMinute")}</span>
+        <span className={activeLabel}>{t(lang, "timeMinute")}</span>
         <select
-          className={timeSelectClass}
+          className={activeTime}
           value={minute}
           required={timeRequired}
           onChange={(event) => {

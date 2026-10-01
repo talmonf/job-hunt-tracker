@@ -8,7 +8,17 @@ import { JOB_STATUSES } from "@/lib/events";
 import { statusLabel, t, type Lang } from "@/lib/i18n";
 import { statusClass } from "./chrome";
 
-export function JobStatusEditor({ jobId, status, lang }: { jobId: string; status: string; lang: Lang }) {
+export function JobStatusEditor({
+  jobId,
+  status,
+  lang,
+  fit = false,
+}: {
+  jobId: string;
+  status: string;
+  lang: Lang;
+  fit?: boolean;
+}) {
   const [value, setValue] = useState(status);
   const [notice, setNotice] = useState<{ from: string; to: string } | null>(null);
   const [pending, start] = useTransition();
@@ -73,7 +83,7 @@ export function JobStatusEditor({ jobId, status, lang }: { jobId: string; status
   return (
     <>
       <select
-        className={`w-full min-w-[7.5rem] rounded border border-slate-600 bg-slate-950 px-1.5 py-0.5 text-xs outline-none focus:border-sky-500 disabled:opacity-60 ${statusClass(value)}`}
+        className={`${fit ? "w-auto" : "w-full"} min-w-[7.5rem] rounded border border-slate-600 bg-slate-950 px-1.5 py-0.5 text-xs outline-none focus:border-sky-500 disabled:opacity-60 ${statusClass(value)}`}
         aria-label={t(lang, "status")}
         disabled={pending}
         value={value}

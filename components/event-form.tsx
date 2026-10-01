@@ -18,6 +18,7 @@ export function EventForm({
   defaultContactId,
   defaultType,
   defaultResultingStatus,
+  defaultOccurredAt,
   lockLinks = false,
   returnTo,
   event,
@@ -33,6 +34,7 @@ export function EventForm({
   defaultContactId?: string;
   defaultType?: string;
   defaultResultingStatus?: string;
+  defaultOccurredAt?: string;
   lockLinks?: boolean;
   returnTo?: string;
   event?: {
@@ -108,7 +110,7 @@ export function EventForm({
       )}
       <div>
         <span className={labelClass}>{type === "application" ? t(lang, "applicationSentAt") : t(lang, "when")}</span>
-        <DateTimeField name="occurredAt" defaultValue={event?.occurredAt} required lang={lang} />
+        <DateTimeField name="occurredAt" defaultValue={event?.occurredAt || defaultOccurredAt} required lang={lang} />
       </div>
       {type === "meeting" ? (
         <>

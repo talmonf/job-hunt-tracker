@@ -7,7 +7,7 @@ import { parseDateOnly } from "@/lib/forms";
 import { EVENT_TYPES, JOB_STATUSES, eventFormValues, eventLoggedAt, eventScheduledStart } from "@/lib/events";
 import { eventHappenedLabel, eventTypeLabel, t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
-import { formatDateTime, formatScheduledRange } from "@/lib/dates";
+import { dateTimeInputValue, formatDateTime, formatScheduledRange } from "@/lib/dates";
 import { deleteEvent, saveEvent } from "@/lib/actions/jobs";
 import { EmptyState, Modal, PageFrame } from "@/components/chrome";
 import { ConfirmSubmit, DateField, MultiSelect, fieldClass, labelClass } from "@/components/widgets";
@@ -16,7 +16,7 @@ import { EventSummary } from "@/components/event-summary";
 
 export const dynamic = "force-dynamic";
 
-const PRESET_PARAMS = ["presetJob", "presetType", "presetStatus"];
+const PRESET_PARAMS = ["presetJob", "presetType", "presetStatus", "presetNow", "returnTo"];
 const SORTS = ["occurredAt", "type"] as const;
 
 export default async function EventsPage({
@@ -81,11 +81,14 @@ export default async function EventsPage({
     }),
   ]);
   const keep = preserveQuery(search, {}, ["modal", "eventId", ...PRESET_PARAMS]);
-  const closeHref = `/events${keep}`;
   const editing = firstParam(search.modal) === "edit" ? events.find((event) => event.id === firstParam(search.eventId)) : undefined;
   const presetJobId = jobs.some((job) => job.id === firstParam(search.presetJob)) ? firstParam(search.presetJob) : "";
   const presetType = (EVENT_TYPES as readonly string[]).includes(firstParam(search.presetType)) ? firstParam(search.presetType) : "";
   const presetStatus = (JOB_STATUSES as readonly string[]).includes(firstParam(search.presetStatus)) ? firstParam(search.presetStatus) : "";
+  const requestedReturn = sameSitePath(firstParam(search.returnTo));
+  const closeHref = requestedReturn || `/events${keep}`;
+  const defaultOccurredAt =
+    editing || firstParam(search.presetNow) !== "1" ? undefined : dateTimeInputValue(new Date(), user.timezone);
   const jobOptions = jobs.map((job) => ({
     id: job.id,
     label: dash(`${job.companyName}${job.title ? ` — ${job.title}` : ""}`, hide),
@@ -231,11 +234,12 @@ export default async function EventsPage({
             action={saveEvent}
             lang={lang}
             calendarLinked={Boolean(user.calendarRefreshToken)}
-            returnTo={`/events${keep}`}
+            returnTo={requestedReturn || `/events${keep}`}
             defaultJobId={editing ? (editing.jobId ?? undefined) : presetJobId || undefined}
             defaultContactId={editing?.contactId ?? undefined}
             defaultType={editing ? undefined : presetType || undefined}
             defaultResultingStatus={editing ? undefined : presetStatus || undefined}
+            defaultOccurredAt={defaultOccurredAt}
             jobs={jobOptions}
             contacts={contactOptions}
             notes={noteOptions}
@@ -246,6 +250,11 @@ export default async function EventsPage({
       ) : null}
     </PageFrame>
   );
+}
+
+function sameSitePath(value: string) {
+  if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\") || value.includes("://")) return "";
+  return value;
 }
 
 function SortHead({
