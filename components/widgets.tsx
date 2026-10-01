@@ -16,6 +16,12 @@ export const compactLabelClass = "mb-0.5 block text-[11px] leading-none text-sla
 export const primaryButton =
   "rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950 hover:bg-sky-400 disabled:opacity-60";
 export const quietButton = "rounded-md border border-slate-600 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-800";
+const dateInputClass =
+  "box-border w-[calc(10ch+2.75rem+2px)] rounded-md border border-slate-600 bg-slate-950 py-1.5 ps-2 pe-9 text-sm text-slate-100 outline-none focus:border-sky-500";
+const compactDateInputClass =
+  "box-border w-[calc(10ch+1.625rem+2px)] rounded border border-slate-600 bg-slate-950 py-0.5 ps-1.5 pe-5 text-xs leading-tight text-slate-100 outline-none focus:border-sky-500";
+const timeSelectClass =
+  "w-[4.25rem] rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-sm text-slate-100 outline-none focus:border-sky-500";
 
 export function AttributeSelect({
   lang,
@@ -198,50 +204,48 @@ export function DateTimeField({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="flex flex-wrap items-end gap-2">
       <DatePicker lang={lang} text={text} onTextChange={applyDateText} required={required} onPick={applyDateText} />
-      <div className="flex flex-wrap items-end gap-2">
-        <label className="block" dir="ltr">
-          <span className={labelClass}>{t(lang, "timeHour")}</span>
-          <select
-            className={`${fieldClass} w-[4.75rem]`}
-            value={hour}
-            required={timeRequired}
-            onChange={(event) => {
-              const next = event.target.value;
-              setHour(next);
-              if (next && !minute) setMinute("00");
-            }}
-          >
-            {timeRequired ? null : <option value="" />}
-            {HOURS.map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block" dir="ltr">
-          <span className={labelClass}>{t(lang, "timeMinute")}</span>
-          <select
-            className={`${fieldClass} w-[4.75rem]`}
-            value={minute}
-            required={timeRequired}
-            onChange={(event) => {
-              const next = event.target.value;
-              setMinute(next);
-              if (next && !hour) setHour("09");
-            }}
-          >
-            {timeRequired ? null : <option value="" />}
-            {MINUTES.map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      <label className="block" dir="ltr">
+        <span className={labelClass}>{t(lang, "timeHour")}</span>
+        <select
+          className={timeSelectClass}
+          value={hour}
+          required={timeRequired}
+          onChange={(event) => {
+            const next = event.target.value;
+            setHour(next);
+            if (next && !minute) setMinute("00");
+          }}
+        >
+          {timeRequired ? null : <option value="" />}
+          {HOURS.map((value) => (
+            <option key={value} value={value}>
+              {value}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="block" dir="ltr">
+        <span className={labelClass}>{t(lang, "timeMinute")}</span>
+        <select
+          className={timeSelectClass}
+          value={minute}
+          required={timeRequired}
+          onChange={(event) => {
+            const next = event.target.value;
+            setMinute(next);
+            if (next && !hour) setHour("09");
+          }}
+        >
+          {timeRequired ? null : <option value="" />}
+          {MINUTES.map((value) => (
+            <option key={value} value={value}>
+              {value}
+            </option>
+          ))}
+        </select>
+      </label>
       <input type="hidden" name={name} value={iso} />
     </div>
   );
@@ -311,10 +315,10 @@ function DatePicker({
   const cells = monthCells(view.year, view.month);
 
   return (
-    <div className="relative" ref={ref}>
-      <span className="relative block">
+    <div className="relative w-fit" ref={ref}>
+      <span className="relative inline-block">
         <input
-          className={compact ? `${compactFieldClass} pe-5` : `${fieldClass} pe-9`}
+          className={compact ? compactDateInputClass : dateInputClass}
           value={text}
           placeholder="dd/mm/yyyy"
           inputMode="numeric"

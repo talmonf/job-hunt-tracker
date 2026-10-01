@@ -60,7 +60,7 @@ export function ContactDateEditor({
 }) {
   const [pending, start] = useTransition();
   return (
-    <div className={`min-w-[11rem] ${pending ? "opacity-60" : ""}`}>
+    <div className={pending ? "opacity-60" : ""}>
       <DateField name="nextActionDate" defaultValue={value} lang={lang} onCommit={(iso) => save(contactId, "nextActionDate", iso, start)} />
     </div>
   );

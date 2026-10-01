@@ -284,15 +284,11 @@ function DateRange({
     <div className="w-fit">
       <span className={compactLabelClass}>{label}</span>
       <div className="flex items-center gap-1">
-        <div className="w-[7.25rem]">
-          <DateField compact name={fromName} defaultValue={fromValue} lang={lang} />
-        </div>
+        <DateField compact name={fromName} defaultValue={fromValue} lang={lang} />
         <span className="text-[11px] leading-none text-slate-500" aria-hidden>
           –
         </span>
-        <div className="w-[7.25rem]">
-          <DateField compact name={toName} defaultValue={toValue} lang={lang} />
-        </div>
+        <DateField compact name={toName} defaultValue={toValue} lang={lang} />
       </div>
     </div>
   );

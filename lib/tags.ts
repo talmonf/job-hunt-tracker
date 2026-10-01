@@ -66,12 +66,80 @@ export const TAG_SWATCH_CLASS: Record<TagColor, string> = {
   orange: "bg-orange-400",
 };
 
+/** Hue of each Tailwind 400 swatch. Neighboring names such as red, rose, and pink sit only a few degrees apart. */
+const TAG_HUE: Record<TagColor, number> = {
+  red: 0,
+  rose: 351,
+  pink: 329,
+  fuchsia: 292,
+  purple: 270,
+  violet: 255,
+  indigo: 234,
+  blue: 213,
+  sky: 198,
+  cyan: 188,
+  teal: 172,
+  emerald: 158,
+  green: 142,
+  lime: 83,
+  yellow: 48,
+  amber: 43,
+  orange: 27,
+};
+
+const MIN_TAG_HUE_GAP = 45;
+
+/** Primaries first, then backups, so the five quick swatches stay easy to tell apart. */
+const TAG_SUGGESTION_ORDER = [
+  "red",
+  "yellow",
+  "green",
+  "blue",
+  "purple",
+  "cyan",
+  "orange",
+  "lime",
+  "fuchsia",
+  "emerald",
+  "indigo",
+  "amber",
+  "sky",
+  "teal",
+  "violet",
+  "pink",
+  "rose",
+] as const satisfies readonly TagColor[];
+
+function hueGap(a: TagColor, b: TagColor) {
+  const delta = Math.abs(TAG_HUE[a] - TAG_HUE[b]);
+  return Math.min(delta, 360 - delta);
+}
+
 export function suggestTagColors(used: Iterable<TagColor>, selected: TagColor, limit = 5): TagColor[] {
   const taken = new Set(used);
-  const unused = TAG_COLORS.filter((color) => !taken.has(color));
-  const picks = unused.slice(0, limit);
-  if (picks.includes(selected)) return picks;
-  return [selected, ...picks].slice(0, limit);
+  const available = TAG_SUGGESTION_ORDER.filter((color) => color === selected || !taken.has(color));
+  const picks: TagColor[] = [selected];
+  for (const color of available) {
+    if (picks.length >= limit) break;
+    if (picks.includes(color)) continue;
+    if (picks.some((pick) => hueGap(pick, color) < MIN_TAG_HUE_GAP)) continue;
+    picks.push(color);
+  }
+  while (picks.length < limit) {
+    let best: TagColor | null = null;
+    let bestGap = -1;
+    for (const color of available) {
+      if (picks.includes(color)) continue;
+      const gap = Math.min(...picks.map((pick) => hueGap(pick, color)));
+      if (gap > bestGap) {
+        bestGap = gap;
+        best = color;
+      }
+    }
+    if (!best) break;
+    picks.push(best);
+  }
+  return picks.sort((a, b) => TAG_HUE[a] - TAG_HUE[b]);
 }
 
 export function firstFreeTagColor(used: Iterable<TagColor>): TagColor {

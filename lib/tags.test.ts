@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { firstFreeTagColor, rankByOverlap, suggestTagColors, TAG_COLORS, type TagRef } from "./tags";
+import { firstFreeTagColor, rankByOverlap, suggestTagColors, type TagRef } from "./tags";
 
 const platform: TagRef = { id: "platform", name: "platform", color: "sky" };
 const leadership: TagRef = { id: "leadership", name: "leadership", color: "amber" };
@@ -30,13 +30,13 @@ test("overlap ranking prefers more shared tags, then name", () => {
 });
 
 test("new tags suggest five colors that are not already used", () => {
-  assert.deepEqual(suggestTagColors([], "red"), TAG_COLORS.slice(0, 5));
+  assert.deepEqual(suggestTagColors([], "red"), ["red", "yellow", "green", "blue", "purple"]);
   assert.deepEqual(firstFreeTagColor(["red", "rose"]), "pink");
-  assert.deepEqual(suggestTagColors(["red", "rose", "pink"], "fuchsia"), ["fuchsia", "purple", "violet", "indigo", "blue"]);
+  assert.deepEqual(suggestTagColors(["red", "rose", "pink"], "fuchsia"), ["yellow", "green", "blue", "violet", "fuchsia"]);
 });
 
 test("a palette color stays visible when it is outside the five suggestions", () => {
-  assert.deepEqual(suggestTagColors([], "orange"), ["orange", "red", "rose", "pink", "fuchsia"]);
+  assert.deepEqual(suggestTagColors([], "orange"), ["orange", "lime", "green", "blue", "purple"]);
 });
 
 test("overlap ranking is empty when nothing is selected", () => {
