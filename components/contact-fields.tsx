@@ -1,15 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { CONTACT_STATUSES, isContactStatus, normalizeContactStatus } from "@/lib/contact-status";
 import { contactStatusLabel, t } from "@/lib/i18n";
 import type { Lang } from "@/lib/i18n";
+import type { ChipLink } from "@/lib/entity-links";
 import type { TagRef } from "@/lib/tags";
 import { contactDetailsFromPerson, joinPersonName, namePartsFromPerson, splitPersonName } from "@/lib/person-name";
-import { DateField, SubmitButton, fieldClass, labelClass, quietButton } from "./widgets";
+import { DateField, SubmitButton, compactFieldClass, compactLabelClass, fieldClass, labelClass, quietButton } from "./widgets";
 import { MentionTextarea } from "./mention-textarea";
+import { MentionText } from "./mention-text";
 import { TagPicker } from "./tag-picker";
 import { ContactChip } from "./contact-chip";
+import { ContactGoogleLink } from "./contact-google-link";
+import { SettingsSection } from "./settings-section";
 import { PersonPicker, type LocalPerson, type PickedPerson } from "./person-picker";
 
 export function ContactFields({
@@ -19,8 +23,12 @@ export function ContactFields({
   contactedAt = "",
   nextActionDate = "",
   localContacts = [],
+  mentionLinks = [],
   googleConnected = false,
   googleAtStart = false,
+  layout = "form",
+  detailSummary,
+  actionSummary,
   tags,
   selectedTagIds = [],
   hide,
@@ -50,8 +58,12 @@ export function ContactFields({
   contactedAt?: string;
   nextActionDate?: string;
   localContacts?: LocalPerson[];
+  mentionLinks?: ChipLink[];
   googleConnected?: boolean;
   googleAtStart?: boolean;
+  layout?: "form" | "page";
+  detailSummary?: ReactNode;
+  actionSummary?: ReactNode;
 }) {
   const initialNames = initialPersonName(contact);
   const [firstName, setFirstName] = useState(initialNames.firstName);
@@ -62,6 +74,7 @@ export function ContactFields({
   const [contactDetails, setContactDetails] = useState(contact?.contactDetails ?? "");
   const [googleResourceName, setGoogleResourceName] = useState(googleAtStart ? (contact?.googleResourceName ?? "") : "");
   const [googleOpen, setGoogleOpen] = useState(false);
+  const lookup = { contacts: localContacts, links: mentionLinks };
 
   function applyGoogle(person: PickedPerson) {
     if (person.kind !== "google_contact" || !person.googleResourceName) return;
@@ -81,6 +94,131 @@ export function ContactFields({
   }
 
   const linkedName = joinPersonName(firstName, lastName);
+  const nameFields = (
+    <>
+      <label>
+        <span className={labelClass}>{t(lang, "firstName")}</span>
+        <input className={fieldClass} name="firstName" value={firstName} onChange={(event) => setFirstName(event.target.value)} required />
+      </label>
+      <label>
+        <span className={labelClass}>{t(lang, "lastName")}</span>
+        <input className={fieldClass} name="lastName" value={lastName} onChange={(event) => setLastName(event.target.value)} />
+      </label>
+      <label>
+        <span className={labelClass}>{t(lang, "role")}</span>
+        <input className={fieldClass} name="role" value={role} onChange={(event) => setRole(event.target.value)} />
+      </label>
+      <label>
+        <span className={labelClass}>{t(lang, "workplace")}</span>
+        <input className={fieldClass} name="workplace" value={workplace} onChange={(event) => setWorkplace(event.target.value)} />
+      </label>
+      <label><span className={labelClass}>{t(lang, "howWeMet")}</span><input className={fieldClass} name="howWeMet" defaultValue={contact?.howWeMet ?? ""} /></label>
+      <label><span className={labelClass}>{t(lang, "channel")}</span><input className={fieldClass} name="lastChannel" defaultValue={contact?.lastChannel ?? ""} /></label>
+    </>
+  );
+
+  if (layout === "page" && contact) {
+    return (
+      <form action={action} className="grid gap-3">
+        <input type="hidden" name="contactId" value={contact.id} />
+        <TagPicker lang={lang} hide={hide} tags={tags} selected={selectedTagIds} compact />
+        <SettingsSection title={t(lang, "detailsSection")} summary={detailSummary}>
+          <div className="grid gap-3 md:grid-cols-2">
+            {nameFields}
+            <div className="md:col-span-2">
+              <ContactGoogleLink
+                lang={lang}
+                hide={hide}
+                contactId={contact.id}
+                fullName={contact.fullName}
+                role={contact.role}
+                googleResourceName={contact.googleResourceName ?? null}
+                googleConnected={googleConnected}
+              />
+            </div>
+            {contact.linkedinUrl ? (
+              <div className="md:col-span-2">
+                <ContactChip
+                  hide={hide}
+                  link={{ kind: "linkedin", displayName: contact.fullName, title: contact.role, url: contact.linkedinUrl }}
+                />
+              </div>
+            ) : null}
+            <label className="md:col-span-2">
+              <span className={labelClass}>{t(lang, "linkedInUrl")}</span>
+              <input
+                className={fieldClass}
+                name="linkedinUrl"
+                value={linkedinUrl}
+                onChange={(event) => setLinkedinUrl(event.target.value)}
+                placeholder="https://www.linkedin.com/in/..."
+              />
+            </label>
+            <div className="md:col-span-2">
+              {contact.contactDetails ? (
+                <div className="mb-3">
+                  <p className={labelClass}>{t(lang, "preview")}</p>
+                  <MentionText text={contact.contactDetails} hide={hide} lookup={lookup} />
+                </div>
+              ) : null}
+              <MentionTextarea
+                lang={lang}
+                name="contactDetails"
+                label={t(lang, "contactDetails")}
+                value={contactDetails}
+                onValueChange={setContactDetails}
+                rows={2}
+                localContacts={localContacts}
+                googleConnected={googleConnected}
+                allowUrl={false}
+              />
+            </div>
+            <div className="md:col-span-2">
+              {contact.summary ? (
+                <div className="mb-3">
+                  <p className={labelClass}>{t(lang, "preview")}</p>
+                  <MentionText text={contact.summary} hide={hide} lookup={lookup} />
+                </div>
+              ) : null}
+              <MentionTextarea
+                lang={lang}
+                name="summary"
+                label={t(lang, "conversation")}
+                defaultValue={contact.summary}
+                rows={3}
+                localContacts={localContacts}
+                googleConnected={googleConnected}
+                allowUrl={false}
+              />
+            </div>
+          </div>
+        </SettingsSection>
+        <SettingsSection title={t(lang, "nextAction")} summary={actionSummary} defaultOpen>
+          <div className="flex min-w-0 flex-wrap items-end gap-x-3 gap-y-2">
+            <label className="shrink-0">
+              <span className={compactLabelClass}>{t(lang, "contactedAt")}</span>
+              <DateField name="contactedAt" defaultValue={contactedAt} lang={lang} compact />
+            </label>
+            <label className="shrink-0">
+              <span className={compactLabelClass}>{t(lang, "nextActionDate")}</span>
+              <DateField name="nextActionDate" defaultValue={nextActionDate} lang={lang} compact />
+            </label>
+            <label className="min-w-[12rem] flex-1">
+              <span className={compactLabelClass}>{t(lang, "nextAction")}</span>
+              <input className={compactFieldClass} name="nextAction" defaultValue={contact.nextAction} />
+            </label>
+            <label className="flex items-center gap-2 pb-1 text-sm">
+              <input type="checkbox" name="willingToRecommend" value="1" defaultChecked={contact.willingToRecommend} />
+              {t(lang, "willing")}
+            </label>
+            <div className="ms-auto">
+              <SubmitButton label={t(lang, "save")} />
+            </div>
+          </div>
+        </SettingsSection>
+      </form>
+    );
+  }
 
   return (
     <form action={action} className="grid gap-3 md:grid-cols-2">
@@ -121,24 +259,7 @@ export function ContactFields({
           <input type="hidden" name="googleResourceName" value={googleResourceName} />
         </div>
       ) : null}
-      <label>
-        <span className={labelClass}>{t(lang, "firstName")}</span>
-        <input className={fieldClass} name="firstName" value={firstName} onChange={(event) => setFirstName(event.target.value)} required />
-      </label>
-      <label>
-        <span className={labelClass}>{t(lang, "lastName")}</span>
-        <input className={fieldClass} name="lastName" value={lastName} onChange={(event) => setLastName(event.target.value)} />
-      </label>
-      <label>
-        <span className={labelClass}>{t(lang, "role")}</span>
-        <input className={fieldClass} name="role" value={role} onChange={(event) => setRole(event.target.value)} />
-      </label>
-      <label>
-        <span className={labelClass}>{t(lang, "workplace")}</span>
-        <input className={fieldClass} name="workplace" value={workplace} onChange={(event) => setWorkplace(event.target.value)} />
-      </label>
-      <label><span className={labelClass}>{t(lang, "howWeMet")}</span><input className={fieldClass} name="howWeMet" defaultValue={contact?.howWeMet ?? ""} /></label>
-      <label><span className={labelClass}>{t(lang, "channel")}</span><input className={fieldClass} name="lastChannel" defaultValue={contact?.lastChannel ?? ""} /></label>
+      {nameFields}
       <label>
         <span className={labelClass}>{t(lang, "status")}</span>
         <select className={fieldClass} name="status" defaultValue={normalizeContactStatus(contact?.status ?? "")}>

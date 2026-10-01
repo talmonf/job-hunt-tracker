@@ -22,17 +22,21 @@ export function ContactStatusEditor({
   contactId,
   status,
   lang,
+  fit = false,
 }: {
   contactId: string;
   status: string;
   lang: Lang;
+  fit?: boolean;
 }) {
   const [pending, start] = useTransition();
   const canonical = normalizeContactStatus(status);
   const extra = status && !isContactStatus(canonical) ? status : "";
+  const fitField =
+    "w-auto min-w-[7.5rem] rounded border border-slate-600 bg-slate-950 px-1.5 py-0.5 text-xs outline-none focus:border-sky-500 disabled:opacity-60";
   return (
     <select
-      className={compactField}
+      className={fit ? fitField : compactField}
       aria-label={t(lang, "status")}
       disabled={pending}
       defaultValue={canonical}

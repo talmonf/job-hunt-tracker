@@ -16,7 +16,7 @@ import { EventSummary } from "@/components/event-summary";
 
 export const dynamic = "force-dynamic";
 
-const PRESET_PARAMS = ["presetJob", "presetType", "presetStatus", "presetNow", "returnTo"];
+const PRESET_PARAMS = ["presetJob", "presetContact", "presetType", "presetStatus", "presetNow", "returnTo"];
 const SORTS = ["occurredAt", "type"] as const;
 
 export default async function EventsPage({
@@ -83,6 +83,7 @@ export default async function EventsPage({
   const keep = preserveQuery(search, {}, ["modal", "eventId", ...PRESET_PARAMS]);
   const editing = firstParam(search.modal) === "edit" ? events.find((event) => event.id === firstParam(search.eventId)) : undefined;
   const presetJobId = jobs.some((job) => job.id === firstParam(search.presetJob)) ? firstParam(search.presetJob) : "";
+  const presetContactId = contacts.some((item) => item.id === firstParam(search.presetContact)) ? firstParam(search.presetContact) : "";
   const presetType = (EVENT_TYPES as readonly string[]).includes(firstParam(search.presetType)) ? firstParam(search.presetType) : "";
   const presetStatus = (JOB_STATUSES as readonly string[]).includes(firstParam(search.presetStatus)) ? firstParam(search.presetStatus) : "";
   const requestedReturn = sameSitePath(firstParam(search.returnTo));
@@ -236,7 +237,7 @@ export default async function EventsPage({
             calendarLinked={Boolean(user.calendarRefreshToken)}
             returnTo={requestedReturn || `/events${keep}`}
             defaultJobId={editing ? (editing.jobId ?? undefined) : presetJobId || undefined}
-            defaultContactId={editing?.contactId ?? undefined}
+            defaultContactId={editing ? (editing.contactId ?? undefined) : presetContactId || undefined}
             defaultType={editing ? undefined : presetType || undefined}
             defaultResultingStatus={editing ? undefined : presetStatus || undefined}
             defaultOccurredAt={defaultOccurredAt}

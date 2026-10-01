@@ -260,7 +260,7 @@ export default async function JobDetailPage({
       <RelatedByTags
         lang={lang}
         hide={hide}
-        jobHasTags={jobTagIds.length > 0}
+        hasTags={jobTagIds.length > 0}
         jobs={relatedJobs}
         employments={relatedEmployments}
         notes={relatedNotes}

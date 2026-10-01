@@ -102,7 +102,13 @@ export async function createContact(formData: FormData) {
   const name = contactName(formData);
   if (!name.fullName) redirect("/contacts?error=required");
   const contact = await prisma.contact.create({
-    data: { userId: user.id, ...contactData(formData, user.timezone), ...name, googleResourceName: googleResourceFromForm(formData) ?? null },
+    data: {
+      userId: user.id,
+      ...contactData(formData, user.timezone),
+      status: statusFromForm(formData) ?? "",
+      ...name,
+      googleResourceName: googleResourceFromForm(formData) ?? null,
+    },
   });
   await replaceRecordTags("contact", contact.id, user.id, formData);
   redirect(`/contacts/${contact.id}?created=1`);
@@ -115,9 +121,15 @@ export async function updateContact(formData: FormData) {
   const existing = await prisma.contact.findFirst({ where: { id, userId: user.id } });
   if (!existing || !name.fullName) redirect("/contacts?error=required");
   const googleResourceName = googleResourceFromForm(formData);
+  const status = statusFromForm(formData);
   await prisma.contact.update({
     where: { id },
-    data: { ...contactData(formData, user.timezone), ...name, ...(googleResourceName !== undefined ? { googleResourceName } : {}) },
+    data: {
+      ...contactData(formData, user.timezone),
+      ...name,
+      ...(status !== undefined ? { status } : {}),
+      ...(googleResourceName !== undefined ? { googleResourceName } : {}),
+    },
   });
   await replaceRecordTags("contact", id, user.id, formData);
   redirect(`/contacts/${id}?updated=1`);
@@ -157,6 +169,11 @@ export async function patchContact(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
+function statusFromForm(formData: FormData): string | undefined {
+  if (!formData.has("status")) return undefined;
+  return normalizeContactStatus(requiredText(formData.get("status")));
+}
+
 function contactName(formData: FormData) {
   const firstName = requiredText(formData.get("firstName"));
   const lastName = requiredText(formData.get("lastName"));
@@ -176,7 +193,6 @@ function contactData(formData: FormData, timeZone: string) {
     workplace: requiredText(formData.get("workplace")),
     howWeMet: requiredText(formData.get("howWeMet")),
     lastChannel: requiredText(formData.get("lastChannel")),
-    status: normalizeContactStatus(requiredText(formData.get("status"))),
     summary: String(formData.get("summary") ?? ""),
     contactedAt: parseDateOnly(formData.get("contactedAt"), timeZone),
     nextActionDate: parseDateOnly(formData.get("nextActionDate"), timeZone),

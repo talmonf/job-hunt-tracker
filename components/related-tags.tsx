@@ -8,7 +8,7 @@ import { TagChips } from "./tag-chip";
 export function RelatedByTags({
   lang,
   hide,
-  jobHasTags,
+  hasTags,
   jobs,
   employments,
   notes,
@@ -16,7 +16,7 @@ export function RelatedByTags({
 }: {
   lang: Lang;
   hide: boolean;
-  jobHasTags: boolean;
+  hasTags: boolean;
   jobs: { id: string; label: string; overlap: TagRef[] }[];
   employments: { id: string; label: string; overlap: TagRef[] }[];
   notes: { id: string; label: string; overlap: TagRef[] }[];
@@ -29,14 +29,14 @@ export function RelatedByTags({
     { title: t(lang, "employment"), rows: employments, href: (id: string) => `/profile?modal=employment&id=${id}` },
   ];
   const visible = groups.filter((group) => group.rows.length > 0);
-  const summary = !jobHasTags
+  const summary = !hasTags
     ? t(lang, "relatedTagsEmpty")
     : visible.length
       ? visible.map((group) => `${group.title} ${group.rows.length}`).join(" · ")
       : t(lang, "relatedNone");
   return (
     <SettingsSection className="mt-8" title={t(lang, "relatedByTags")} summary={summary}>
-      {jobHasTags && visible.length === 0 ? <p className="text-sm text-slate-400">{t(lang, "relatedNone")}</p> : null}
+      {hasTags && visible.length === 0 ? <p className="text-sm text-slate-400">{t(lang, "relatedNone")}</p> : null}
       <div className="grid gap-4">
         {visible.map((group) => (
           <div key={group.title}>

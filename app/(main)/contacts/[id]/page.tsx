@@ -1,23 +1,20 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
-import { dateInputValue } from "@/lib/dates";
+import { dateInputValue, formatDate } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
-import { assignmentTags } from "@/lib/tags";
-import { eventFormValues } from "@/lib/events";
+import { assignmentTags, rankByOverlap } from "@/lib/tags";
 import { deleteContact, updateContact } from "@/lib/actions/network";
-import { saveEvent } from "@/lib/actions/jobs";
 import { toChipLink } from "@/lib/entity-links";
 import { PageFrame } from "@/components/chrome";
-import { EventForm } from "@/components/event-form";
 import { EventHistoryTable } from "@/components/event-history";
 import { ContactFields } from "@/components/contact-fields";
-import { ContactChip } from "@/components/contact-chip";
-import { ContactGoogleLink } from "@/components/contact-google-link";
+import { ContactStatusEditor } from "@/components/contact-inline";
 import { EntityLinksSection } from "@/components/entity-links";
-import { MentionText } from "@/components/mention-text";
-import { firstParam } from "@/lib/http";
+import { RelatedByTags } from "@/components/related-tags";
+import { SettingsSection } from "@/components/settings-section";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +29,7 @@ export default async function ContactDetailPage({
   const hide = await hidePersonalInfo();
   const { id } = await params;
   const search = await searchParams;
-  const [contact, notes, contacts, catalog] = await Promise.all([
+  const [contact, notes, contacts, jobs, employments, catalog] = await Promise.all([
     prisma.contact.findFirst({
       where: { id, userId: user.id },
       include: {
@@ -44,13 +41,25 @@ export default async function ContactDetailPage({
     prisma.note.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
+      include: { tags: { include: { tag: true } } },
     }),
-    prisma.contact.findMany({ where: { userId: user.id }, orderBy: { fullName: "asc" } }),
+    prisma.contact.findMany({
+      where: { userId: user.id },
+      orderBy: { fullName: "asc" },
+      include: { tags: { include: { tag: true } } },
+    }),
+    prisma.job.findMany({
+      where: { userId: user.id },
+      include: { tags: { include: { tag: true } } },
+    }),
+    prisma.employment.findMany({
+      where: { userId: user.id },
+      include: { tags: { include: { tag: true } } },
+    }),
     prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
   ]);
   if (!contact) notFound();
   const lang = user.uiLanguage;
-  const editing = contact.events.find((event) => event.id === firstParam(search.editEvent));
   const localContacts = contacts.map((item) => ({
     id: item.id,
     fullName: item.fullName,
@@ -61,53 +70,109 @@ export default async function ContactDetailPage({
   }));
   const people = contact.parentLinks.map(toChipLink);
   const googleConnected = Boolean(user.contactsRefreshToken);
-  const lookup = { contacts: localContacts, links: people };
+  const contactTags = assignmentTags(contact.tags);
+  const contactTagIds = contactTags.map((tag) => tag.id);
+  const relatedJobs = rankByOverlap(
+    jobs,
+    (row) => assignmentTags(row.tags),
+    contactTagIds,
+    (row) => `${row.companyName} ${row.title}`,
+  ).map((row) => ({
+    id: row.item.id,
+    label: row.item.title ? `${row.item.companyName} — ${row.item.title}` : row.item.companyName,
+    overlap: row.overlap,
+  }));
+  const relatedEmployments = rankByOverlap(
+    employments,
+    (row) => assignmentTags(row.tags),
+    contactTagIds,
+    (row) => `${row.title} ${row.company}`,
+  ).map((row) => ({ id: row.item.id, label: `${row.item.title} · ${row.item.company}`, overlap: row.overlap }));
+  const relatedNotes = rankByOverlap(
+    notes,
+    (row) => assignmentTags(row.tags),
+    contactTagIds,
+    (row) => row.title,
+  ).map((row) => ({ id: row.item.id, label: row.item.title, overlap: row.overlap }));
+  const relatedContacts = rankByOverlap(
+    contacts.filter((item) => item.id !== contact.id),
+    (row) => assignmentTags(row.tags),
+    contactTagIds,
+    (row) => row.fullName,
+  ).map((row) => ({ id: row.item.id, label: row.item.fullName, overlap: row.overlap }));
+  const detailItems = [
+    contact.role.trim() ? { label: t(lang, "role"), value: dash(contact.role, hide) } : null,
+    contact.workplace.trim() ? { label: t(lang, "workplace"), value: dash(contact.workplace, hide) } : null,
+    contact.howWeMet.trim() ? { label: t(lang, "howWeMet"), value: dash(contact.howWeMet, hide) } : null,
+    contact.lastChannel.trim() ? { label: t(lang, "channel"), value: dash(contact.lastChannel, hide) } : null,
+  ].filter((item): item is { label: string; value: string } => item !== null);
+  const detailSummary = detailItems.length ? (
+    <span className="flex flex-wrap gap-x-4 gap-y-1">
+      {detailItems.map((item) => (
+        <span key={item.label}>
+          <span className="text-slate-500">{item.label} </span>
+          {item.value}
+        </span>
+      ))}
+    </span>
+  ) : undefined;
+  const actionItems = [
+    contact.contactedAt ? { label: t(lang, "contactedAt"), value: formatDate(contact.contactedAt, user.timezone) } : null,
+    contact.nextActionDate ? { label: t(lang, "nextActionDate"), value: formatDate(contact.nextActionDate, user.timezone) } : null,
+    contact.nextAction.trim() ? { label: t(lang, "nextAction"), value: dash(contact.nextAction, hide) } : null,
+  ].filter((item): item is { label: string; value: string } => item !== null);
+  const actionSummary = actionItems.length ? (
+    <span className="flex flex-wrap gap-x-4 gap-y-1">
+      {actionItems.map((item) => (
+        <span key={item.label}>
+          <span className="text-slate-500">{item.label} </span>
+          {item.value}
+        </span>
+      ))}
+    </span>
+  ) : undefined;
+  const contactReturn = `/contacts/${contact.id}`;
+  const logHref = `/events?modal=new&presetContact=${encodeURIComponent(contact.id)}&presetNow=1&returnTo=${encodeURIComponent(contactReturn)}`;
   return (
-    <PageFrame lang={lang} backHref="/contacts" title={dash(contact.fullName, hide)} description={t(lang, "contactDetailIntro")} search={search}>
-      <div className="mb-4 space-y-3">
-        <ContactGoogleLink
-          lang={lang}
-          hide={hide}
-          contactId={contact.id}
-          fullName={contact.fullName}
-          role={contact.role}
-          googleResourceName={contact.googleResourceName}
-          googleConnected={googleConnected}
-        />
-        {contact.linkedinUrl ? (
-          <ContactChip
-            hide={hide}
-            link={{ kind: "linkedin", displayName: contact.fullName, title: contact.role, url: contact.linkedinUrl }}
-          />
-        ) : null}
-        {contact.contactDetails || contact.summary ? (
-          <div className="space-y-3">
-            {contact.contactDetails ? (
-              <div>
-                <p className="mb-1 text-xs text-slate-300">{t(lang, "preview")}</p>
-                <MentionText text={contact.contactDetails} hide={hide} lookup={lookup} />
-              </div>
-            ) : null}
-            {contact.summary ? (
-              <div>
-                <p className="mb-1 text-xs text-slate-300">{t(lang, "preview")}</p>
-                <MentionText text={contact.summary} hide={hide} lookup={lookup} />
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+    <PageFrame
+      lang={lang}
+      backHref="/contacts"
+      title={dash(contact.fullName, hide)}
+      titleAside={
+        <div className="flex flex-wrap items-center gap-2">
+          <ContactStatusEditor contactId={contact.id} status={contact.status} lang={lang} fit />
+          <Link className="rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950" href={logHref}>
+            {t(lang, "logEvent")}
+          </Link>
+        </div>
+      }
+      description={t(lang, "contactDetailIntro")}
+      search={search}
+    >
       <ContactFields
         lang={lang}
         action={updateContact}
+        layout="page"
         contact={contact}
         contactedAt={contact.contactedAt ? dateInputValue(contact.contactedAt, user.timezone) : ""}
         nextActionDate={contact.nextActionDate ? dateInputValue(contact.nextActionDate, user.timezone) : ""}
         localContacts={localContacts}
+        mentionLinks={people}
         googleConnected={googleConnected}
+        detailSummary={detailSummary}
+        actionSummary={actionSummary}
         tags={catalog}
-        selectedTagIds={assignmentTags(contact.tags).map((tag) => tag.id)}
+        selectedTagIds={contactTagIds}
         hide={hide}
+      />
+      <RelatedByTags
+        lang={lang}
+        hide={hide}
+        hasTags={contactTagIds.length > 0}
+        jobs={relatedJobs}
+        employments={relatedEmployments}
+        notes={relatedNotes}
+        contacts={relatedContacts}
       />
       <EntityLinksSection
         lang={lang}
@@ -116,34 +181,25 @@ export default async function ContactDetailPage({
         parentContactId={contact.id}
         localContacts={localContacts.filter((item) => item.id !== contact.id)}
         googleConnected={googleConnected}
+        title={t(lang, "people")}
+        collapsible
       />
-      <h2 className="mb-2 mt-8 text-lg">{t(lang, "logEvent")}</h2>
-      <EventForm
-        action={saveEvent}
-        lang={lang}
-        calendarLinked={Boolean(user.calendarRefreshToken)}
-        lockLinks
-        defaultJobId={editing?.jobId ?? undefined}
-        defaultContactId={contact.id}
-        jobs={[]}
-        contacts={[]}
-        notes={notes.map((item) => ({ id: item.id, label: dash(item.title, hide) }))}
-        cvs={[]}
-        event={editing ? eventFormValues(editing, user.timezone) : undefined}
-      />
-      <h2 className="mb-2 mt-8 text-lg">{t(lang, "history")}</h2>
-      <EventHistoryTable
-        lang={lang}
-        timezone={user.timezone}
-        hide={hide}
-        events={contact.events}
-        editHref={`/contacts/${contact.id}?editEvent={id}`}
-        returnTo={`/contacts/${contact.id}`}
-      />
-      <form action={deleteContact} className="mt-6">
-        <input type="hidden" name="contactId" value={contact.id} />
-        <button className="text-sm text-rose-300" type="submit">{t(lang, "delete")}</button>
-      </form>
+      <SettingsSection className="mt-8" title={t(lang, "history")} badge={contact.events.length ? String(contact.events.length) : undefined}>
+        <EventHistoryTable
+          lang={lang}
+          timezone={user.timezone}
+          hide={hide}
+          events={contact.events}
+          editHref={`/events?modal=edit&eventId={id}&returnTo=${encodeURIComponent(contactReturn)}`}
+          returnTo={contactReturn}
+        />
+      </SettingsSection>
+      <div className="mt-8">
+        <form action={deleteContact}>
+          <input type="hidden" name="contactId" value={contact.id} />
+          <button className="text-sm text-rose-300" type="submit">{t(lang, "delete")}</button>
+        </form>
+      </div>
     </PageFrame>
   );
 }

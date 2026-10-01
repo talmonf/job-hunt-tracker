@@ -52,12 +52,17 @@ export function ContactGoogleLink({
             }}
           />
           <span className="text-xs text-slate-400">{t(lang, "googleContactLinked")}</span>
-          <form action={unlinkContactGoogle}>
-            <input type="hidden" name="contactId" value={contactId} />
-            <button className="text-sm text-rose-300" type="submit">
-              {t(lang, "unlinkGoogleContact")}
-            </button>
-          </form>
+          <button
+            className="text-sm text-rose-300"
+            type="button"
+            onClick={() => {
+              const data = new FormData();
+              data.set("contactId", contactId);
+              void unlinkContactGoogle(data);
+            }}
+          >
+            {t(lang, "unlinkGoogleContact")}
+          </button>
         </div>
       ) : googleConnected ? (
         <>
