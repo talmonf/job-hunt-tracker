@@ -3,10 +3,11 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { allParams, firstParam, preserveQuery } from "@/lib/http";
+import { assignmentTags } from "@/lib/tags";
 import { parseDateOnly } from "@/lib/forms";
 import { EMPLOYMENT_TYPES, ENGAGEMENTS, JOB_STATUSES, WORK_ARRANGEMENTS, statusesForJobList } from "@/lib/events";
 import { jobAttributeLabel, statusLabel, t, type Lang } from "@/lib/i18n";
-import { dash } from "@/lib/mask";
+import { dash, maskText } from "@/lib/mask";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { createJob } from "@/lib/actions/jobs";
 import { EmptyState, Modal, PageFrame } from "@/components/chrome";
@@ -14,6 +15,8 @@ import { AttributeSelect, DateField, DateTimeField, MultiSelect, SubmitButton, c
 import { JobStatusEditor } from "@/components/job-status-editor";
 import { JobUrlsEditor } from "@/components/job-urls";
 import { MentionTextarea } from "@/components/mention-textarea";
+import { TagChips } from "@/components/tag-chip";
+import { TagPicker } from "@/components/tag-picker";
 
 export const dynamic = "force-dynamic";
 
@@ -37,8 +40,11 @@ export default async function JobsPage({
   const interestTo = parseDateOnly(firstParam(search.interestTo) ? `${firstParam(search.interestTo)}T23:59` : "", user.timezone);
   const followFrom = parseDateOnly(firstParam(search.followFrom), user.timezone);
   const followTo = parseDateOnly(firstParam(search.followTo) ? `${firstParam(search.followTo)}T23:59` : "", user.timezone);
+  const catalog = await prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } });
+  const tagIds = allParams(search.tag).filter((id) => catalog.some((tag) => tag.id === id));
   const where: Prisma.JobWhereInput = {
     userId: user.id,
+    ...(tagIds.length ? { tags: { some: { tagId: { in: tagIds } } } } : {}),
     ...(q
       ? {
           OR: [
@@ -56,7 +62,7 @@ export default async function JobsPage({
     prisma.job.findMany({
       where,
       orderBy: { [sort]: dir },
-      include: { _count: { select: { urls: true, cvs: true } } },
+      include: { _count: { select: { urls: true, cvs: true } }, tags: { include: { tag: true } } },
     }),
     prisma.contact.findMany({ where: { userId: user.id }, orderBy: { fullName: "asc" } }),
   ]);
@@ -132,6 +138,22 @@ export default async function JobsPage({
                 {t(lang, "apply")}
               </button>
             </div>
+            {catalog.length ? (
+              <div className="col-span-full w-44">
+                <span className={compactLabelClass}>{t(lang, "tags")}</span>
+                <MultiSelect
+                  compact
+                  name="tag"
+                  selected={tagIds}
+                  anyLabel={t(lang, "any")}
+                  selectAll={t(lang, "selectAll")}
+                  deselectAll={t(lang, "deselectAll")}
+                  done={t(lang, "done")}
+                  selectedWord={t(lang, "selectedCount")}
+                  options={catalog.map((tag) => ({ value: tag.id, label: maskText(tag.name, hide) }))}
+                />
+              </div>
+            ) : null}
           </div>
         </fieldset>
       </form>
@@ -144,6 +166,7 @@ export default async function JobsPage({
               <tr>
                 <SortHead label={t(lang, "company")} column="companyName" sort={sort} dir={dir} search={search} />
                 <SortHead label={t(lang, "title")} column="title" sort={sort} dir={dir} search={search} />
+                <th className="px-3 py-2">{t(lang, "tags")}</th>
                 <SortHead label={t(lang, "location")} column="location" sort={sort} dir={dir} search={search} />
                 <SortHead label={t(lang, "employmentType")} column="employmentType" sort={sort} dir={dir} search={search} />
                 <SortHead label={t(lang, "workArrangement")} column="workArrangement" sort={sort} dir={dir} search={search} />
@@ -164,6 +187,9 @@ export default async function JobsPage({
                     </Link>
                   </td>
                   <td className="px-3 py-2">{dash(job.title, hide)}</td>
+                  <td className="px-3 py-2">
+                    <TagChips tags={assignmentTags(job.tags)} hide={hide} />
+                  </td>
                   <td className="px-3 py-2">{dash(job.location, hide)}</td>
                   <td className="px-3 py-2">{job.employmentType ? jobAttributeLabel(lang, job.employmentType) : "—"}</td>
                   <td className="px-3 py-2">{job.workArrangement ? jobAttributeLabel(lang, job.workArrangement) : "—"}</td>
@@ -230,6 +256,7 @@ export default async function JobsPage({
               </label>
             </div>
             <p className="text-xs text-slate-400">{t(lang, "reminderBlank")}</p>
+            <TagPicker lang={lang} hide={hide} tags={catalog} selected={[]} />
             <SubmitButton label={t(lang, "save")} />
           </form>
         </Modal>

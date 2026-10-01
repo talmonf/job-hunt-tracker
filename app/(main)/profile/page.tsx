@@ -4,6 +4,7 @@ import { firstParam, preserveQuery } from "@/lib/http";
 import { dateInputValue, formatDate } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
+import { assignmentTags, type TagRef } from "@/lib/tags";
 import {
   deleteCertificate,
   deleteEducation,
@@ -19,6 +20,8 @@ import {
 } from "@/lib/actions/profile";
 import { Modal, PageFrame } from "@/components/chrome";
 import { DateField, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
+import { TagChips } from "@/components/tag-chip";
+import { TagPicker } from "@/components/tag-picker";
 
 export const dynamic = "force-dynamic";
 
@@ -31,13 +34,18 @@ export default async function ProfilePage({
   const hide = await hidePersonalInfo();
   const search = await searchParams;
   const lang = user.uiLanguage;
-  const [profile, employments, educations, volunteers, certificates, files] = await Promise.all([
+  const [profile, employments, educations, volunteers, certificates, files, catalog] = await Promise.all([
     prisma.profile.findUnique({ where: { userId: user.id } }),
-    prisma.employment.findMany({ where: { userId: user.id }, orderBy: { startDate: "desc" } }),
+    prisma.employment.findMany({
+      where: { userId: user.id },
+      orderBy: { startDate: "desc" },
+      include: { tags: { include: { tag: true } } },
+    }),
     prisma.education.findMany({ where: { userId: user.id }, orderBy: { startDate: "desc" } }),
     prisma.volunteerRole.findMany({ where: { userId: user.id }, orderBy: { startDate: "desc" } }),
     prisma.certificate.findMany({ where: { userId: user.id }, orderBy: { issuedOn: "desc" } }),
     prisma.profileFile.findMany({ where: { userId: user.id }, orderBy: { uploadedAt: "desc" } }),
+    prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
   ]);
   const modal = firstParam(search.modal);
   const editId = firstParam(search.id);
@@ -65,6 +73,11 @@ export default async function ProfilePage({
           <article key={row.id} className="rounded-md border border-slate-700 p-3 text-sm">
             <div className="font-medium">{dash(row.title, hide)} · {dash(row.company, hide)}</div>
             <div className="text-slate-400">{row.startDate ? formatDate(row.startDate, user.timezone) : "—"} – {row.isCurrent ? t(lang, "currentRole") : row.endDate ? formatDate(row.endDate, user.timezone) : "—"}</div>
+            {row.tags.length ? (
+              <div className="mt-2">
+                <TagChips tags={assignmentTags(row.tags)} hide={hide} />
+              </div>
+            ) : null}
             <RowActions editHref={`/profile${preserveQuery(search, { modal: "employment", id: row.id }, ["modal", "id"])}`} deleteAction={deleteEmployment} id={row.id} langEdit={t(lang, "edit")} langDelete={t(lang, "delete")} />
           </article>
         ))}
@@ -116,7 +129,7 @@ export default async function ProfilePage({
 
       {modal === "employment" ? (
         <Modal title={t(lang, "employment")} closeHref={closeHref} closeLabel={t(lang, "close")}>
-          <EmploymentForm row={employments.find((row) => row.id === editId)} timeZone={user.timezone} lang={lang} />
+          <EmploymentForm row={employments.find((row) => row.id === editId)} timeZone={user.timezone} lang={lang} tags={catalog} hide={hide} />
         </Modal>
       ) : null}
       {modal === "education" ? (
@@ -162,7 +175,29 @@ function RowActions({ editHref, deleteAction, id, langEdit, langDelete }: { edit
   );
 }
 
-function EmploymentForm({ row, timeZone, lang }: { row?: { id: string; title: string; company: string; startDate: Date | null; endDate: Date | null; isCurrent: boolean; descriptionEn: string; descriptionHe: string }; timeZone: string; lang: "en" | "he" }) {
+function EmploymentForm({
+  row,
+  timeZone,
+  lang,
+  tags,
+  hide,
+}: {
+  row?: {
+    id: string;
+    title: string;
+    company: string;
+    startDate: Date | null;
+    endDate: Date | null;
+    isCurrent: boolean;
+    descriptionEn: string;
+    descriptionHe: string;
+    tags: { tag: TagRef }[];
+  };
+  timeZone: string;
+  lang: "en" | "he";
+  tags: TagRef[];
+  hide: boolean;
+}) {
   return (
     <form action={saveEmployment} className="grid gap-3">
       {row ? <input type="hidden" name="id" value={row.id} /> : null}
@@ -173,6 +208,7 @@ function EmploymentForm({ row, timeZone, lang }: { row?: { id: string; title: st
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="isCurrent" value="1" defaultChecked={row?.isCurrent} /> {t(lang, "currentRole")}</label>
       <label><span className={labelClass}>{t(lang, "bodyEn")}</span><textarea className={fieldClass} name="descriptionEn" rows={3} defaultValue={row?.descriptionEn ?? ""} /></label>
       <label><span className={labelClass}>{t(lang, "bodyHe")}</span><textarea className={fieldClass} name="descriptionHe" rows={3} defaultValue={row?.descriptionHe ?? ""} /></label>
+      <TagPicker lang={lang} hide={hide} tags={tags} selected={row ? assignmentTags(row.tags).map((tag) => tag.id) : []} />
       <SubmitButton label={t(lang, "save")} />
     </form>
   );

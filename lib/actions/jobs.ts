@@ -11,6 +11,7 @@ import { recomputeJobStatus } from "../job-status";
 import { t } from "../i18n";
 import { removeStored, saveUpload } from "../files";
 import { deleteCalendarEvent, syncMeetingToCalendar } from "../calendar";
+import { replaceRecordTags } from "../tag-assign";
 
 export async function createJob(formData: FormData) {
   const user = await requireUser();
@@ -52,6 +53,7 @@ export async function createJob(formData: FormData) {
       summary: description.slice(0, 500),
     },
   });
+  await replaceRecordTags("job", job.id, user.id, formData);
   redirect("/jobs?created=1");
 }
 
@@ -124,6 +126,7 @@ export async function updateJob(formData: FormData) {
   if (formData.get("urlsManaged") === "1") {
     await syncJobUrls(job.id, readUrls(formData));
   }
+  await replaceRecordTags("job", job.id, user.id, formData);
   redirect(`/jobs/${job.id}?updated=1`);
 }
 

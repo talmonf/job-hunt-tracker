@@ -1,8 +1,10 @@
 import { CONTACT_STATUSES, isContactStatus, normalizeContactStatus } from "@/lib/contact-status";
 import { contactStatusLabel, t } from "@/lib/i18n";
 import type { Lang } from "@/lib/i18n";
+import type { TagRef } from "@/lib/tags";
 import { DateField, SubmitButton, fieldClass, labelClass } from "./widgets";
 import { MentionTextarea } from "./mention-textarea";
+import { TagPicker } from "./tag-picker";
 import type { LocalPerson } from "./person-picker";
 
 export function ContactFields({
@@ -13,9 +15,15 @@ export function ContactFields({
   nextActionDate = "",
   localContacts = [],
   googleConnected = false,
+  tags,
+  selectedTagIds = [],
+  hide,
 }: {
   lang: Lang;
   action: (formData: FormData) => void;
+  tags: TagRef[];
+  selectedTagIds?: string[];
+  hide: boolean;
   contact?: {
     id: string;
     fullName: string;
@@ -92,6 +100,9 @@ export function ContactFields({
         <input type="checkbox" name="willingToRecommend" value="1" defaultChecked={contact?.willingToRecommend} />
         {t(lang, "willing")}
       </label>
+      <div className="md:col-span-2">
+        <TagPicker lang={lang} hide={hide} tags={tags} selected={selectedTagIds} />
+      </div>
       <SubmitButton label={t(lang, "save")} />
     </form>
   );

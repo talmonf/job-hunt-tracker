@@ -5,6 +5,7 @@ import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { formatDateTime } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
+import { assignmentTags } from "@/lib/tags";
 import { cloneNote, deleteNote, updateNote } from "@/lib/actions/network";
 import { toChipLink } from "@/lib/entity-links";
 import { PageFrame } from "@/components/chrome";
@@ -27,17 +28,19 @@ export default async function NoteDetailPage({
   const hide = await hidePersonalInfo();
   const { id } = await params;
   const search = await searchParams;
-  const [note, jobs, contacts] = await Promise.all([
+  const [note, jobs, contacts, catalog] = await Promise.all([
     prisma.note.findFirst({
       where: { id, userId: user.id },
       include: {
         job: true,
         entityLinks: { orderBy: { createdAt: "asc" } },
         events: { orderBy: { occurredAt: "desc" }, include: { job: true, contact: true } },
+        tags: { include: { tag: true } },
       },
     }),
     prisma.job.findMany({ where: { userId: user.id }, orderBy: { companyName: "asc" } }),
     prisma.contact.findMany({ where: { userId: user.id }, orderBy: { fullName: "asc" } }),
+    prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
   ]);
   if (!note) notFound();
   const lang = user.uiLanguage;
@@ -69,6 +72,9 @@ export default async function NoteDetailPage({
         jobs={jobs.map((job) => ({ id: job.id, label: dash(jobNoteLabel(job), hide) }))}
         localContacts={localContacts}
         googleConnected={googleConnected}
+        tags={catalog}
+        selectedTagIds={assignmentTags(note.tags).map((tag) => tag.id)}
+        hide={hide}
       />
       <EntityLinksSection
         lang={lang}

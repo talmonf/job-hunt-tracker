@@ -1,3 +1,4 @@
+import type { TagColor } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { googleConfigured, smtpConfigured } from "@/lib/mail";
@@ -11,8 +12,10 @@ import {
   startCalendarLink,
   startGoogleContactsLink,
 } from "@/lib/actions/settings";
+import { createTag, deleteTag, updateTag } from "@/lib/actions/tags";
+import { TAG_COLORS, TAG_SWATCH_CLASS } from "@/lib/tags";
 import { PageFrame } from "@/components/chrome";
-import { SubmitButton, fieldClass, labelClass } from "@/components/widgets";
+import { ConfirmSubmit, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
 
 export const dynamic = "force-dynamic";
 
@@ -24,11 +27,43 @@ export default async function SettingsPage({
   const user = await requireUser();
   const search = await searchParams;
   const lang = user.uiLanguage;
-  const goals = await prisma.userGoals.findUnique({ where: { userId: user.id } });
+  const [goals, tags] = await Promise.all([
+    prisma.userGoals.findUnique({ where: { userId: user.id } }),
+    prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
+  ]);
   const networkingDaily = goals?.networkingPerDay ?? (goals?.networkingPerWeek != null ? goals.networkingPerWeek / 5 : 0);
   const searchMinutes = goals?.searchMinutesOverride ?? ((goals?.applicationsPerDay ?? 0) + networkingDaily) * 30;
   return (
     <PageFrame lang={lang} title={t(lang, "settings")} description={t(lang, "settingsIntro")} search={search}>
+      <h2 className="mb-1 text-lg">{t(lang, "tags")}</h2>
+      <p className="mb-3 text-sm text-slate-400">{t(lang, "tagsIntro")}</p>
+      <ul className="mb-4 space-y-3">
+        {tags.map((tag) => (
+          <li key={tag.id} className="flex flex-wrap items-end gap-3 rounded-md border border-slate-700 p-3">
+            <form action={updateTag} className="flex flex-wrap items-end gap-3">
+              <input type="hidden" name="id" value={tag.id} />
+              <label>
+                <span className={labelClass}>{t(lang, "tagName")}</span>
+                <input className={fieldClass} name="name" defaultValue={tag.name} required />
+              </label>
+              <ColorSwatches legend={t(lang, "tagColor")} selected={tag.color} />
+              <SubmitButton label={t(lang, "save")} />
+            </form>
+            <ConfirmSubmit action={deleteTag} message={t(lang, "deleteTagConfirm")} label={t(lang, "delete")} className="text-sm text-rose-300">
+              <input type="hidden" name="id" value={tag.id} />
+            </ConfirmSubmit>
+          </li>
+        ))}
+      </ul>
+      <form action={createTag} className="mb-8 flex flex-wrap items-end gap-3">
+        <label>
+          <span className={labelClass}>{t(lang, "addTag")}</span>
+          <input className={fieldClass} name="name" required />
+        </label>
+        <ColorSwatches legend={t(lang, "tagColor")} selected="sky" />
+        <SubmitButton label={t(lang, "add")} />
+      </form>
+
       <h2 className="mb-2 text-lg">{t(lang, "importExport")}</h2>
       <form action={importMentme} encType="multipart/form-data" className="flex flex-wrap items-end gap-3">
         <label>
@@ -108,6 +143,24 @@ export default async function SettingsPage({
         <p className="text-sm text-slate-300">{t(lang, "googleContactsMissing")}</p>
       )}
     </PageFrame>
+  );
+}
+
+function ColorSwatches({ legend, selected }: { legend: string; selected: TagColor }) {
+  return (
+    <fieldset>
+      <legend className={labelClass}>{legend}</legend>
+      <div className="flex flex-wrap gap-2">
+        {TAG_COLORS.map((color) => (
+          <label key={color} className="cursor-pointer">
+            <input className="peer sr-only" type="radio" name="color" value={color} defaultChecked={color === selected} required aria-label={color} />
+            <span
+              className={`block h-6 w-6 rounded-full ring-2 ring-transparent ring-offset-2 ring-offset-slate-950 peer-checked:ring-white peer-focus-visible:ring-slate-300 ${TAG_SWATCH_CLASS[color]}`}
+            />
+          </label>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 

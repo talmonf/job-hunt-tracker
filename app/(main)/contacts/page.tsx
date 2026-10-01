@@ -2,13 +2,15 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
-import { firstParam, preserveQuery } from "@/lib/http";
+import { allParams, firstParam, preserveQuery } from "@/lib/http";
 import { dateInputValue } from "@/lib/dates";
 import { t } from "@/lib/i18n";
-import { dash } from "@/lib/mask";
+import { dash, maskText } from "@/lib/mask";
+import { assignmentTags } from "@/lib/tags";
 import { createContact } from "@/lib/actions/network";
 import { EmptyState, Modal, PageFrame } from "@/components/chrome";
-import { compactFieldClass, compactLabelClass } from "@/components/widgets";
+import { MultiSelect, compactFieldClass, compactLabelClass } from "@/components/widgets";
+import { TagChips } from "@/components/tag-chip";
 import { ContactFields } from "@/components/contact-fields";
 import { ContactDateEditor, ContactStatusEditor, ContactWillingEditor } from "@/components/contact-inline";
 
@@ -27,8 +29,11 @@ export default async function ContactsPage({
   const willing = firstParam(search.willing);
   const sort = ["fullName", "workplace", "status", "nextActionDate"].includes(firstParam(search.sort)) ? firstParam(search.sort) : "fullName";
   const dir = firstParam(search.dir) === "desc" ? "desc" : "asc";
+  const catalog = await prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } });
+  const tagIds = allParams(search.tag).filter((id) => catalog.some((tag) => tag.id === id));
   const where: Prisma.ContactWhereInput = {
     userId: user.id,
+    ...(tagIds.length ? { tags: { some: { tagId: { in: tagIds } } } } : {}),
     ...(q
       ? {
           OR: [
@@ -39,7 +44,11 @@ export default async function ContactsPage({
       : {}),
     ...(willing === "yes" ? { willingToRecommend: true } : willing === "no" ? { willingToRecommend: false } : {}),
   };
-  const contacts = await prisma.contact.findMany({ where, orderBy: { [sort]: dir } });
+  const contacts = await prisma.contact.findMany({
+    where,
+    orderBy: { [sort]: dir },
+    include: { tags: { include: { tag: true } } },
+  });
   return (
     <PageFrame lang={lang} title={t(lang, "networking")} description={t(lang, "contactsIntro")} search={search}>
       <div className="mb-3 flex items-center justify-between">
@@ -66,6 +75,22 @@ export default async function ContactsPage({
                 <option value="no">{t(lang, "no")}</option>
               </select>
             </label>
+            {catalog.length ? (
+              <div className="w-44 min-w-0">
+                <span className={compactLabelClass}>{t(lang, "tags")}</span>
+                <MultiSelect
+                  compact
+                  name="tag"
+                  selected={tagIds}
+                  anyLabel={t(lang, "any")}
+                  selectAll={t(lang, "selectAll")}
+                  deselectAll={t(lang, "deselectAll")}
+                  done={t(lang, "done")}
+                  selectedWord={t(lang, "selectedCount")}
+                  options={catalog.map((tag) => ({ value: tag.id, label: maskText(tag.name, hide) }))}
+                />
+              </div>
+            ) : null}
             <button className="rounded bg-sky-500 px-2 py-0.5 text-xs font-semibold leading-tight text-slate-950" type="submit">{t(lang, "apply")}</button>
           </div>
         </fieldset>
@@ -78,6 +103,7 @@ export default async function ContactsPage({
             <thead className="bg-slate-800/80 text-xs uppercase tracking-wide text-slate-300">
               <tr>
                 <Sort label={t(lang, "fullName")} column="fullName" sort={sort} dir={dir} search={search} />
+                <th className="px-3 py-2">{t(lang, "tags")}</th>
                 <th className="px-3 py-2">{t(lang, "role")}</th>
                 <Sort label={t(lang, "workplace")} column="workplace" sort={sort} dir={dir} search={search} />
                 <Sort label={t(lang, "status")} column="status" sort={sort} dir={dir} search={search} />
@@ -89,6 +115,7 @@ export default async function ContactsPage({
               {contacts.map((contact) => (
                 <tr key={contact.id} className="border-t border-slate-800">
                   <td className="px-3 py-2"><Link className="text-sky-300" href={`/contacts/${contact.id}`}>{dash(contact.fullName, hide)}</Link></td>
+                  <td className="px-3 py-2"><TagChips tags={assignmentTags(contact.tags)} hide={hide} /></td>
                   <td className="px-3 py-2">{dash(contact.role, hide)}</td>
                   <td className="px-3 py-2">{dash(contact.workplace, hide)}</td>
                   <td className="px-3 py-2">
@@ -124,6 +151,8 @@ export default async function ContactsPage({
               linkedinUrl: item.linkedinUrl,
             }))}
             googleConnected={Boolean(user.contactsRefreshToken)}
+            tags={catalog}
+            hide={hide}
           />
         </Modal>
       ) : null}

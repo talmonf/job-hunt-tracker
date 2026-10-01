@@ -124,6 +124,7 @@ model User {
   events        Event[]
   notifications Notification[]
   entityLinks   EntityLink[]
+  tags          Tag[]
 }
 
 model UserGoals {
@@ -158,6 +159,7 @@ model Employment {
   isCurrent     Boolean   @default(false)
   descriptionEn String    @default("")
   descriptionHe String    @default("")
+  tags          EmploymentTag[]
 }
 
 model Education {
@@ -230,6 +232,7 @@ model Job {
   events                 Event[]
   notes                  Note[]
   entityLinks            EntityLink[]
+  tags                   JobTag[]
 
   @@unique([userId, importKey])
   @@index([userId, status])
@@ -279,6 +282,7 @@ model Contact {
   events             Event[]
   entityLinks        EntityLink[] @relation("LinkContact")
   parentLinks        EntityLink[] @relation("ParentContact")
+  tags               ContactTag[]
 
   @@unique([userId, importKey])
   @@index([userId, fullName])
@@ -299,6 +303,7 @@ model Note {
   updatedAt      DateTime @default(now()) @updatedAt
   events         Event[]
   entityLinks    EntityLink[]
+  tags           NoteTag[]
 
   @@index([userId, createdAt])
   @@index([jobId])
@@ -375,4 +380,71 @@ model Notification {
   emailedAt DateTime?
 
   @@unique([userId, dedupeKey])
+}
+
+enum TagColor {
+  sky
+  emerald
+  amber
+  rose
+  violet
+  cyan
+  orange
+  fuchsia
+}
+
+model Tag {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  color       TagColor
+  createdAt   DateTime @default(now())
+  jobs        JobTag[]
+  contacts    ContactTag[]
+  notes       NoteTag[]
+  employments EmploymentTag[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model JobTag {
+  jobId String
+  tagId String
+  job   Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  tag   Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([jobId, tagId])
+  @@index([tagId])
+}
+
+model ContactTag {
+  contactId String
+  tagId     String
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([contactId, tagId])
+  @@index([tagId])
+}
+
+model NoteTag {
+  noteId String
+  tagId  String
+  note   Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, tagId])
+  @@index([tagId])
+}
+
+model EmploymentTag {
+  employmentId String
+  tagId        String
+  employment   Employment @relation(fields: [employmentId], references: [id], onDelete: Cascade)
+  tag          Tag        @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([employmentId, tagId])
+  @@index([tagId])
 }

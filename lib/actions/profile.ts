@@ -5,6 +5,7 @@ import { prisma } from "../prisma";
 import { requireUser } from "../session";
 import { parseDateOnly, requiredText } from "../forms";
 import { removeStored, saveUpload } from "../files";
+import { replaceRecordTags } from "../tag-assign";
 
 export async function saveAbout(formData: FormData) {
   const user = await requireUser();
@@ -36,13 +37,16 @@ export async function saveEmployment(formData: FormData) {
     descriptionHe: String(formData.get("descriptionHe") ?? ""),
   };
   const id = requiredText(formData.get("id"));
+  let savedId = id;
   if (id) {
     const row = await prisma.employment.findFirst({ where: { id, userId: user.id } });
     if (!row) redirect("/profile?error=required");
     await prisma.employment.update({ where: { id }, data });
   } else {
-    await prisma.employment.create({ data: { userId: user.id, ...data } });
+    const created = await prisma.employment.create({ data: { userId: user.id, ...data } });
+    savedId = created.id;
   }
+  await replaceRecordTags("employment", savedId, user.id, formData);
   redirect("/profile?updated=1");
 }
 

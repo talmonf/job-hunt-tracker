@@ -4,6 +4,7 @@ import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { dateInputValue } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
+import { assignmentTags } from "@/lib/tags";
 import { eventFormValues } from "@/lib/events";
 import { deleteContact, updateContact } from "@/lib/actions/network";
 import { saveEvent } from "@/lib/actions/jobs";
@@ -31,16 +32,21 @@ export default async function ContactDetailPage({
   const hide = await hidePersonalInfo();
   const { id } = await params;
   const search = await searchParams;
-  const [contact, notes, contacts] = await Promise.all([
+  const [contact, notes, contacts, catalog] = await Promise.all([
     prisma.contact.findFirst({
       where: { id, userId: user.id },
-      include: { events: { orderBy: { occurredAt: "desc" } }, parentLinks: { orderBy: { createdAt: "asc" } } },
+      include: {
+        events: { orderBy: { occurredAt: "desc" } },
+        parentLinks: { orderBy: { createdAt: "asc" } },
+        tags: { include: { tag: true } },
+      },
     }),
     prisma.note.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
     }),
     prisma.contact.findMany({ where: { userId: user.id }, orderBy: { fullName: "asc" } }),
+    prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
   ]);
   if (!contact) notFound();
   const lang = user.uiLanguage;
@@ -99,6 +105,9 @@ export default async function ContactDetailPage({
         nextActionDate={contact.nextActionDate ? dateInputValue(contact.nextActionDate, user.timezone) : ""}
         localContacts={localContacts}
         googleConnected={googleConnected}
+        tags={catalog}
+        selectedTagIds={assignmentTags(contact.tags).map((tag) => tag.id)}
+        hide={hide}
       />
       <EntityLinksSection
         lang={lang}

@@ -6,10 +6,12 @@ import { allParams, firstParam, preserveQuery } from "@/lib/http";
 import { cloneNote, createNote, deleteNote } from "@/lib/actions/network";
 import { NOTE_TYPES } from "@/lib/notes";
 import { noteTypeLabel, t } from "@/lib/i18n";
-import { dash } from "@/lib/mask";
+import { dash, maskText } from "@/lib/mask";
+import { assignmentTags } from "@/lib/tags";
 import { EmptyState, Modal, PageFrame } from "@/components/chrome";
 import { ConfirmSubmit, MultiSelect, fieldClass, labelClass } from "@/components/widgets";
 import { NoteFields, jobNoteLabel } from "@/components/note-fields";
+import { TagChips } from "@/components/tag-chip";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +28,11 @@ export default async function NotesPage({
   const types = allParams(search.type).filter((type): type is NoteType =>
     (NOTE_TYPES as readonly string[]).includes(type),
   );
+  const catalog = await prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } });
+  const tagIds = allParams(search.tag).filter((id) => catalog.some((tag) => tag.id === id));
   const where: Prisma.NoteWhereInput = {
     userId: user.id,
+    ...(tagIds.length ? { tags: { some: { tagId: { in: tagIds } } } } : {}),
     ...(types.length ? { type: { in: types } } : {}),
     ...(q
       ? {
@@ -45,7 +50,7 @@ export default async function NotesPage({
   const [notes, jobs, contacts] = await Promise.all([
     prisma.note.findMany({
       where,
-      include: { job: true },
+      include: { job: true, tags: { include: { tag: true } } },
       orderBy: { createdAt: "desc" },
     }),
     prisma.job.findMany({ where: { userId: user.id }, orderBy: { companyName: "asc" } }),
@@ -77,6 +82,21 @@ export default async function NotesPage({
               <span className={labelClass}>{t(lang, "search")}</span>
               <input className={fieldClass} name="q" defaultValue={q} />
             </label>
+            {catalog.length ? (
+              <div>
+                <span className={labelClass}>{t(lang, "tags")}</span>
+                <MultiSelect
+                  name="tag"
+                  selected={tagIds}
+                  anyLabel={t(lang, "any")}
+                  selectAll={t(lang, "selectAll")}
+                  deselectAll={t(lang, "deselectAll")}
+                  done={t(lang, "done")}
+                  selectedWord={t(lang, "selectedCount")}
+                  options={catalog.map((tag) => ({ value: tag.id, label: maskText(tag.name, hide) }))}
+                />
+              </div>
+            ) : null}
             <label>
               <span className={labelClass}>{t(lang, "noteType")}</span>
               <MultiSelect
@@ -104,6 +124,7 @@ export default async function NotesPage({
             <thead className="bg-slate-800/80 text-xs uppercase tracking-wide text-slate-300">
               <tr>
                 <th className="px-3 py-2">{t(lang, "title")}</th>
+                <th className="px-3 py-2">{t(lang, "tags")}</th>
                 <th className="px-3 py-2">{t(lang, "jobs")}</th>
                 <th className="px-3 py-2">{t(lang, "noteType")}</th>
                 <th className="px-3 py-2">{t(lang, "additionalInfo")}</th>
@@ -117,6 +138,9 @@ export default async function NotesPage({
                     <Link className="text-sky-300" href={`/notes/${note.id}`}>
                       {dash(note.title, hide)}
                     </Link>
+                  </td>
+                  <td className="px-3 py-2">
+                    <TagChips tags={assignmentTags(note.tags)} hide={hide} />
                   </td>
                   <td className="px-3 py-2">
                     {note.job ? (
@@ -158,7 +182,7 @@ export default async function NotesPage({
       )}
       {firstParam(search.modal) === "new" ? (
         <Modal title={t(lang, "addNote")} closeHref={`/notes${preserveQuery(search, {}, ["modal"])}`} closeLabel={t(lang, "close")}>
-          <NoteFields lang={lang} action={createNote} jobs={jobOptions} localContacts={localContacts} googleConnected={googleConnected} />
+          <NoteFields lang={lang} action={createNote} jobs={jobOptions} localContacts={localContacts} googleConnected={googleConnected} tags={catalog} hide={hide} />
         </Modal>
       ) : null}
     </PageFrame>

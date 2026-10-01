@@ -4,6 +4,7 @@ import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { dateInputValue, dateTimeInputValue } from "@/lib/dates";
 import { jobAttributeLabel, statusLabel, t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
+import { assignmentTags, rankByOverlap } from "@/lib/tags";
 import { EMPLOYMENT_TYPES, ENGAGEMENTS, WORK_ARRANGEMENTS, eventFormValues } from "@/lib/events";
 import { deleteCv, deleteJob, saveEvent, updateJob, uploadCv } from "@/lib/actions/jobs";
 import { toChipLink } from "@/lib/entity-links";
@@ -15,6 +16,8 @@ import { EventHistoryTable } from "@/components/event-history";
 import { EntityLinksSection } from "@/components/entity-links";
 import { MentionText } from "@/components/mention-text";
 import { MentionTextarea } from "@/components/mention-textarea";
+import { TagPicker } from "@/components/tag-picker";
+import { RelatedByTags } from "@/components/related-tags";
 import { firstParam } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +33,7 @@ export default async function JobDetailPage({
   const hide = await hidePersonalInfo();
   const { id } = await params;
   const search = await searchParams;
-  const [job, notes, contacts] = await Promise.all([
+  const [job, notes, contacts, employments, catalog] = await Promise.all([
     prisma.job.findFirst({
       where: { id, userId: user.id },
       include: {
@@ -38,13 +41,24 @@ export default async function JobDetailPage({
         cvs: { orderBy: { uploadedAt: "desc" } },
         events: { orderBy: { occurredAt: "desc" } },
         entityLinks: { orderBy: { createdAt: "asc" } },
+        tags: { include: { tag: true } },
       },
     }),
     prisma.note.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
+      include: { tags: { include: { tag: true } } },
     }),
-    prisma.contact.findMany({ where: { userId: user.id }, orderBy: { fullName: "asc" } }),
+    prisma.contact.findMany({
+      where: { userId: user.id },
+      orderBy: { fullName: "asc" },
+      include: { tags: { include: { tag: true } } },
+    }),
+    prisma.employment.findMany({
+      where: { userId: user.id },
+      include: { tags: { include: { tag: true } } },
+    }),
+    prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
   ]);
   if (!job) notFound();
   const lang = user.uiLanguage;
@@ -59,6 +73,26 @@ export default async function JobDetailPage({
   const people = job.entityLinks.map(toChipLink);
   const googleConnected = Boolean(user.contactsRefreshToken);
   const editing = job.events.find((event) => event.id === firstParam(search.editEvent));
+  const jobTags = assignmentTags(job.tags);
+  const jobTagIds = jobTags.map((tag) => tag.id);
+  const relatedEmployments = rankByOverlap(
+    employments,
+    (row) => assignmentTags(row.tags),
+    jobTagIds,
+    (row) => `${row.title} ${row.company}`,
+  ).map((row) => ({ id: row.item.id, label: `${row.item.title} · ${row.item.company}`, overlap: row.overlap }));
+  const relatedNotes = rankByOverlap(
+    notes,
+    (row) => assignmentTags(row.tags),
+    jobTagIds,
+    (row) => row.title,
+  ).map((row) => ({ id: row.item.id, label: row.item.title, overlap: row.overlap }));
+  const relatedContacts = rankByOverlap(
+    contacts,
+    (row) => assignmentTags(row.tags),
+    jobTagIds,
+    (row) => row.fullName,
+  ).map((row) => ({ id: row.item.id, label: row.item.fullName, overlap: row.overlap }));
   return (
     <PageFrame lang={lang} backHref="/jobs" title={dash(job.companyName, hide)} description={t(lang, "jobDetailIntro")} search={search}>
       <p className={`mb-4 text-sm ${statusClass(job.status)}`}>
@@ -142,9 +176,21 @@ export default async function JobDetailPage({
           <JobUrlsEditor lang={lang} initialUrls={job.urls} />
         </div>
         <div className="md:col-span-2">
+          <TagPicker lang={lang} hide={hide} tags={catalog} selected={jobTagIds} />
+        </div>
+        <div className="md:col-span-2">
           <SubmitButton label={t(lang, "save")} />
         </div>
       </form>
+
+      <RelatedByTags
+        lang={lang}
+        hide={hide}
+        jobHasTags={jobTagIds.length > 0}
+        employments={relatedEmployments}
+        notes={relatedNotes}
+        contacts={relatedContacts}
+      />
 
       <EntityLinksSection
         lang={lang}

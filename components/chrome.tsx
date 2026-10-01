@@ -66,6 +66,8 @@ export function Flash({ lang, search }: { lang: Lang; search: Record<string, str
                       ? policyMessage(lang, firstParam(search.rule))
                       : error === "contacts"
                         ? t(lang, "errorGoogleContacts")
+                        : error === "tagName"
+                          ? t(lang, "errorTagName")
                       : error
                         ? t(lang, "errorGeneric")
                         : "";

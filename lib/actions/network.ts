@@ -9,12 +9,14 @@ import { normalizeContactStatus } from "../contact-status";
 import { NOTE_TYPES } from "../notes";
 import { isHttpUrl } from "../entity-links";
 import type { NoteType } from "@prisma/client";
+import { replaceRecordTags } from "../tag-assign";
 
 export async function createNote(formData: FormData) {
   const user = await requireUser();
   const data = await noteFields(formData, user.id);
   if (!data) redirect("/notes?error=required");
   const note = await prisma.note.create({ data: { userId: user.id, ...data } });
+  await replaceRecordTags("note", note.id, user.id, formData);
   redirect(`/notes/${note.id}?created=1`);
 }
 
@@ -25,6 +27,7 @@ export async function updateNote(formData: FormData) {
   const data = await noteFields(formData, user.id);
   if (!data) redirect(`/notes/${note.id}?error=required`);
   await prisma.note.update({ where: { id: note.id }, data });
+  await replaceRecordTags("note", note.id, user.id, formData);
   redirect(`/notes/${note.id}?updated=1`);
 }
 
@@ -33,7 +36,10 @@ export async function cloneNote(formData: FormData) {
   const note = await ownedNote(user.id, requiredText(formData.get("noteId")));
   if (!note) redirect("/notes?error=required");
   const suffix = user.uiLanguage === "he" ? "(עותק)" : "(copy)";
-  const links = await prisma.entityLink.findMany({ where: { noteId: note.id, userId: user.id } });
+  const [links, tagRows] = await Promise.all([
+    prisma.entityLink.findMany({ where: { noteId: note.id, userId: user.id } }),
+    prisma.noteTag.findMany({ where: { noteId: note.id } }),
+  ]);
   const copy = await prisma.note.create({
     data: {
       userId: user.id,
@@ -53,6 +59,9 @@ export async function cloneNote(formData: FormData) {
           url: link.url,
           contactId: link.contactId,
         })),
+      },
+      tags: {
+        create: tagRows.map((row) => ({ tagId: row.tagId })),
       },
     },
   });
@@ -92,6 +101,7 @@ export async function createContact(formData: FormData) {
   const fullName = requiredText(formData.get("fullName"));
   if (!fullName) redirect("/contacts?error=required");
   const contact = await prisma.contact.create({ data: { userId: user.id, ...contactData(formData, user.timezone), fullName } });
+  await replaceRecordTags("contact", contact.id, user.id, formData);
   redirect(`/contacts/${contact.id}?created=1`);
 }
 
@@ -102,6 +112,7 @@ export async function updateContact(formData: FormData) {
   const existing = await prisma.contact.findFirst({ where: { id, userId: user.id } });
   if (!existing || !fullName) redirect("/contacts?error=required");
   await prisma.contact.update({ where: { id }, data: { ...contactData(formData, user.timezone), fullName } });
+  await replaceRecordTags("contact", id, user.id, formData);
   redirect(`/contacts/${id}?updated=1`);
 }
 

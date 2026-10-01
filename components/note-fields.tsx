@@ -1,8 +1,10 @@
 import type { Note } from "@prisma/client";
 import { NOTE_TYPES } from "@/lib/notes";
 import { noteTypeLabel, t, type Lang } from "@/lib/i18n";
+import type { TagRef } from "@/lib/tags";
 import { SubmitButton, fieldClass, labelClass } from "./widgets";
 import { MentionTextarea } from "./mention-textarea";
+import { TagPicker } from "./tag-picker";
 import type { LocalPerson } from "./person-picker";
 
 export function NoteFields({
@@ -12,6 +14,9 @@ export function NoteFields({
   jobs,
   localContacts = [],
   googleConnected = false,
+  tags,
+  selectedTagIds = [],
+  hide,
 }: {
   lang: Lang;
   action: (formData: FormData) => void;
@@ -19,6 +24,9 @@ export function NoteFields({
   jobs: { id: string; label: string }[];
   localContacts?: LocalPerson[];
   googleConnected?: boolean;
+  tags: TagRef[];
+  selectedTagIds?: string[];
+  hide: boolean;
 }) {
   return (
     <form action={action} className="grid gap-3">
@@ -75,6 +83,7 @@ export function NoteFields({
         localContacts={localContacts}
         googleConnected={googleConnected}
       />
+      <TagPicker lang={lang} hide={hide} tags={tags} selected={selectedTagIds} />
       <SubmitButton label={t(lang, "save")} />
     </form>
   );
