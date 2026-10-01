@@ -53,8 +53,9 @@ export function AttributeSelect({
   );
 }
 
-export function SubmitButton({ label }: { label: string }) {
-  const { pending } = useFormStatus();
+export function SubmitButton({ label, pending: forced }: { label: string; pending?: boolean }) {
+  const { pending: formPending } = useFormStatus();
+  const pending = forced ?? formPending;
   return (
     <button className={`${primaryButton} inline-flex items-center gap-2`} disabled={pending} type="submit" aria-busy={pending}>
       {pending ? (

@@ -1,10 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import type { Lang } from "@/lib/i18n";
 import { channelLabel, eventTypeLabel, stageLabel, statusLabel, t } from "@/lib/i18n";
 import { CHANNELS, EVENT_TYPES, JOB_STATUSES, STAGES } from "@/lib/events";
+import type { LoggedHistoryEvent } from "@/lib/job-activity";
 import { DateTimeField, fieldClass, labelClass, SubmitButton } from "./widgets";
+
+export type InlineEventResult =
+  | { ok: true; status: string | null; event: LoggedHistoryEvent | null; warn?: "calendar" }
+  | { ok: false; error: string };
+
+function inlineErrorText(lang: Lang, code: string) {
+  if (code === "required") return t(lang, "errorRequired");
+  if (code === "date") return t(lang, "errorDate");
+  if (code === "link") return t(lang, "eventNeedsLink");
+  if (code === "auth") return t(lang, "authError");
+  return t(lang, "errorGeneric");
+}
 
 export function EventForm({
   action,
@@ -22,8 +35,11 @@ export function EventForm({
   lockLinks = false,
   returnTo,
   event,
+  focusJobId,
+  submitInline,
+  onInlineResult,
 }: {
-  action: (formData: FormData) => void;
+  action?: (formData: FormData) => void;
   lang: Lang;
   jobs: { id: string; label: string }[];
   contacts: { id: string; label: string }[];
@@ -53,12 +69,38 @@ export function EventForm({
     resultingStatus: string;
     onCalendar: boolean;
   };
+  focusJobId?: string;
+  submitInline?: (formData: FormData) => Promise<InlineEventResult>;
+  onInlineResult?: (result: Extract<InlineEventResult, { ok: true }>) => void;
 }) {
   const [type, setType] = useState(event?.type || defaultType || "interest");
   const [jobId, setJobId] = useState(defaultJobId || "");
+  const [inlineError, setInlineError] = useState("");
+  const [inlinePending, setInlinePending] = useState(false);
   const visibleCvs = cvs.filter((cv) => !cv.jobId || cv.jobId === jobId);
+
+  async function onInlineSubmit(formEvent: FormEvent<HTMLFormElement>) {
+    if (!submitInline) return;
+    formEvent.preventDefault();
+    setInlineError("");
+    setInlinePending(true);
+    try {
+      const result = await submitInline(new FormData(formEvent.currentTarget));
+      if (!result.ok) {
+        setInlineError(inlineErrorText(lang, result.error));
+        return;
+      }
+      onInlineResult?.(result);
+    } catch {
+      setInlineError(inlineErrorText(lang, "generic"));
+    } finally {
+      setInlinePending(false);
+    }
+  }
+
   return (
-    <form action={action} className="grid gap-3">
+    <form action={submitInline ? undefined : action} onSubmit={submitInline ? onInlineSubmit : undefined} className="grid gap-3">
+      {focusJobId ? <input type="hidden" name="focusJobId" value={focusJobId} /> : null}
       {event ? <input type="hidden" name="eventId" value={event.id} /> : null}
       {returnTo ? <input type="hidden" name="returnTo" value={returnTo} /> : null}
       {lockLinks ? (
@@ -204,8 +246,9 @@ export function EventForm({
         <span className={labelClass}>{t(lang, "summary")}</span>
         <textarea className={fieldClass} name="summary" rows={3} defaultValue={event?.summary || ""} />
       </label>
+      {inlineError ? <p className="text-sm text-rose-300">{inlineError}</p> : null}
       <div>
-        <SubmitButton label={t(lang, "save")} />
+        <SubmitButton label={t(lang, "save")} pending={submitInline ? inlinePending : undefined} />
       </div>
     </form>
   );

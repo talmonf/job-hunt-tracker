@@ -1,17 +1,15 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import type { Channel, EventType, JobStatus, MeetingStage } from "@prisma/client";
 import { prisma } from "../prisma";
 import { requireUser } from "../session";
 import { optionalInt, parseDateOnly, parseDateTime, requiredText } from "../forms";
-import { defaultResultingStatus, CHANNELS, EMPLOYMENT_TYPES, ENGAGEMENTS, EVENT_TYPES, JOB_STATUSES, STAGES, WORK_ARRANGEMENTS } from "../events";
+import { EMPLOYMENT_TYPES, ENGAGEMENTS, WORK_ARRANGEMENTS } from "../events";
 import { recomputeJobStatus } from "../job-status";
-import { t } from "../i18n";
 import { removeStored, saveUpload } from "../files";
-import { deleteCalendarEvent, syncMeetingToCalendar } from "../calendar";
+import { deleteCalendarEvent } from "../calendar";
 import { replaceRecordTags } from "../tag-assign";
+import { persistEvent } from "../event-write";
 
 export async function createJob(formData: FormData) {
   const user = await requireUser();
@@ -55,44 +53,6 @@ export async function createJob(formData: FormData) {
   });
   await replaceRecordTags("job", job.id, user.id, formData);
   redirect("/jobs?created=1");
-}
-
-export async function setJobStatus(formData: FormData) {
-  const user = await requireUser();
-  const job = await ownedJob(user.id, requiredText(formData.get("jobId")));
-  const status = requiredText(formData.get("status")) as JobStatus;
-  if (!job || !JOB_STATUSES.includes(status)) return false;
-  if (job.status !== status) {
-    await prisma.job.update({ where: { id: job.id }, data: { status } });
-  }
-  revalidatePath(`/jobs/${job.id}`);
-  revalidatePath("/dashboard");
-  return true;
-}
-
-export async function confirmDirectStatusChange(formData: FormData) {
-  const user = await requireUser();
-  const job = await ownedJob(user.id, requiredText(formData.get("jobId")));
-  const fromStatus = requiredText(formData.get("fromStatus")) as JobStatus;
-  const status = requiredText(formData.get("status")) as JobStatus;
-  if (!job || fromStatus === status || !JOB_STATUSES.includes(fromStatus) || !JOB_STATUSES.includes(status)) return false;
-  await prisma.event.create({
-    data: {
-      userId: user.id,
-      jobId: job.id,
-      type: "status_change",
-      occurredAt: new Date(),
-      previousStatus: fromStatus,
-      resultingStatus: status,
-      summary: t(user.uiLanguage, "systemStatusChange"),
-    },
-  });
-  await recomputeJobStatus(job.id);
-  revalidatePath("/jobs");
-  revalidatePath(`/jobs/${job.id}`);
-  revalidatePath("/events");
-  revalidatePath("/dashboard");
-  return true;
 }
 
 export async function updateJob(formData: FormData) {
@@ -187,85 +147,10 @@ export async function deleteCv(formData: FormData) {
 
 export async function saveEvent(formData: FormData) {
   const user = await requireUser();
-  const type = requiredText(formData.get("type")) as EventType;
-  if (!EVENT_TYPES.includes(type)) redirect(eventReturn(formData, undefined, undefined, "required"));
-  const jobId = requiredText(formData.get("jobId"));
-  const contactId = requiredText(formData.get("contactId"));
-  const job = jobId ? await ownedJob(user.id, jobId) : null;
-  const contact = contactId
-    ? await prisma.contact.findFirst({ where: { id: contactId, userId: user.id } })
-    : null;
-  if (!job && !contact) redirect(eventReturn(formData, undefined, undefined, "link"));
-  const occurredAt = parseDateTime(formData.get("occurredAt"), user.timezone);
-  if (!occurredAt) redirect(eventReturn(formData, job?.id, contact?.id, "date"));
-  const startsAt = type === "meeting" ? parseDateTime(formData.get("startsAt"), user.timezone) : null;
-  const endsAt = type === "meeting" ? parseDateTime(formData.get("endsAt"), user.timezone) : null;
-  if (type === "meeting" && !startsAt) redirect(eventReturn(formData, job?.id, contact?.id, "date"));
-  if (startsAt && endsAt && endsAt.getTime() < startsAt.getTime()) redirect(eventReturn(formData, job?.id, contact?.id, "date"));
-  const channel = optionalEnum(formData.get("channel"), CHANNELS) as Channel | null;
-  const stage = optionalEnum(formData.get("stage"), STAGES) as MeetingStage | null;
-  let resultingStatus = defaultResultingStatus(type);
-  if (type === "status_change") {
-    const picked = requiredText(formData.get("resultingStatus")) as JobStatus;
-    if (!JOB_STATUSES.includes(picked)) redirect(eventReturn(formData, job?.id, contact?.id, "required"));
-    resultingStatus = picked;
-  }
-  if (type === "outreach" && !channel) redirect(eventReturn(formData, job?.id, contact?.id, "required"));
-  if (type === "meeting" && !stage) redirect(eventReturn(formData, job?.id, contact?.id, "required"));
-  const noteId = requiredText(formData.get("noteId"));
-  const note = noteId ? await prisma.note.findFirst({ where: { id: noteId, userId: user.id } }) : null;
-  const cvId = requiredText(formData.get("cvId"));
-  const cv = cvId && job ? await prisma.jobCv.findFirst({ where: { id: cvId, jobId: job.id } }) : null;
-  const eventId = requiredText(formData.get("eventId"));
-  const existing = eventId
-    ? await prisma.event.findFirst({ where: { id: eventId, userId: user.id } })
-    : null;
-  const data = {
-    type,
-    occurredAt,
-    startsAt,
-    endsAt,
-    jobId: job?.id ?? null,
-    contactId: contact?.id ?? null,
-    channel: type === "outreach" || type === "meeting" ? channel : null,
-    counterpartyName: requiredText(formData.get("counterpartyName")),
-    stage: type === "meeting" ? stage : null,
-    resultingStatus,
-    summary: String(formData.get("summary") ?? ""),
-    noteId: note?.id ?? null,
-    cvId: cv?.id ?? null,
-    tailoredCv: type === "application" ? formData.get("tailoredCv") === "1" : null,
-  };
-  const saved = existing
-    ? await prisma.event.update({ where: { id: existing.id }, data })
-    : await prisma.event.create({ data: { userId: user.id, ...data } });
-  let calendarFailed = false;
-  if (type === "meeting") {
-    const wantCalendar = formData.get("addToCalendar") === "1" || Boolean(existing?.googleCalendarEventId && formData.get("addToCalendar") === "1");
-    const sync = await syncMeetingToCalendar({
-      user,
-      event: { ...saved, googleCalendarEventId: existing?.googleCalendarEventId ?? null },
-      job,
-      enabled: formData.get("addToCalendar") === "1",
-    });
-    if (sync === "failed") calendarFailed = true;
-    else if (sync) {
-      await prisma.event.update({
-        where: { id: saved.id },
-        data: { googleCalendarEventId: sync.id, googleCalendarHtmlLink: sync.htmlLink },
-      });
-    } else if (existing?.googleCalendarEventId) {
-      await prisma.event.update({
-        where: { id: saved.id },
-        data: { googleCalendarEventId: null, googleCalendarHtmlLink: null },
-      });
-    }
-    void wantCalendar;
-  }
-  if (job) await recomputeJobStatus(job.id);
-  if (existing?.jobId && existing.jobId !== job?.id) await recomputeJobStatus(existing.jobId);
-  const flash = calendarFailed ? "warn=calendar" : existing ? "updated=1" : "created=1";
-  redirect(eventDone(formData, job?.id, contact?.id, flash));
+  const result = await persistEvent(user, formData);
+  if (!result.ok) redirect(eventReturn(formData, result.jobId, result.contactId, result.error));
+  const flash = result.calendarFailed ? "warn=calendar" : result.existed ? "updated=1" : "created=1";
+  redirect(eventDone(formData, result.jobId ?? undefined, result.contactId ?? undefined, flash));
 }
 
 export async function deleteEvent(formData: FormData) {

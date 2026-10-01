@@ -286,6 +286,7 @@ export default async function JobDetailPage({
         events={job.events}
         editHref={(eventId) => `/events?modal=edit&eventId=${encodeURIComponent(eventId)}&returnTo=${encodeURIComponent(jobReturn)}`}
         returnTo={jobReturn}
+        liveJobId={job.id}
       />
       <div className="mt-8">
         <form action={deleteJob}>

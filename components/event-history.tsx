@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { deleteEvent } from "@/lib/actions/jobs";
+import { JOB_EVENT_LOGGED, type LoggedHistoryEvent } from "@/lib/job-activity";
 import { EmptyState } from "@/components/chrome";
 import { ConfirmSubmit } from "@/components/widgets";
 import { EventSummary } from "@/components/event-summary";
@@ -11,16 +15,30 @@ import { dash } from "@/lib/mask";
 type HistoryEvent = {
   id: string;
   type: string;
-  occurredAt: Date;
-  startsAt: Date | null;
-  endsAt: Date | null;
-  createdAt: Date;
+  occurredAt: Date | string;
+  startsAt: Date | string | null;
+  endsAt: Date | string | null;
+  createdAt: Date | string;
   stage: string | null;
   resultingStatus?: string | null;
   previousStatus?: string | null;
   counterpartyName: string;
   summary: string;
 };
+
+function asDate(value: Date | string) {
+  return value instanceof Date ? value : new Date(value);
+}
+
+function normalize(event: HistoryEvent) {
+  return {
+    ...event,
+    occurredAt: asDate(event.occurredAt),
+    startsAt: event.startsAt ? asDate(event.startsAt) : null,
+    endsAt: event.endsAt ? asDate(event.endsAt) : null,
+    createdAt: asDate(event.createdAt),
+  };
+}
 
 export function EventHistoryTable({
   lang,
@@ -29,6 +47,7 @@ export function EventHistoryTable({
   events,
   editHref,
   returnTo,
+  liveJobId,
 }: {
   lang: Lang;
   timezone: string;
@@ -36,8 +55,25 @@ export function EventHistoryTable({
   events: HistoryEvent[];
   editHref: (eventId: string) => string;
   returnTo: string;
+  liveJobId?: string;
 }) {
-  if (events.length === 0) {
+  const [extra, setExtra] = useState<ReturnType<typeof normalize>[]>([]);
+  useEffect(() => {
+    if (!liveJobId) return;
+    function onLogged(event: Event) {
+      const detail = (event as CustomEvent<{ jobId: string; event: LoggedHistoryEvent }>).detail;
+      if (!detail || detail.jobId !== liveJobId) return;
+      const row = normalize(detail.event);
+      setExtra((current) => [row, ...current.filter((item) => item.id !== row.id)]);
+    }
+    window.addEventListener(JOB_EVENT_LOGGED, onLogged);
+    return () => window.removeEventListener(JOB_EVENT_LOGGED, onLogged);
+  }, [liveJobId]);
+  const seen = new Set(extra.map((event) => event.id));
+  const rows = [...extra, ...events.map(normalize).filter((event) => !seen.has(event.id))].sort(
+    (a, b) => b.occurredAt.getTime() - a.occurredAt.getTime(),
+  );
+  if (rows.length === 0) {
     return <EmptyState>{t(lang, "emptyEvents")}</EmptyState>;
   }
   return (
@@ -54,7 +90,7 @@ export function EventHistoryTable({
           </tr>
         </thead>
         <tbody>
-          {events.map((event) => {
+          {rows.map((event) => {
             const scheduled = eventScheduledStart(event);
             return (
               <tr key={event.id} className="border-t border-slate-800">
