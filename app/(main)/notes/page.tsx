@@ -43,6 +43,9 @@ export default async function NotesPage({
             { bodyHe: { contains: q, mode: "insensitive" } },
             { job: { companyName: { contains: q, mode: "insensitive" } } },
             { job: { title: { contains: q, mode: "insensitive" } } },
+            { contact: { fullName: { contains: q, mode: "insensitive" } } },
+            { contact: { firstName: { contains: q, mode: "insensitive" } } },
+            { contact: { lastName: { contains: q, mode: "insensitive" } } },
           ],
         }
       : {}),
@@ -50,7 +53,7 @@ export default async function NotesPage({
   const [notes, jobs, contacts] = await Promise.all([
     prisma.note.findMany({
       where,
-      include: { job: true, tags: { include: { tag: true } } },
+      include: { job: true, contact: true, tags: { include: { tag: true } } },
       orderBy: { createdAt: "desc" },
     }),
     prisma.job.findMany({ where: { userId: user.id }, orderBy: { companyName: "asc" } }),
@@ -66,6 +69,7 @@ export default async function NotesPage({
   }));
   const googleConnected = Boolean(user.contactsRefreshToken);
   const jobOptions = jobs.map((job) => ({ id: job.id, label: dash(jobNoteLabel(job), hide) }));
+  const contactOptions = contacts.map((contact) => ({ id: contact.id, label: dash(contact.fullName, hide) }));
   return (
     <PageFrame lang={lang} title={t(lang, "notes")} description={t(lang, "notesIntro")} search={search}>
       <div className="mb-3 flex items-center justify-between">
@@ -125,7 +129,7 @@ export default async function NotesPage({
               <tr>
                 <th className="px-3 py-2">{t(lang, "title")}</th>
                 <th className="px-3 py-2">{t(lang, "tags")}</th>
-                <th className="px-3 py-2">{t(lang, "jobs")}</th>
+                <th className="px-3 py-2">{t(lang, "noteFor")}</th>
                 <th className="px-3 py-2">{t(lang, "noteType")}</th>
                 <th className="px-3 py-2">{t(lang, "additionalInfo")}</th>
                 <th className="px-3 py-2" />
@@ -147,8 +151,12 @@ export default async function NotesPage({
                       <Link className="text-sky-300" href={`/jobs/${note.job.id}`}>
                         {dash(jobNoteLabel(note.job), hide)}
                       </Link>
+                    ) : note.contact ? (
+                      <Link className="text-sky-300" href={`/contacts/${note.contact.id}`}>
+                        {dash(note.contact.fullName, hide)}
+                      </Link>
                     ) : (
-                      "—"
+                      t(lang, "generalNote")
                     )}
                   </td>
                   <td className="px-3 py-2">{noteTypeLabel(lang, note.type)}</td>
@@ -182,7 +190,7 @@ export default async function NotesPage({
       )}
       {firstParam(search.modal) === "new" ? (
         <Modal title={t(lang, "addNote")} closeHref={`/notes${preserveQuery(search, {}, ["modal"])}`} closeLabel={t(lang, "close")}>
-          <NoteFields lang={lang} action={createNote} jobs={jobOptions} localContacts={localContacts} googleConnected={googleConnected} tags={catalog} hide={hide} />
+          <NoteFields lang={lang} action={createNote} jobs={jobOptions} contacts={contactOptions} localContacts={localContacts} googleConnected={googleConnected} tags={catalog} hide={hide} />
         </Modal>
       ) : null}
     </PageFrame>

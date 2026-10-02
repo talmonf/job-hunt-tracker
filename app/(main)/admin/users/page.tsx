@@ -6,7 +6,8 @@ import { ruleText, t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
 import { formatDateTime } from "@/lib/dates";
 import { grantCredits } from "@/lib/actions/ai";
-import { createUser, resetUserPassword, setAudienceTestUser, setUserActive } from "@/lib/actions/admin";
+import { createUser, resetUserPassword, setUserActive } from "@/lib/actions/admin";
+import { AudienceTestUserCheck } from "@/components/audience-test-user";
 import { EmptyState, Modal, PageFrame } from "@/components/chrome";
 import { PasswordFieldLabeled, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
 
@@ -78,13 +79,7 @@ export default async function UsersPage({
                   <td className="px-3 py-2">{formatDateTime(user.createdAt, admin.timezone)}</td>
                   <td className="px-3 py-2">{user.lastAccessAt ? formatDateTime(user.lastAccessAt, admin.timezone) : "—"}</td>
                   <td className="px-3 py-2">
-                    <form action={setAudienceTestUser}>
-                      <input type="hidden" name="id" value={user.id} />
-                      <input type="hidden" name="added" value={user.audienceTestUser ? "0" : "1"} />
-                      <button className="text-sky-300" type="submit">
-                        {user.audienceTestUser ? t(lang, "audienceTestUserYes") : t(lang, "audienceTestUserNo")}
-                      </button>
-                    </form>
+                    <AudienceTestUserCheck id={user.id} checked={user.audienceTestUser} label={t(lang, "audienceTestUser")} />
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex gap-3">

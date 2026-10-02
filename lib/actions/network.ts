@@ -6,7 +6,7 @@ import { prisma } from "../prisma";
 import { requireUser } from "../session";
 import { parseDateOnly, requiredText } from "../forms";
 import { normalizeContactStatus } from "../contact-status";
-import { NOTE_TYPES } from "../notes";
+import { noteTypesFor, subjectKind } from "../notes";
 import { isGoogleResourceName, isHttpUrl } from "../entity-links";
 import { displayPersonName } from "../person-name";
 import type { NoteType } from "@prisma/client";
@@ -46,6 +46,7 @@ export async function cloneNote(formData: FormData) {
       userId: user.id,
       title: `${note.title} ${suffix}`,
       jobId: note.jobId,
+      contactId: note.contactId,
       type: note.type,
       additionalInfo: note.additionalInfo,
       bodyEn: note.bodyEn,
@@ -83,18 +84,43 @@ async function ownedNote(userId: string, id: string) {
 async function noteFields(formData: FormData, userId: string) {
   const title = requiredText(formData.get("title"));
   if (!title) return null;
+  const subject = parseSubject(requiredText(formData.get("subject")));
+  if (!subject) return null;
   const type = requiredText(formData.get("type")) as NoteType;
-  if (!NOTE_TYPES.includes(type)) return null;
-  const jobId = requiredText(formData.get("jobId"));
-  const job = jobId ? await prisma.job.findFirst({ where: { id: jobId, userId } }) : null;
+  if (!(noteTypesFor(subject.kind) as readonly string[]).includes(type)) return null;
+  let jobId: string | null = null;
+  let contactId: string | null = null;
+  if (subject.kind === "job") {
+    const job = await prisma.job.findFirst({ where: { id: subject.id, userId } });
+    if (!job) return null;
+    jobId = job.id;
+  } else if (subject.kind === "contact") {
+    const contact = await prisma.contact.findFirst({ where: { id: subject.id, userId } });
+    if (!contact) return null;
+    contactId = contact.id;
+  }
   return {
     title,
     type,
-    jobId: job?.id ?? null,
+    jobId,
+    contactId,
     additionalInfo: String(formData.get("additionalInfo") ?? ""),
     bodyEn: String(formData.get("bodyEn") ?? ""),
     bodyHe: String(formData.get("bodyHe") ?? ""),
   };
+}
+
+function parseSubject(raw: string): { kind: ReturnType<typeof subjectKind>; id: string } | null {
+  if (!raw) return { kind: "general", id: "" };
+  if (raw.startsWith("job:")) {
+    const id = raw.slice("job:".length);
+    return id ? { kind: "job", id } : null;
+  }
+  if (raw.startsWith("contact:")) {
+    const id = raw.slice("contact:".length);
+    return id ? { kind: "contact", id } : null;
+  }
+  return null;
 }
 
 export async function createContact(formData: FormData) {

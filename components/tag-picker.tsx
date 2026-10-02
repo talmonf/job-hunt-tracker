@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { t, type Lang } from "@/lib/i18n";
 import { maskText } from "@/lib/mask";
 import { TAG_CHIP_CLASS, type TagRef } from "@/lib/tags";
-import { fieldClass, quietButton } from "./widgets";
+import { SubmitButton, fieldClass, quietButton } from "./widgets";
 
 export const JOB_TAGS_ADD_EVENT = "job-tags-add";
 
@@ -13,6 +13,12 @@ export type JobTagsAddDetail = {
   ids: string[];
   tags?: TagRef[];
 };
+
+function sameIds(current: string[], saved: string[]) {
+  if (current.length !== saved.length) return false;
+  const savedIds = new Set(saved);
+  return current.every((id) => savedIds.has(id));
+}
 
 export function TagPicker({
   lang,
@@ -55,6 +61,7 @@ export function TagPicker({
     window.addEventListener(JOB_TAGS_ADD_EVENT, onAdd);
     return () => window.removeEventListener(JOB_TAGS_ADD_EVENT, onAdd);
   }, []);
+  const dirty = !sameIds(ids, selected);
   const byId = useMemo(() => new Map(catalog.map((tag) => [tag.id, tag])), [catalog]);
   const chosen = ids.flatMap((id) => {
     const tag = byId.get(id);
@@ -119,9 +126,12 @@ export function TagPicker({
                       );
                     })}
                   </div>
-                  <button className={`${quietButton} mt-2`} type="button" onClick={() => setOpen(false)}>
-                    {t(lang, "done")}
-                  </button>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {dirty ? <SubmitButton label={t(lang, "save")} thin /> : null}
+                    <button className={quietButton} type="button" onClick={() => setOpen(false)}>
+                      {t(lang, "done")}
+                    </button>
+                  </div>
                 </div>
               ) : null}
             </div>
@@ -131,6 +141,7 @@ export function TagPicker({
           <Link className="text-xs text-sky-300" href="/settings?section=tags#tags" target="_blank" rel="noopener noreferrer">
             {t(lang, "manageTags")}
           </Link>
+          {dirty && !open ? <SubmitButton label={t(lang, "save")} thin /> : null}
         </div>
         {fields}
       </div>

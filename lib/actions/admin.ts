@@ -1,6 +1,7 @@
 "use server";
 
 import bcrypt from "bcryptjs";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "../prisma";
 import { requireAdmin } from "../session";
@@ -49,12 +50,11 @@ export async function setUserActive(formData: FormData) {
   redirect("/admin/users?updated=1");
 }
 
-export async function setAudienceTestUser(formData: FormData) {
+export async function setAudienceTestUser(id: string, added: boolean) {
   await requireAdmin();
-  const id = requiredText(formData.get("id"));
-  const added = formData.get("added") === "1";
+  if (!id) return;
   await prisma.user.updateMany({ where: { id }, data: { audienceTestUser: added } });
-  redirect("/admin/users?updated=1");
+  revalidatePath("/admin/users");
 }
 
 export async function resetUserPassword(formData: FormData) {

@@ -68,6 +68,15 @@ enum NoteType {
   follow_up
   thank_you
   other
+  meeting_prep
+  meeting_summary
+  coffee_chat
+  intro_request
+  referral
+  relationship
+  reminder
+  idea
+  general
 }
 
 enum EmploymentType {
@@ -308,6 +317,7 @@ model Contact {
   importKey          String?
   createdAt          DateTime  @default(now())
   events             Event[]
+  notes              Note[]
   entityLinks        EntityLink[] @relation("LinkContact")
   parentLinks        EntityLink[] @relation("ParentContact")
   tags               ContactTag[]
@@ -323,6 +333,8 @@ model Note {
   title          String
   jobId          String?
   job            Job?     @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  contactId      String?
+  contact        Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
   type           NoteType @default(interview_prep)
   additionalInfo String   @default("")
   bodyEn         String   @default("")
@@ -335,6 +347,7 @@ model Note {
 
   @@index([userId, createdAt])
   @@index([jobId])
+  @@index([contactId])
 }
 
 model EntityLink {

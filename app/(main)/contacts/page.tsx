@@ -5,6 +5,7 @@ import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { allParams, firstParam, preserveQuery } from "@/lib/http";
 import { dateInputValue } from "@/lib/dates";
 import { t } from "@/lib/i18n";
+import { notePreview } from "@/lib/notes";
 import { dash, maskText } from "@/lib/mask";
 import { assignmentTags } from "@/lib/tags";
 import { createContact } from "@/lib/actions/network";
@@ -13,6 +14,7 @@ import { MultiSelect, compactFieldClass, compactLabelClass } from "@/components/
 import { TagChips } from "@/components/tag-chip";
 import { ContactFields } from "@/components/contact-fields";
 import { ContactDateEditor, ContactStatusEditor, ContactWillingEditor } from "@/components/contact-inline";
+import { ExpandableNote } from "@/components/expandable-note";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +56,10 @@ export default async function ContactsPage({
   const contacts = await prisma.contact.findMany({
     where,
     orderBy: { [sort]: dir },
-    include: { tags: { include: { tag: true } } },
+    include: {
+      tags: { include: { tag: true } },
+      notes: { orderBy: { updatedAt: "desc" }, take: 1 },
+    },
   });
   return (
     <PageFrame lang={lang} title={t(lang, "networking")} description={t(lang, "contactsIntro")} search={search}>
@@ -116,6 +121,7 @@ export default async function ContactsPage({
                 <Sort label={t(lang, "status")} column="status" sort={sort} dir={dir} search={search} />
                 <Sort label={t(lang, "nextActionDate")} column="nextActionDate" sort={sort} dir={dir} search={search} />
                 <th className="px-3 py-2">{t(lang, "willing")}</th>
+                <th className="px-3 py-2">{t(lang, "note")}</th>
               </tr>
             </thead>
             <tbody>
@@ -137,6 +143,13 @@ export default async function ContactsPage({
                   </td>
                   <td className="px-3 py-2">
                     <ContactWillingEditor contactId={contact.id} willing={contact.willingToRecommend} lang={lang} />
+                  </td>
+                  <td className="px-3 py-2">
+                    <ExpandableNote
+                      text={contact.notes[0] ? dash(notePreview(contact.notes[0], lang), hide) : "—"}
+                      moreLabel={t(lang, "more")}
+                      lessLabel={t(lang, "less")}
+                    />
                   </td>
                 </tr>
               ))}

@@ -70,6 +70,7 @@ export default async function NoteDetailPage({
         action={updateNote}
         note={note}
         jobs={jobs.map((job) => ({ id: job.id, label: dash(jobNoteLabel(job), hide) }))}
+        contacts={contacts.map((contact) => ({ id: contact.id, label: dash(contact.fullName, hide) }))}
         localContacts={localContacts}
         googleConnected={googleConnected}
         tags={catalog}
