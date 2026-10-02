@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
 import { authConfig } from "./auth.config";
+import { isBuiltinAdmin } from "./lib/admin";
 
 const { auth } = NextAuth(authConfig);
 
@@ -49,7 +50,8 @@ export default auth((req) => {
     return NextResponse.redirect(new URL(locked ? "/change-password" : "/dashboard", req.nextUrl.origin));
   }
 
-  if (pathname.startsWith("/admin") && req.auth?.user?.role !== "admin") {
+  const sessionAdmin = req.auth?.user?.role === "admin" || isBuiltinAdmin(req.auth?.user?.email);
+  if (pathname.startsWith("/admin") && !sessionAdmin) {
     return NextResponse.redirect(new URL("/dashboard", req.nextUrl.origin));
   }
 
