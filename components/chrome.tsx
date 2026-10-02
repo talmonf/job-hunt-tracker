@@ -144,3 +144,17 @@ export function statusClass(status: string) {
   if (status === "applied" || status === "contacted") return "text-sky-300";
   return "text-slate-200";
 }
+
+export function statusChipClass(status: string) {
+  if (status === "interest") return "bg-indigo-400 text-indigo-950";
+  if (status === "contacted") return "bg-sky-400 text-sky-950";
+  if (status === "applied") return "bg-cyan-400 text-cyan-950";
+  if (status === "interviewing") return "bg-amber-300 text-amber-950";
+  if (status === "offer") return "bg-emerald-400 text-emerald-950";
+  if (status === "rejected") return "bg-rose-400 text-rose-950";
+  if (status === "withdrawn") return "bg-orange-400 text-orange-950";
+  if (status === "on_hold") return "bg-violet-400 text-violet-950";
+  if (status === "not_applicable") return "bg-slate-400 text-slate-950";
+  if (status === "parked") return "bg-zinc-400 text-zinc-950";
+  return "bg-slate-300 text-slate-950";
+}
