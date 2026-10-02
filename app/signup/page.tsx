@@ -16,10 +16,10 @@ export default async function SignupPage({
   const search = await searchParams;
   const lang = await publicLang(search);
   return (
-    <div className="mx-auto max-w-md px-4 py-10">
+    <div dir={lang === "he" ? "rtl" : "ltr"} className="mx-auto max-w-md px-4 py-10">
       <div className="mb-4 flex items-center justify-between">
         <Link className="text-lg font-semibold" href="/">
-          Job Hunt
+          Job Hunt Tracker
         </Link>
         <LanguageSwitch action={setLoginLanguage} lang={lang} returnTo="/signup" />
       </div>

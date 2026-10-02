@@ -8,8 +8,8 @@ import type { Lang } from "@/lib/i18n";
 import { jobAttributeLabel, t } from "@/lib/i18n";
 
 export const fieldClass =
-  "w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-sm text-slate-100 outline-none focus:border-sky-500";
-export const labelClass = "mb-1 block text-xs text-slate-300";
+  "w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-start text-sm text-slate-100 outline-none focus:border-sky-500";
+export const labelClass = "mb-1 block text-start text-xs text-slate-300";
 export const compactFieldClass =
   "w-full rounded border border-slate-600 bg-slate-950 px-1.5 py-0.5 text-xs leading-tight text-slate-100 outline-none focus:border-sky-500";
 export const compactLabelClass = "mb-0.5 block text-[11px] leading-none text-slate-400";
@@ -68,18 +68,77 @@ export function SubmitButton({ label, pending: forced, thin = false }: { label: 
   );
 }
 
+function PasswordVisibility({
+  name,
+  shown,
+  show,
+  hide,
+  autoComplete,
+  required,
+  pending,
+  onToggle,
+}: {
+  name: string;
+  shown: boolean;
+  show: string;
+  hide: string;
+  autoComplete?: string;
+  required: boolean;
+  pending: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <span className="relative block">
+      <input className={`${fieldClass} pe-9`} name={name} type={shown ? "text" : "password"} autoComplete={autoComplete} required={required} />
+      <button
+        className="absolute inset-y-0 end-0 flex w-9 items-center justify-center text-slate-400 hover:text-slate-100 disabled:opacity-60"
+        type="button"
+        aria-label={shown ? hide : show}
+        aria-pressed={shown}
+        onClick={onToggle}
+        disabled={pending}
+      >
+        <EyeIcon off={shown} />
+      </button>
+    </span>
+  );
+}
+
+function EyeIcon({ off }: { off: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      {off ? (
+        <>
+          <path d="M3 3l18 18" strokeLinecap="round" />
+          <path d="M10.58 10.58a2 2 0 0 0 2.84 2.84" strokeLinecap="round" />
+          <path d="M9.88 5.09A10.9 10.9 0 0 1 12 4.8c5.05 0 9.27 3.11 11 7.2a11.8 11.8 0 0 1-4.12 5.09M6.11 6.11A11.8 11.8 0 0 0 1 12c1.73 4.09 5.95 7.2 11 7.2 1.55 0 3.03-.3 4.38-.84" strokeLinecap="round" strokeLinejoin="round" />
+        </>
+      ) : (
+        <>
+          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" strokeLinejoin="round" />
+          <circle cx="12" cy="12" r="3" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 export function PasswordField({ name, label, autoComplete }: { name: string; label: string; autoComplete?: string }) {
   const [shown, setShown] = useState(false);
   const { pending } = useFormStatus();
   return (
     <label className="block">
       <span className={labelClass}>{label}</span>
-      <span className="flex gap-2">
-        <input className={fieldClass} name={name} type={shown ? "text" : "password"} autoComplete={autoComplete} required />
-        <button className={quietButton} type="button" onClick={() => setShown((value) => !value)} disabled={pending}>
-          {shown ? "Hide" : "Show"}
-        </button>
-      </span>
+      <PasswordVisibility
+        name={name}
+        shown={shown}
+        show="Show"
+        hide="Hide"
+        autoComplete={autoComplete}
+        required
+        pending={pending}
+        onToggle={() => setShown((value) => !value)}
+      />
     </label>
   );
 }
@@ -104,12 +163,16 @@ export function PasswordFieldLabeled({
   return (
     <label className="block">
       <span className={labelClass}>{label}</span>
-      <span className="flex gap-2">
-        <input className={fieldClass} name={name} type={shown ? "text" : "password"} autoComplete={autoComplete} required={required} />
-        <button className={quietButton} type="button" onClick={() => setShown((value) => !value)} disabled={pending}>
-          {shown ? hide : show}
-        </button>
-      </span>
+      <PasswordVisibility
+        name={name}
+        shown={shown}
+        show={show}
+        hide={hide}
+        autoComplete={autoComplete}
+        required={required}
+        pending={pending}
+        onToggle={() => setShown((value) => !value)}
+      />
     </label>
   );
 }
