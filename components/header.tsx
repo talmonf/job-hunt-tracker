@@ -43,12 +43,7 @@ export function AppHeader({
           {t(lang, "appName")}
         </Link>
         <nav className="flex flex-wrap gap-1">
-          <NavLinks
-            links={[
-              ...links.map(([href, key]) => ({ href, label: t(lang, key) })),
-              ...(role === "admin" ? [{ href: "/admin/users", label: t(lang, "users") }] : []),
-            ]}
-          />
+          <NavLinks links={links.map(([href, key]) => ({ href, label: t(lang, key) }))} />
         </nav>
         <div className="ms-auto flex flex-wrap items-center gap-3">
           <LanguageSwitch action={setUserLanguage} lang={lang} />
@@ -59,6 +54,7 @@ export function AppHeader({
             isAdmin={role === "admin"}
             adminLabel={t(lang, "admin")}
             changePasswordLabel={t(lang, "changePassword")}
+            usersLabel={t(lang, "users")}
           >
             <SignOutButton
               action={signOutAction}

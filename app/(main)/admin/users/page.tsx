@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireAdmin } from "@/lib/session";
+import { isBuiltinAdmin } from "@/lib/admin";
 import { firstParam, preserveQuery } from "@/lib/http";
 import { ruleText, t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
+import { formatDateTime } from "@/lib/dates";
 import { grantCredits } from "@/lib/actions/ai";
-import { formatIls } from "@/lib/ai/money";
-import { createUser, resetUserPassword, setUserActive } from "@/lib/actions/admin";
+import { createUser, resetUserPassword, setAudienceTestUser, setUserActive } from "@/lib/actions/admin";
 import { EmptyState, Modal, PageFrame } from "@/components/chrome";
 import { PasswordFieldLabeled, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
 
@@ -30,7 +31,7 @@ export default async function UsersPage({
           ],
         }
       : undefined,
-    orderBy: { email: "asc" },
+    orderBy: { createdAt: "desc" },
   });
   const resetId = firstParam(search.id);
   const rule = firstParam(search.rule);
@@ -61,9 +62,10 @@ export default async function UsersPage({
               <tr>
                 <th className="px-3 py-2">{t(lang, "fullName")}</th>
                 <th className="px-3 py-2">{t(lang, "email")}</th>
-                <th className="px-3 py-2">{t(lang, "roleLabel")}</th>
-                <th className="px-3 py-2">{t(lang, "status")}</th>
-                <th className="px-3 py-2">{t(lang, "balance")}</th>
+                <th className="px-3 py-2">{t(lang, "registeredWith")}</th>
+                <th className="px-3 py-2">{t(lang, "registeredAt")}</th>
+                <th className="px-3 py-2">{t(lang, "lastAccess")}</th>
+                <th className="px-3 py-2">{t(lang, "audienceTestUser")}</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -72,12 +74,21 @@ export default async function UsersPage({
                 <tr key={user.id} className="border-t border-slate-800">
                   <td className="px-3 py-2">{dash(user.fullName, hide)}</td>
                   <td className="px-3 py-2">{dash(user.email, hide)}</td>
-                  <td className="px-3 py-2">{user.role === "admin" ? t(lang, "adminRole") : t(lang, "userRole")}</td>
-                  <td className="px-3 py-2">{user.isActive ? t(lang, "active") : t(lang, "inactive")}</td>
-                  <td className="px-3 py-2">{formatIls(user.creditBalance)}</td>
+                  <td className="px-3 py-2">{user.registeredWith === "google" ? t(lang, "googleSignup") : t(lang, "passwordSignup")}</td>
+                  <td className="px-3 py-2">{formatDateTime(user.createdAt, admin.timezone)}</td>
+                  <td className="px-3 py-2">{user.lastAccessAt ? formatDateTime(user.lastAccessAt, admin.timezone) : "—"}</td>
+                  <td className="px-3 py-2">
+                    <form action={setAudienceTestUser}>
+                      <input type="hidden" name="id" value={user.id} />
+                      <input type="hidden" name="added" value={user.audienceTestUser ? "0" : "1"} />
+                      <button className="text-sky-300" type="submit">
+                        {user.audienceTestUser ? t(lang, "audienceTestUserYes") : t(lang, "audienceTestUserNo")}
+                      </button>
+                    </form>
+                  </td>
                   <td className="px-3 py-2">
                     <div className="flex gap-3">
-                      {user.id !== admin.id ? (
+                      {user.id !== admin.id && !(user.isActive && isBuiltinAdmin(user.email)) ? (
                         <form action={setUserActive}>
                           <input type="hidden" name="id" value={user.id} />
                           <input type="hidden" name="active" value={user.isActive ? "0" : "1"} />

@@ -6,6 +6,7 @@ import { cookies } from "next/headers";
 import { authConfig } from "./auth.config";
 import { prisma } from "./lib/prisma";
 import { passwordActionRequired } from "./lib/password";
+import { isBuiltinAdmin } from "./lib/admin";
 import type { Role } from "@prisma/client";
 
 const credentialProvider = Credentials({
@@ -21,11 +22,19 @@ const credentialProvider = Credentials({
       if (!user?.isActive || !user.passwordHash) return null;
       const matches = await bcrypt.compare(password, user.passwordHash);
       if (!matches) return null;
+      const role: Role = isBuiltinAdmin(user.email) ? "admin" : user.role;
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          lastAccessAt: new Date(),
+          ...(role !== user.role ? { role } : {}),
+        },
+      });
       return {
         id: user.id,
         email: user.email,
         name: user.fullName,
-        role: user.role,
+        role,
         passwordActionRequired: passwordActionRequired(user),
       };
     },
@@ -58,6 +67,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           data: {
             googleAccountId: existing.googleAccountId ?? account.providerAccountId,
             uiLanguage: lang,
+            lastAccessAt: new Date(),
+            ...(isBuiltinAdmin(email) ? { role: "admin" } : {}),
           },
         });
         return true;
@@ -67,9 +78,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email,
           fullName: profile?.name || email,
           googleAccountId: account.providerAccountId,
-          role: "user",
+          registeredWith: "google",
+          role: isBuiltinAdmin(email) ? "admin" : "user",
           isActive: true,
           uiLanguage: lang,
+          lastAccessAt: new Date(),
           goals: { create: {} },
           profile: { create: {} },
         },
@@ -114,7 +127,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.invalid = true;
           return token;
         }
-        token.role = dbUser.role;
+        const promote = isBuiltinAdmin(dbUser.email) && dbUser.role !== "admin";
+        if (stale || promote) {
+          await prisma.user.update({
+            where: { id: dbUser.id },
+            data: {
+              ...(stale ? { lastAccessAt: new Date() } : {}),
+              ...(promote ? { role: "admin" } : {}),
+            },
+          });
+        }
+        token.role = promote ? "admin" : dbUser.role;
         token.name = dbUser.fullName;
         token.email = dbUser.email;
         token.passwordActionRequired = passwordActionRequired(dbUser);

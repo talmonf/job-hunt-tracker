@@ -6,13 +6,14 @@ import { prisma } from "../prisma";
 import { requireAdmin } from "../session";
 import { passwordRule } from "../password";
 import { requiredText } from "../forms";
+import { isBuiltinAdmin } from "../admin";
 
 export async function createUser(formData: FormData) {
   const admin = await requireAdmin();
   const email = requiredText(formData.get("email")).toLowerCase();
   const fullName = requiredText(formData.get("fullName"));
   const password = String(formData.get("password") ?? "");
-  const role = formData.get("role") === "admin" ? "admin" : "user";
+  const role = isBuiltinAdmin(email) || formData.get("role") === "admin" ? "admin" : "user";
   const rule = passwordRule(password);
   if (!email.includes("@") || !fullName) redirect("/admin/users?error=required");
   if (rule) redirect(`/admin/users?error=policy&rule=${rule}`);
@@ -23,6 +24,7 @@ export async function createUser(formData: FormData) {
       email,
       fullName,
       role,
+      registeredWith: "password",
       passwordHash: await bcrypt.hash(password, 12),
       passwordChangedAt: new Date(),
       mustChangePassword: true,
@@ -39,7 +41,19 @@ export async function setUserActive(formData: FormData) {
   const id = requiredText(formData.get("id"));
   if (id === admin.id) redirect("/admin/users?error=required");
   const active = formData.get("active") === "1";
+  if (!active) {
+    const target = await prisma.user.findUnique({ where: { id }, select: { email: true } });
+    if (target && isBuiltinAdmin(target.email)) redirect("/admin/users?error=required");
+  }
   await prisma.user.updateMany({ where: { id }, data: { isActive: active } });
+  redirect("/admin/users?updated=1");
+}
+
+export async function setAudienceTestUser(formData: FormData) {
+  await requireAdmin();
+  const id = requiredText(formData.get("id"));
+  const added = formData.get("added") === "1";
+  await prisma.user.updateMany({ where: { id }, data: { audienceTestUser: added } });
   redirect("/admin/users?updated=1");
 }
 

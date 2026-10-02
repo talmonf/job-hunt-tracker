@@ -7,6 +7,7 @@ import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { signIn, signOut } from "@/auth";
 import { prisma } from "../prisma";
 import { passwordActionRequired, passwordRule } from "../password";
+import { isBuiltinAdmin } from "../admin";
 import { safeCallback } from "../http";
 import { auth } from "@/auth";
 
@@ -26,6 +27,8 @@ export async function signUp(formData: FormData) {
       email,
       fullName,
       passwordHash: await bcrypt.hash(password, 12),
+      registeredWith: "password",
+      role: isBuiltinAdmin(email) ? "admin" : "user",
       passwordChangedAt: new Date(),
       mustChangePassword: false,
       uiLanguage: lang,
