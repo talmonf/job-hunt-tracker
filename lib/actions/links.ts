@@ -5,7 +5,8 @@ import type { EntityLinkKind } from "@prisma/client";
 import { prisma } from "../prisma";
 import { requireUser } from "../session";
 import { requiredText } from "../forms";
-import { displayPersonName } from "../person-name";
+import { displayPersonName, joinPersonName } from "../person-name";
+import { normalizeConnection, normalizeWorksThere } from "../job-person";
 import {
   isEntityLinkKind,
   isGoogleResourceName,
@@ -25,16 +26,49 @@ export async function addEntityLink(formData: FormData) {
   const parent = await ownedParent(user.id, readParent(formData));
   const dest = parentPath(parent?.ids) ?? "/dashboard";
   if (!parent) redirect(`${dest}?error=required`);
-  const parsed = await parseLinkInput(user.id, formData, parent.allowUrl);
+  const parsed = await parseLinkInput(user.id, formData, parent.allowUrl, Boolean(parent.ids.jobId));
   if (!parsed) redirect(`${dest}?error=required`);
   await prisma.entityLink.create({
     data: {
       userId: user.id,
       ...parent.ids,
       ...parsed,
+      ...(parent.ids.jobId ? readRelationship(formData) : {}),
     },
   });
   redirect(`${dest}?created=1`);
+}
+
+export async function updateJobPerson(formData: FormData) {
+  const user = await requireUser();
+  const link = await prisma.entityLink.findFirst({
+    where: { id: requiredText(formData.get("linkId")), userId: user.id, jobId: { not: null } },
+  });
+  if (!link?.jobId) redirect("/jobs");
+  const relationship = readRelationship(formData);
+  if (link.kind === "manual") {
+    const firstName = requiredText(formData.get("firstName"));
+    const lastName = requiredText(formData.get("lastName"));
+    const displayName = joinPersonName(firstName, lastName);
+    if (!displayName) redirect(`/jobs/${link.jobId}?error=required`);
+    await prisma.entityLink.update({
+      where: { id: link.id },
+      data: {
+        firstName,
+        lastName,
+        phone: requiredText(formData.get("phone")),
+        email: requiredText(formData.get("email")),
+        displayName,
+        ...relationship,
+      },
+    });
+  } else {
+    await prisma.entityLink.update({
+      where: { id: link.id },
+      data: relationship,
+    });
+  }
+  redirect(`/jobs/${link.jobId}?updated=1`);
 }
 
 export async function deleteEntityLink(formData: FormData) {
@@ -128,7 +162,15 @@ async function ownedParent(userId: string, parent: ParentIds) {
   return null;
 }
 
-async function parseLinkInput(userId: string, formData: FormData, allowUrl: boolean) {
+function readRelationship(formData: FormData) {
+  return {
+    worksThere: normalizeWorksThere(requiredText(formData.get("worksThere"))),
+    connection: normalizeConnection(requiredText(formData.get("connection"))),
+    relationshipNote: requiredText(formData.get("relationshipNote")),
+  };
+}
+
+async function parseLinkInput(userId: string, formData: FormData, allowUrl: boolean, allowManual: boolean) {
   const kindRaw = requiredText(formData.get("kind"));
   const displayName = requiredText(formData.get("displayName"));
   const title = requiredText(formData.get("title"));
@@ -143,6 +185,26 @@ async function parseLinkInput(userId: string, formData: FormData, allowUrl: bool
     kind = fromUrl;
   }
   if (!kind) return null;
+
+  if (kind === "manual") {
+    if (!allowManual) return null;
+    const firstName = requiredText(formData.get("firstName"));
+    const lastName = requiredText(formData.get("lastName"));
+    const displayName = joinPersonName(firstName, lastName);
+    if (!displayName) return null;
+    return {
+      kind,
+      displayName,
+      title: "",
+      firstName,
+      lastName,
+      phone: requiredText(formData.get("phone")),
+      email: requiredText(formData.get("email")),
+      url: "",
+      googleResourceName: null,
+      contactId: null,
+    };
+  }
 
   if (kind === "local_contact") {
     const contact = contactId ? await prisma.contact.findFirst({ where: { id: contactId, userId } }) : null;

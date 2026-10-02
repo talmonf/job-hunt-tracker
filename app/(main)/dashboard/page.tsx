@@ -93,6 +93,7 @@ export default async function DashboardPage({
           label={t(lang, "applicationsWeek")}
           actual={applications}
           goal={allTime ? null : applicationGoal}
+          goalLabel={t(lang, "goal")}
           tone="sky"
         />
         <StatCard
@@ -100,6 +101,7 @@ export default async function DashboardPage({
           label={t(lang, "networkingWeek")}
           actual={outreaches}
           goal={allTime ? null : networkingGoal}
+          goalLabel={t(lang, "goal")}
           tone="violet"
         />
         <StatCard
@@ -107,6 +109,7 @@ export default async function DashboardPage({
           label={t(lang, "meetingsWeek")}
           actual={meetings}
           goal={null}
+          goalLabel={t(lang, "goal")}
           tone="amber"
         />
       </div>
@@ -212,9 +215,9 @@ function eventsHref(type: string, allTime: boolean, from: string, to: string) {
 }
 
 const CARD_TONES = {
-  sky: { card: "bg-sky-400 text-sky-950 hover:bg-sky-300", track: "fill-sky-950/25", bar: "fill-sky-950" },
-  violet: { card: "bg-violet-400 text-violet-950 hover:bg-violet-300", track: "fill-violet-950/25", bar: "fill-violet-950" },
-  amber: { card: "bg-amber-300 text-amber-950 hover:bg-amber-200", track: "fill-amber-950/25", bar: "fill-amber-950" },
+  sky: "bg-sky-400 text-sky-950",
+  violet: "bg-violet-400 text-violet-950",
+  amber: "bg-amber-300 text-amber-950",
 } as const;
 
 function StatCard({
@@ -222,28 +225,24 @@ function StatCard({
   label,
   actual,
   goal,
+  goalLabel,
   tone,
 }: {
   href: string;
   label: string;
   actual: number;
   goal: number | null;
+  goalLabel: string;
   tone: keyof typeof CARD_TONES;
 }) {
-  const colors = CARD_TONES[tone];
-  const width = goal === null ? 0 : Math.min(100, goal === 0 ? (actual > 0 ? 100 : 0) : (actual / goal) * 100);
   return (
-    <Link href={href} className={`block h-full rounded-md px-3 py-1.5 ${colors.card}`}>
-      <div className="flex items-baseline justify-between gap-2 text-sm font-medium">
-        <span>{label}</span>
-        <span>{goal === null ? actual : `${actual} / ${goal}`}</span>
-      </div>
-      {goal === null ? null : (
-        <svg viewBox="0 0 100 6" className="mt-1.5 h-1.5 w-full" role="img">
-          <rect width="100" height="6" className={colors.track} rx="2" />
-          <rect width={width} height="6" className={colors.bar} rx="2" />
-        </svg>
-      )}
+    <Link
+      href={href}
+      className={`flex h-full min-h-16 flex-col items-center justify-center rounded-md px-1.5 py-2 text-center hover:brightness-110 ${CARD_TONES[tone]}`}
+    >
+      <span className="text-xs font-medium leading-tight">{label}</span>
+      <span className="mt-1 text-2xl font-semibold leading-none">{actual}</span>
+      {goal === null ? null : <span className="mt-1 text-xs font-medium leading-tight">{goalLabel} {goal}</span>}
     </Link>
   );
 }

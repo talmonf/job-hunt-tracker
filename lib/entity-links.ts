@@ -1,4 +1,4 @@
-export const ENTITY_LINK_KINDS = ["google_contact", "linkedin", "url", "local_contact"] as const;
+export const ENTITY_LINK_KINDS = ["google_contact", "linkedin", "url", "local_contact", "manual"] as const;
 export type EntityLinkKind = (typeof ENTITY_LINK_KINDS)[number];
 
 export type ChipLink = {

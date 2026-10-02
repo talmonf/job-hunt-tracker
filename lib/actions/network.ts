@@ -111,6 +111,27 @@ export async function createContact(formData: FormData) {
     },
   });
   await replaceRecordTags("contact", contact.id, user.id, formData);
+  const linkId = requiredText(formData.get("entityLinkId"));
+  if (linkId) {
+    const link = await prisma.entityLink.findFirst({
+      where: { id: linkId, userId: user.id, kind: "manual", jobId: { not: null } },
+    });
+    if (link) {
+      await prisma.entityLink.update({
+        where: { id: link.id },
+        data: {
+          kind: "local_contact",
+          contactId: contact.id,
+          displayName: contact.fullName,
+          title: contact.role,
+          firstName: "",
+          lastName: "",
+          phone: "",
+          email: "",
+        },
+      });
+    }
+  }
   redirect(`/contacts/${contact.id}?created=1`);
 }
 

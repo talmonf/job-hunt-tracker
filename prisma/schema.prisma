@@ -86,6 +86,7 @@ enum EntityLinkKind {
   linkedin
   url
   local_contact
+  manual
 }
 
 model User {
@@ -345,6 +346,13 @@ model EntityLink {
   note               Note?           @relation(fields: [noteId], references: [id], onDelete: Cascade)
   parentContactId    String?
   parentContact      Contact?        @relation("ParentContact", fields: [parentContactId], references: [id], onDelete: Cascade)
+  firstName          String          @default("")
+  lastName           String          @default("")
+  phone              String          @default("")
+  email              String          @default("")
+  worksThere         String          @default("")
+  connection         String          @default("")
+  relationshipNote   String          @default("")
   createdAt          DateTime        @default(now())
 
   @@index([userId, jobId])

@@ -32,6 +32,7 @@ export function ContactFields({
   tags,
   selectedTagIds = [],
   hide,
+  entityLinkId = "",
 }: {
   lang: Lang;
   action: (formData: FormData) => void;
@@ -69,6 +70,7 @@ export function ContactFields({
   layout?: "form" | "page";
   detailSummary?: ReactNode;
   actionSummary?: ReactNode;
+  entityLinkId?: string;
 }) {
   const initialNames = initialPersonName(contact);
   const [firstName, setFirstName] = useState(initialNames.firstName);
@@ -190,28 +192,31 @@ export function ContactFields({
     </>
   );
 
-  if (layout === "page" && contact) {
+  if (layout === "page") {
     return (
       <form action={action} onSubmit={guardName}>
-        <input type="hidden" name="contactId" value={contact.id} />
+        {contact?.id ? <input type="hidden" name="contactId" value={contact.id} /> : null}
+        {entityLinkId ? <input type="hidden" name="entityLinkId" value={entityLinkId} /> : null}
         <div className="mb-3">
           <TagPicker lang={lang} hide={hide} tags={tags} selected={selectedTagIds} compact />
         </div>
-        <SettingsSection title={t(lang, "detailsSection")} summary={detailSummary}>
+        <SettingsSection title={t(lang, "detailsSection")} summary={detailSummary} defaultOpen={!contact?.id}>
           <div className="grid gap-3 md:grid-cols-2">
             {nameFields}
-            <div className="md:col-span-2">
-              <ContactGoogleLink
-                lang={lang}
-                hide={hide}
-                contactId={contact.id}
-                fullName={contact.fullName}
-                role={contact.role}
-                googleResourceName={contact.googleResourceName ?? null}
-                googleConnected={googleConnected}
-              />
-            </div>
-            {contact.linkedinUrl ? (
+            {contact?.id ? (
+              <div className="md:col-span-2">
+                <ContactGoogleLink
+                  lang={lang}
+                  hide={hide}
+                  contactId={contact.id}
+                  fullName={contact.fullName}
+                  role={contact.role}
+                  googleResourceName={contact.googleResourceName ?? null}
+                  googleConnected={googleConnected}
+                />
+              </div>
+            ) : null}
+            {contact?.id && contact.linkedinUrl ? (
               <div className="md:col-span-2">
                 <ContactChip
                   hide={hide}
@@ -230,7 +235,7 @@ export function ContactFields({
               />
             </label>
             <div className="md:col-span-2">
-              {contact.contactDetails ? (
+              {contact?.contactDetails ? (
                 <div className="mb-3">
                   <p className={labelClass}>{t(lang, "preview")}</p>
                   <MentionText text={contact.contactDetails} hide={hide} lookup={lookup} />
@@ -249,7 +254,7 @@ export function ContactFields({
               />
             </div>
             <div className="md:col-span-2">
-              {contact.summary ? (
+              {contact?.summary ? (
                 <div className="mb-3">
                   <p className={labelClass}>{t(lang, "preview")}</p>
                   <MentionText text={contact.summary} hide={hide} lookup={lookup} />
@@ -259,7 +264,7 @@ export function ContactFields({
                 lang={lang}
                 name="summary"
                 label={t(lang, "conversation")}
-                defaultValue={contact.summary}
+                defaultValue={contact?.summary ?? ""}
                 rows={3}
                 localContacts={localContacts}
                 googleConnected={googleConnected}
@@ -268,7 +273,7 @@ export function ContactFields({
             </div>
           </div>
         </SettingsSection>
-        <SettingsSection title={t(lang, "nextAction")} summary={actionSummary}>
+        <SettingsSection title={t(lang, "nextAction")} summary={actionSummary} defaultOpen={!contact?.id}>
           <div className="flex min-w-0 flex-wrap items-end gap-x-3 gap-y-2">
             <label className="shrink-0">
               <span className={compactLabelClass}>{t(lang, "contactedAt")}</span>
@@ -280,10 +285,10 @@ export function ContactFields({
             </label>
             <label className="min-w-[12rem] flex-1">
               <span className={compactLabelClass}>{t(lang, "nextAction")}</span>
-              <input className={compactFieldClass} name="nextAction" defaultValue={contact.nextAction} />
+              <input className={compactFieldClass} name="nextAction" defaultValue={contact?.nextAction ?? ""} />
             </label>
             <label className="flex items-center gap-2 pb-1 text-sm">
-              <input type="checkbox" name="willingToRecommend" value="1" defaultChecked={contact.willingToRecommend} />
+              <input type="checkbox" name="willingToRecommend" value="1" defaultChecked={contact?.willingToRecommend} />
               {t(lang, "willing")}
             </label>
             <div className="ms-auto">

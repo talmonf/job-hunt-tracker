@@ -14,7 +14,7 @@ import { AttributeSelect, DateField, DateTimeField, SubmitButton, compactFieldCl
 import { JobStatusEditor } from "@/components/job-status-editor";
 import { JobUrlsEditor } from "@/components/job-urls";
 import { EventHistoryTable } from "@/components/event-history";
-import { EntityLinksSection } from "@/components/entity-links";
+import { JobPeopleSection } from "@/components/job-people";
 import { MentionText } from "@/components/mention-text";
 import { MentionTextarea } from "@/components/mention-textarea";
 import { TagPicker } from "@/components/tag-picker";
@@ -269,15 +269,28 @@ export default async function JobDetailPage({
         contacts={relatedContacts}
       />
 
-      <EntityLinksSection
+      <JobPeopleSection
         lang={lang}
         hide={hide}
-        links={people}
         jobId={job.id}
+        links={job.entityLinks.map((link) => ({
+          id: link.id,
+          kind: link.kind,
+          displayName: link.displayName,
+          title: link.title,
+          googleResourceName: link.googleResourceName,
+          url: link.url,
+          contactId: link.contactId,
+          firstName: link.firstName,
+          lastName: link.lastName,
+          phone: link.phone,
+          email: link.email,
+          worksThere: link.worksThere,
+          connection: link.connection,
+          relationshipNote: link.relationshipNote,
+        }))}
         localContacts={localContacts}
         googleConnected={googleConnected}
-        title={t(lang, "people")}
-        collapsible
       />
 
       <SettingsSection title={t(lang, "urls")} badge={String(job.urls.length)}>

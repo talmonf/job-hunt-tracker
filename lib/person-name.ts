@@ -101,6 +101,13 @@ function groupedByRun(token: string, grouped: { he: string[]; en: string[] }) {
   flush();
 }
 
+export function assignFieldsByScript(firstName: string, lastName: string): BilingualName {
+  const slots = emptyBilingualName();
+  placeNamePart(firstName, "first", slots);
+  placeNamePart(lastName, "last", slots);
+  return slots;
+}
+
 export function assignNameByScript(fullName: string): BilingualName {
   const slots = emptyBilingualName();
   const split = splitPersonName(fullName);
