@@ -78,6 +78,7 @@ export async function updateJob(formData: FormData) {
       description: String(formData.get("description") ?? ""),
       interestDate,
       followUpAt,
+      followUpNote: requiredText(formData.get("followUpNote")),
       reminderLeadDays: reminder.days,
       reminderLeadHours: reminder.hours,
       followUpReminderSentAt: reminderChanged ? null : job.followUpReminderSentAt,

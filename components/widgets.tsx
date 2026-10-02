@@ -244,6 +244,7 @@ export function DateTimeField({
   lang = "en",
   compact = false,
   dateLabel,
+  clearable = false,
 }: {
   name: string;
   defaultValue?: string;
@@ -251,6 +252,7 @@ export function DateTimeField({
   lang?: Lang;
   compact?: boolean;
   dateLabel?: string;
+  clearable?: boolean;
 }) {
   const initial = splitDateTime(defaultValue ?? "", required);
   const [text, setText] = useState(initial.date);
@@ -323,6 +325,19 @@ export function DateTimeField({
           ))}
         </select>
       </label>
+      {clearable && (text || hour || minute) ? (
+        <button
+          className={`text-sky-300 hover:text-sky-200 ${compact ? "pb-0.5 text-xs" : "pb-1.5 text-sm"}`}
+          type="button"
+          onClick={() => {
+            setText("");
+            setHour("");
+            setMinute("");
+          }}
+        >
+          {t(lang, "clearDate")}
+        </button>
+      ) : null}
       <input type="hidden" name={name} value={iso} />
     </div>
   );

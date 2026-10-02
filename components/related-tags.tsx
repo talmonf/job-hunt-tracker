@@ -48,6 +48,7 @@ export function RelatedByTags({
       summary={summary}
       badge={showCount ? String(total) : undefined}
     >
+      {!hasTags ? <p className="text-sm text-slate-400">{t(lang, "relatedTagsEmpty")}</p> : null}
       {hasTags && visible.length === 0 ? <p className="text-sm text-slate-400">{t(lang, "relatedNone")}</p> : null}
       <div className="grid gap-4">
         {visible.map((group) => (

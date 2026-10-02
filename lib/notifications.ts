@@ -26,9 +26,10 @@ export async function runNotifications(now = new Date()) {
     const he = job.user.uiLanguage === "he";
     const when = formatDateTime(job.followUpAt, job.user.timezone);
     const subject = he ? `תזכורת המשך: ${job.companyName}` : `Follow-up reminder: ${job.companyName}`;
+    const note = job.followUpNote.trim();
     const body = he
-      ? `מועד ההמשך עבור ${job.companyName}${job.title ? ` — ${job.title}` : ""} הוא ${when}.`
-      : `Follow up on ${job.companyName}${job.title ? ` — ${job.title}` : ""} at ${when}.`;
+      ? `מועד ההמשך עבור ${job.companyName}${job.title ? ` — ${job.title}` : ""} הוא ${when}.${note ? `\n${note}` : ""}`
+      : `Follow up on ${job.companyName}${job.title ? ` — ${job.title}` : ""} at ${when}.${note ? `\n${note}` : ""}`;
     const dedupeKey = `reminder:${job.id}:${job.followUpAt.toISOString()}:${job.reminderLeadDays ?? ""}:${job.reminderLeadHours ?? ""}`;
     const sent = smtp ? await sendMail(job.user.email, subject, body).catch(() => false) : false;
     await prisma.notification.upsert({
@@ -83,7 +84,7 @@ export async function runNotifications(now = new Date()) {
     const lines = [
       he ? "תאריכי המשך" : "Follow-ups",
       ...followUps.map((job) =>
-        `- ${job.followUpAt ? formatDateTime(job.followUpAt, user.timezone) : ""} ${job.companyName} ${job.title}`.trim(),
+        `- ${job.followUpAt ? formatDateTime(job.followUpAt, user.timezone) : ""} ${job.companyName} ${job.title}${job.followUpNote.trim() ? ` — ${job.followUpNote.trim()}` : ""}`.trim(),
       ),
       he ? "פגישות" : "Meetings",
       ...meetings.map((meeting) => {
