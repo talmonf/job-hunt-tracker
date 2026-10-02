@@ -605,17 +605,19 @@ export function ObfuscateToggle({
   action,
   hide,
   label,
+  returnTo,
 }: {
   action: (formData: FormData) => void;
   hide: boolean;
   label: string;
   returnTo?: string;
 }) {
-  const returnTo = usePathname();
+  const pathname = usePathname();
+  const target = returnTo || pathname;
   return (
     <form action={action}>
       <input type="hidden" name="value" value={hide ? "0" : "1"} />
-          <input type="hidden" name="returnTo" value={target} />
+      <input type="hidden" name="returnTo" value={target} />
       <ToggleBox label={label} checked={hide} />
     </form>
   );
