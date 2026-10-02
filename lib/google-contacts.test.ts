@@ -1,6 +1,22 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { matchGooglePeople, mergeGooglePeople, peopleFromSearch } from "./google-contacts";
+import { classifyGoogleError, matchGooglePeople, mergeGooglePeople, peopleFromSearch } from "./google-contacts";
+
+test("classifies Google auth failures separately from a disabled People API", () => {
+  assert.equal(
+    classifyGoogleError(403, {
+      error: { status: "PERMISSION_DENIED", message: "Request had insufficient authentication scopes.", details: [{ reason: "ACCESS_TOKEN_SCOPE_INSUFFICIENT" }] },
+    }),
+    "scope",
+  );
+  assert.equal(
+    classifyGoogleError(403, {
+      error: { status: "PERMISSION_DENIED", message: "People API has not been used in project 1 before or it is disabled." },
+    }),
+    "api",
+  );
+  assert.equal(classifyGoogleError(401, { error: { status: "UNAUTHENTICATED" } }), "refresh");
+});
 
 test("search results keep saved contacts and other contacts", () => {
   const people = peopleFromSearch({

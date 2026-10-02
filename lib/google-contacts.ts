@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import { decryptSecret } from "./crypto";
-import { googleAccessToken } from "./calendar";
+import { googleRefresh } from "./calendar";
 import { isGoogleResourceName } from "./entity-links";
 import { normalizeGooglePerson, type GooglePerson, type GooglePersonPayload } from "./google-person";
 
@@ -11,9 +11,19 @@ const DIRECTORY_PAGES = 3;
 
 export type { GooglePerson };
 
+export type GoogleContactsError = "config" | "refresh" | "scope" | "api" | "google";
+
 export type GooglePeopleSearch = {
   people: GooglePerson[];
-  error?: "google";
+  error?: GoogleContactsError;
+};
+
+type GoogleErrorBody = {
+  error?: {
+    status?: string;
+    message?: string;
+    details?: { reason?: string }[];
+  };
 };
 
 type PeopleSearchResponse = {
@@ -29,14 +39,35 @@ type PeopleListResponse = {
 type EndpointHit = {
   ok: boolean;
   people: GooglePerson[];
+  error?: GoogleContactsError;
 };
 
-type Directory = { ok: boolean; people: GooglePerson[] };
+type Directory = { ok: boolean; people: GooglePerson[]; error?: GoogleContactsError };
 
 const directoryLoads = new Map<string, { expires: number; pending: Promise<Directory> }>();
 
-export async function contactsAccessToken(encryptedRefresh: string): Promise<string | null> {
-  return googleAccessToken(decryptSecret(encryptedRefresh));
+export async function contactsAccessToken(encryptedRefresh: string): Promise<{ accessToken: string | null; error?: "config" | "refresh" }> {
+  try {
+    return await googleRefresh(decryptSecret(encryptedRefresh));
+  } catch {
+    return { accessToken: null, error: "refresh" };
+  }
+}
+
+export function classifyGoogleError(status: number, body: GoogleErrorBody | null): GoogleContactsError {
+  const reason = body?.error?.details?.find((item) => item.reason)?.reason ?? "";
+  const text = `${status} ${body?.error?.status ?? ""} ${reason} ${body?.error?.message ?? ""}`.toLowerCase();
+  if (text.includes("insufficient") || reason.toLowerCase().includes("scope")) return "scope";
+  if (
+    text.includes("service_disabled") ||
+    text.includes("accessnotconfigured") ||
+    text.includes("has not been used") ||
+    text.includes("is disabled")
+  ) {
+    return "api";
+  }
+  if (status === 401 || text.includes("unauthenticated") || text.includes("invalid_grant")) return "refresh";
+  return "google";
 }
 
 export function peopleFromSearch(json: PeopleSearchResponse): GooglePerson[] {
@@ -62,17 +93,21 @@ export function matchGooglePeople(people: GooglePerson[], query: string): Google
 export async function searchGooglePeople(accessToken: string, query: string): Promise<GooglePeopleSearch> {
   const q = query.trim();
   if (!q) return { people: [] };
+  const scopeError = await missingContactsScope(accessToken);
+  if (scopeError) return { people: [], error: "scope" };
   const first = await queryBoth(accessToken, q);
   if (first.people.length) return { people: first.people.slice(0, 20) };
+  if (first.error === "scope" || first.error === "api" || first.error === "refresh") return { people: [], error: first.error };
   // The People API fills its search index lazily, so the first query often comes back empty.
   if (first.ok) {
     const second = await queryBoth(accessToken, q);
     if (second.people.length) return { people: second.people.slice(0, 20) };
+    if (second.error === "scope" || second.error === "api" || second.error === "refresh") return { people: [], error: second.error };
   }
   const listed = await cachedDirectory(accessToken);
   const matched = matchGooglePeople(listed.people, q).slice(0, 20);
   if (matched.length || listed.ok || first.ok) return { people: matched };
-  return { people: [], error: "google" };
+  return { people: [], error: listed.error ?? first.error ?? "google" };
 }
 
 export async function getGooglePerson(accessToken: string, resourceName: string): Promise<GooglePerson | null> {
@@ -100,12 +135,13 @@ async function queryBoth(accessToken: string, query: string): Promise<EndpointHi
   return {
     ok: mine.ok || other.ok,
     people: mergeGooglePeople([...mine.people, ...other.people]),
+    error: mine.ok || other.ok ? undefined : mine.error ?? other.error,
   };
 }
 
 async function searchEndpoint(url: string, accessToken: string): Promise<EndpointHit> {
   const response = await googleGet(url, accessToken);
-  if (!response.ok || !response.json) return { ok: false, people: [] };
+  if (!response.ok || !response.json) return { ok: false, people: [], error: response.error };
   return { ok: true, people: peopleFromSearch(response.json as PeopleSearchResponse) };
 }
 
@@ -139,7 +175,7 @@ async function loadDirectory(accessToken: string): Promise<Directory> {
       "otherContacts",
     ),
   ]);
-  if (!saved.ok && !other.ok) return { ok: false, people: [] };
+  if (!saved.ok && !other.ok) return { ok: false, people: [], error: saved.error ?? other.error };
   return { ok: true, people: mergeGooglePeople([...saved.people, ...other.people]) };
 }
 
@@ -153,7 +189,10 @@ async function listPeople(
   let ok = false;
   for (let page = 0; page < DIRECTORY_PAGES && url; page += 1) {
     const response = await googleGet(url, accessToken);
-    if (!response.ok || !response.json || typeof response.json !== "object") break;
+    if (!response.ok || !response.json || typeof response.json !== "object") {
+      if (!ok) return { ok: false, people, error: response.error };
+      break;
+    }
     ok = true;
     const body = response.json as PeopleListResponse;
     for (const row of body[field] ?? []) {
@@ -172,17 +211,37 @@ function pageUrl(base: string, pageToken: string): string {
   return url.toString();
 }
 
-async function googleGet(url: string, accessToken: string): Promise<{ ok: boolean; json: unknown }> {
+async function missingContactsScope(accessToken: string): Promise<boolean> {
+  try {
+    const response = await fetch("https://oauth2.googleapis.com/tokeninfo", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ access_token: accessToken }),
+      cache: "no-store",
+    });
+    if (!response.ok) return false;
+    const json = (await response.json()) as { scope?: string };
+    const scopes = (json.scope ?? "").split(/\s+/).filter(Boolean);
+    if (!scopes.length) return false;
+    return !scopes.some((scope) => scope.includes("/auth/contacts"));
+  } catch {
+    return false;
+  }
+}
+
+async function googleGet(url: string, accessToken: string): Promise<{ ok: boolean; json: unknown; error?: GoogleContactsError }> {
   try {
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
       cache: "no-store",
-      signal: AbortSignal.timeout(12_000),
     });
-    if (!response.ok) return { ok: false, json: null };
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as GoogleErrorBody | null;
+      return { ok: false, json: null, error: classifyGoogleError(response.status, body) };
+    }
     return { ok: true, json: await response.json() };
   } catch {
-    return { ok: false, json: null };
+    return { ok: false, json: null, error: "google" };
   }
 }
 

@@ -38,6 +38,20 @@ export type PickedPerson = {
 
 type GoogleHit = GooglePerson;
 
+type SearchError = "" | "config" | "refresh" | "scope" | "api" | "google";
+
+function searchErrorCode(value: string | undefined): SearchError {
+  if (value === "config" || value === "refresh" || value === "scope" || value === "api" || value === "google") return value;
+  return value ? "google" : "";
+}
+
+function searchErrorText(lang: Lang, error: SearchError) {
+  if (error === "config") return t(lang, "googleContactsMissing");
+  if (error === "refresh" || error === "scope") return t(lang, "errorGoogleContactsRelink");
+  if (error === "api") return t(lang, "errorGoogleContacts");
+  return t(lang, "errorGoogleContactsSearch");
+}
+
 export function PersonPicker({
   lang,
   localContacts,
@@ -61,7 +75,7 @@ export function PersonPicker({
   const [name, setName] = useState("");
   const [title, setTitle] = useState("");
   const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState(false);
+  const [searchError, setSearchError] = useState<SearchError>("");
   const q = query.trim().toLowerCase();
 
   const locals = useMemo(() => {
@@ -78,13 +92,13 @@ export function PersonPicker({
     if (!googleConnected || q.length < 2) {
       setGoogleHits([]);
       setSearching(false);
-      setSearchError(false);
+      setSearchError("");
       return;
     }
     const controller = new AbortController();
     const handle = window.setTimeout(async () => {
       setSearching(true);
-      setSearchError(false);
+      setSearchError("");
       try {
         const response = await fetch(`/api/google-contacts/search?q=${encodeURIComponent(query.trim())}`, {
           signal: controller.signal,
@@ -92,11 +106,11 @@ export function PersonPicker({
         const json = (await response.json()) as { people?: GoogleHit[]; error?: string };
         if (controller.signal.aborted) return;
         setGoogleHits(json.people ?? []);
-        setSearchError(Boolean(json.error) && (json.people ?? []).length === 0);
+        setSearchError((json.people ?? []).length === 0 ? searchErrorCode(json.error) : "");
       } catch {
         if (controller.signal.aborted) return;
         setGoogleHits([]);
-        setSearchError(true);
+        setSearchError("google");
       } finally {
         if (!controller.signal.aborted) setSearching(false);
       }
@@ -172,7 +186,7 @@ export function PersonPicker({
         >
           {searching ? <p className="px-2 py-1 text-xs text-slate-400">{t(lang, "continuing")}</p> : null}
           {searchError && !searching ? (
-            <p className="px-2 py-1 text-xs text-rose-300">{t(lang, "errorGoogleContacts")}</p>
+            <p className="px-2 py-1 text-xs text-rose-300">{searchErrorText(lang, searchError)}</p>
           ) : null}
           {googleHits.map((person) => (
             <button

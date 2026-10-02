@@ -10,11 +10,14 @@ export async function GET(request: Request) {
   if (!user?.isActive) return NextResponse.json({ error: "auth" }, { status: 401 });
   if (!user.contactsRefreshToken) return NextResponse.json({ people: [], connected: false });
   const query = new URL(request.url).searchParams.get("q") ?? "";
-  const token = await contactsAccessToken(user.contactsRefreshToken);
-  if (!token) return NextResponse.json({ people: [], connected: true, error: "token" }, { status: 502 });
+  const access = await contactsAccessToken(user.contactsRefreshToken);
+  if (!access.accessToken) {
+    return NextResponse.json({ people: [], connected: true, error: access.error ?? "refresh" }, { status: 502 });
+  }
   try {
-    const result = await searchGooglePeople(token, query);
-    return NextResponse.json({ people: result.people, connected: true, error: result.error });
+    const result = await searchGooglePeople(access.accessToken, query);
+    const status = result.error ? 502 : 200;
+    return NextResponse.json({ people: result.people, connected: true, error: result.error }, { status });
   } catch {
     return NextResponse.json({ people: [], connected: true, error: "google" }, { status: 502 });
   }

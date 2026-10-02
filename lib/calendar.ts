@@ -5,7 +5,12 @@ import { dateTimeInputValue } from "./dates";
 type CalendarResult = { id: string; htmlLink: string };
 
 export async function googleAccessToken(refreshToken: string): Promise<string | null> {
-  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) return null;
+  const result = await googleRefresh(refreshToken);
+  return result.accessToken;
+}
+
+export async function googleRefresh(refreshToken: string): Promise<{ accessToken: string | null; error?: "config" | "refresh" }> {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) return { accessToken: null, error: "config" };
   const body = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID,
     client_secret: process.env.GOOGLE_CLIENT_SECRET,
@@ -17,9 +22,10 @@ export async function googleAccessToken(refreshToken: string): Promise<string | 
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
   });
-  if (!response.ok) return null;
+  if (!response.ok) return { accessToken: null, error: "refresh" };
   const json = (await response.json()) as { access_token?: string };
-  return json.access_token ?? null;
+  if (!json.access_token) return { accessToken: null, error: "refresh" };
+  return { accessToken: json.access_token };
 }
 
 export async function syncMeetingToCalendar(input: {

@@ -28,8 +28,11 @@ export async function GET(request: Request) {
     }),
   });
   if (!tokenResponse.ok) return fail();
-  const tokens = (await tokenResponse.json()) as { refresh_token?: string; access_token?: string };
+  const tokens = (await tokenResponse.json()) as { refresh_token?: string; access_token?: string; scope?: string };
   if (!tokens.refresh_token) return fail();
+  if (!(await grantsContacts(tokens.scope, tokens.access_token))) {
+    return NextResponse.redirect(new URL("/settings?error=contacts-scope", url.origin));
+  }
   let email = "";
   if (tokens.access_token) {
     const profile = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
@@ -45,4 +48,18 @@ export async function GET(request: Request) {
     data: { contactsRefreshToken: encryptSecret(tokens.refresh_token), contactsEmail: email },
   });
   return NextResponse.redirect(new URL("/settings?updated=1", url.origin));
+}
+
+async function grantsContacts(scope: string | undefined, accessToken: string | undefined): Promise<boolean> {
+  const listed = (scope ?? "").split(/\s+/).filter(Boolean);
+  if (listed.some((item) => item.includes("/auth/contacts"))) return true;
+  if (listed.length || !accessToken) return false;
+  const info = await fetch("https://oauth2.googleapis.com/tokeninfo", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ access_token: accessToken }),
+  });
+  if (!info.ok) return false;
+  const body = (await info.json()) as { scope?: string };
+  return (body.scope ?? "").split(/\s+/).some((item) => item.includes("/auth/contacts"));
 }
