@@ -17,7 +17,7 @@ export async function GET(request: Request) {
   try {
     const result = await searchGooglePeople(access.accessToken, query);
     const status = result.error ? 502 : 200;
-    return NextResponse.json({ people: result.people, connected: true, error: result.error, helpUrl: result.helpUrl }, { status });
+    return NextResponse.json({ people: result.people, connected: true, error: result.error }, { status });
   } catch {
     return NextResponse.json({ people: [], connected: true, error: "google" }, { status: 502 });
   }

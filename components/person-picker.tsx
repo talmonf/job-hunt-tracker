@@ -46,32 +46,9 @@ function searchErrorCode(value: string | undefined): SearchError {
   return value ? "google" : "";
 }
 
-const PEOPLE_API_LIBRARY_URL = "https://console.cloud.google.com/apis/library/people.googleapis.com";
-
-function consoleUrl(value: string) {
-  return /^https:\/\/console\.(developers|cloud)\.google\.com\//.test(value) ? value : PEOPLE_API_LIBRARY_URL;
-}
-
-function PhraseLink({
-  text,
-  token,
-  label,
-  href,
-  external = false,
-}: {
-  text: string;
-  token: string;
-  label: string;
-  href: string;
-  external?: boolean;
-}) {
-  const className = "text-sky-300 underline";
-  const link = external ? (
-    <a className={className} href={href} target="_blank" rel="noopener noreferrer">
-      {label}
-    </a>
-  ) : (
-    <Link className={className} href={href} target="_blank" rel="noopener noreferrer">
+function PhraseLink({ text, token, label, href }: { text: string; token: string; label: string; href: string }) {
+  const link = (
+    <Link className="text-sky-300 underline" href={href} target="_blank" rel="noopener noreferrer">
       {label}
     </Link>
   );
@@ -92,7 +69,7 @@ function PhraseLink({
   );
 }
 
-function SearchErrorLine({ lang, error, helpUrl }: { lang: Lang; error: SearchError; helpUrl: string }) {
+function SearchErrorLine({ lang, error }: { lang: Lang; error: SearchError }) {
   if (error === "config") return t(lang, "googleContactsMissing");
   if (error === "refresh" || error === "scope") {
     return (
@@ -104,17 +81,7 @@ function SearchErrorLine({ lang, error, helpUrl }: { lang: Lang; error: SearchEr
       />
     );
   }
-  if (error === "api") {
-    return (
-      <PhraseLink
-        text={t(lang, "errorGoogleContactsApi")}
-        token="{api}"
-        label={t(lang, "peopleApi")}
-        href={consoleUrl(helpUrl)}
-        external
-      />
-    );
-  }
+  if (error === "api") return t(lang, "errorGoogleContactsApi");
   return t(lang, "errorGoogleContactsSearch");
 }
 
@@ -142,7 +109,6 @@ export function PersonPicker({
   const [title, setTitle] = useState("");
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<SearchError>("");
-  const [helpUrl, setHelpUrl] = useState("");
   const q = query.trim().toLowerCase();
 
   const locals = useMemo(() => {
@@ -160,7 +126,6 @@ export function PersonPicker({
       setGoogleHits([]);
       setSearching(false);
       setSearchError("");
-      setHelpUrl("");
       return;
     }
     const controller = new AbortController();
@@ -171,17 +136,15 @@ export function PersonPicker({
         const response = await fetch(`/api/google-contacts/search?q=${encodeURIComponent(query.trim())}`, {
           signal: controller.signal,
         });
-        const json = (await response.json()) as { people?: GoogleHit[]; error?: string; helpUrl?: string };
+        const json = (await response.json()) as { people?: GoogleHit[]; error?: string };
         if (controller.signal.aborted) return;
         const people = json.people ?? [];
         setGoogleHits(people);
         setSearchError(people.length === 0 ? searchErrorCode(json.error) : "");
-        setHelpUrl(people.length === 0 && typeof json.helpUrl === "string" ? json.helpUrl : "");
       } catch {
         if (controller.signal.aborted) return;
         setGoogleHits([]);
         setSearchError("google");
-        setHelpUrl("");
       } finally {
         if (!controller.signal.aborted) setSearching(false);
       }
@@ -258,7 +221,7 @@ export function PersonPicker({
           {searching ? <p className="px-2 py-1 text-xs text-slate-400">{t(lang, "continuing")}</p> : null}
           {searchError && !searching ? (
             <p className="px-2 py-1 text-xs text-rose-300">
-              <SearchErrorLine lang={lang} error={searchError} helpUrl={helpUrl} />
+              <SearchErrorLine lang={lang} error={searchError} />
             </p>
           ) : null}
           {googleHits.map((person) => (
