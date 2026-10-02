@@ -15,6 +15,8 @@ export function AuthForm({
   error,
   rule,
   fixedLanguage = false,
+  home = false,
+  onSwitch,
 }: {
   mode: "login" | "signup";
   lang: Lang;
@@ -23,6 +25,8 @@ export function AuthForm({
   error: string;
   rule: string;
   fixedLanguage?: boolean;
+  home?: boolean;
+  onSwitch?: () => void;
 }) {
   const [current, setCurrent] = useState<Lang>(lang);
   const [email, setEmail] = useState("");
@@ -57,6 +61,8 @@ export function AuthForm({
     <div dir={current === "he" ? "rtl" : "ltr"} className="mx-auto w-full max-w-md rounded-xl bg-slate-900 p-4 ring-1 ring-slate-800">
       {message ? <p className="mb-3 rounded-md border border-rose-700 px-3 py-2 text-start text-sm text-rose-200">{message}</p> : null}
       <form action={mode === "login" ? login : signUp} className="grid gap-3">
+        {home ? <input type="hidden" name="surface" value="home" /> : null}
+        <input type="hidden" name="ui_language" value={current} />
         {mode === "login" ? <input type="hidden" name="callbackUrl" value={callbackUrl} /> : null}
         {mode === "signup" ? (
           <label>
@@ -95,16 +101,28 @@ export function AuthForm({
         {mode === "login" ? (
           <>
             {t(current, "needAccount")}{" "}
-            <Link className="text-sky-300" href={authPath("/signup", current, callbackUrl)}>
-              {t(current, "signUp")}
-            </Link>
+            {home && onSwitch ? (
+              <button className="text-sky-300" type="button" onClick={onSwitch}>
+                {t(current, "signUp")}
+              </button>
+            ) : (
+              <Link className="text-sky-300" href={authPath("/signup", current, callbackUrl)}>
+                {t(current, "signUp")}
+              </Link>
+            )}
           </>
         ) : (
           <>
             {t(current, "haveAccount")}{" "}
-            <Link className="text-sky-300" href={authPath("/login", current, callbackUrl)}>
-              {t(current, "signIn")}
-            </Link>
+            {home && onSwitch ? (
+              <button className="text-sky-300" type="button" onClick={onSwitch}>
+                {t(current, "signIn")}
+              </button>
+            ) : (
+              <Link className="text-sky-300" href={authPath("/login", current, callbackUrl)}>
+                {t(current, "signIn")}
+              </Link>
+            )}
           </>
         )}
       </p>

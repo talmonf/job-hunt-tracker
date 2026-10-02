@@ -15,12 +15,12 @@ export async function signUp(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   const fullName = String(formData.get("fullName") ?? "").trim();
   const rule = passwordRule(password);
-  if (!email.includes("@") || !fullName) redirect("/signup?error=required");
-  if (rule) redirect(`/signup?error=policy&rule=${rule}`);
+  if (!email.includes("@") || !fullName) authFailure(formData, "signup", { error: "required" });
+  if (rule) authFailure(formData, "signup", { error: "policy", rule });
   const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) redirect("/signup?error=auth");
+  if (existing) authFailure(formData, "signup", { error: "auth" });
   const jar = await cookies();
-  const lang = jar.get("login_lang")?.value === "he" ? "he" : "en";
+  const lang = chosenLang(formData, jar.get("login_lang")?.value);
   await prisma.user.create({
     data: {
       email,
@@ -43,14 +43,14 @@ export async function login(formData: FormData) {
   try {
     const result = await signIn("credentials", { email, password, redirect: false });
     if (result && "error" in result && result.error) {
-      redirect(`/login?error=auth&callbackUrl=${encodeURIComponent(callback)}`);
+      authFailure(formData, "login", { error: "auth" });
     }
   } catch (error) {
     if (isRedirectError(error)) throw error;
-    redirect(`/login?error=auth&callbackUrl=${encodeURIComponent(callback)}`);
+    authFailure(formData, "login", { error: "auth" });
   }
   const jar = await cookies();
-  const lang = jar.get("login_lang")?.value === "he" ? "he" : "en";
+  const lang = chosenLang(formData, jar.get("login_lang")?.value);
   const user = await prisma.user.findUnique({ where: { email } });
   if (user) {
     await prisma.user.update({ where: { id: user.id }, data: { uiLanguage: lang } });
@@ -96,6 +96,22 @@ export async function changePassword(formData: FormData) {
     },
   });
   redirect("/session-sync?next=/dashboard");
+}
+
+function chosenLang(formData: FormData, stored: string | undefined) {
+  const posted = formData.get("ui_language");
+  if (posted === "he" || posted === "en") return posted;
+  return stored === "he" ? "he" : "en";
+}
+
+function authFailure(formData: FormData, page: "login" | "signup", query: Record<string, string>): never {
+  const params = new URLSearchParams(query);
+  if (formData.get("surface") === "home") {
+    params.set("panel", page);
+    redirect(`/?${params.toString()}`);
+  }
+  if (page === "login") params.set("callbackUrl", safeCallback(String(formData.get("callbackUrl") ?? "")));
+  redirect(`/${page}?${params.toString()}`);
 }
 
 export async function setLoginLanguage(formData: FormData) {

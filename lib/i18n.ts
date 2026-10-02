@@ -5,11 +5,14 @@ export type Lang = "en" | "he";
 const dict = {
   en: {
     appName: "Job Hunt Tracker",
-    splashTitle: "So the next step is obvious",
+    splashTitle: "Know what to do next",
     splashBody:
       "A search slips in the quiet parts: the company you meant to write to, the answer that worked last time, the follow-up that was due on Tuesday. Keep every role here, even before a job is posted. The status moves only when you log what happened, and a follow-up date keeps a quiet role from disappearing.",
     splashBody2:
       "Paste a posting and AI fills the company, title, and tags for you to review. Bring in a CV or LinkedIn profile and it drafts your background in Hebrew and English, including which experience to emphasize. Prepare interview answers in both languages, keep the people who can help next to the roles they fit, and use the dashboard to see if this week matches the pace you set.",
+    splashListTitle: "What you can do here",
+    splashLogin: "Login",
+    splashCreate: "Create Account",
     email: "Email",
     password: "Password",
     fullName: "Full name",
@@ -370,11 +373,14 @@ const dict = {
   },
   he: {
     appName: "מעקב חיפוש עבודה",
-    splashTitle: "כדי שהצעד הבא יהיה ברור",
+    splashTitle: "יודעים מה הצעד הבא",
     splashBody:
       "חיפוש מתפזר ברגעים השקטים: חברה שרציתם לכתוב אליה, תשובה שעבדה בפעם הקודמת, המשך טיפול שהיה אמור לצאת ביום שלישי. כאן נשמר כל תפקיד, גם לפני שיש משרה מפורסמת. הסטטוס זז רק כשרושמים מה קרה, ותאריך המשך שומר שתפקיד שקט לא ייעלם.",
     splashBody2:
       "מדביקים מודעה, והבינה המלאכותית ממלאת חברה, תפקיד ותגיות — ואתם בודקים לפני שזה נשמר. ייבוא של קורות חיים או לינקדאין מנסח את הרקע בעברית ובאנגלית, ומסמן איזה ניסיון להבליט. מכינים תשובות לראיון בשתי השפות, אנשי הקשר יושבים ליד התפקידים שהם יכולים לפתוח, ולוח הבקרה מראה אם השבוע תואם את הקצב שהגדרתם.",
+    splashListTitle: "מה אפשר לעשות כאן",
+    splashLogin: "כניסה",
+    splashCreate: "יצירת חשבון",
     email: "אימייל",
     password: "סיסמה",
     fullName: "שם מלא",
@@ -818,6 +824,33 @@ const stageHe: Record<string, string> = {
 export function t(lang: Lang, key: MessageKey): string {
   return dict[lang][key];
 }
+
+export const splashFeatures: Record<Lang, readonly string[]> = {
+  en: [
+    "Companies and roles, including ones with no posting yet",
+    "A status that changes only when you log what happened",
+    "A follow-up on every role, with an optional reminder",
+    "An email of the dates coming up",
+    "Meetings added to Google Calendar",
+    "Paste a posting and AI fills the details and tags, for you to review",
+    "Import a CV or LinkedIn profile; AI drafts your background in Hebrew and English, and which experience to emphasize",
+    "Interview answers in both languages — edit, clone, or attach one to a conversation",
+    "Contacts next to the roles they can help with, including people from Google Contacts",
+    "A dashboard that shows whether this week matches the pace you set",
+  ],
+  he: [
+    "חברות ותפקידים, גם כשאין עדיין משרה מפורסמת",
+    "סטטוס שמשתנה רק כשרושמים מה קרה",
+    "המשך טיפול לכל תפקיד, עם תזכורת אם רוצים",
+    "מייל עם התאריכים הקרובים",
+    "פגישות שנכנסות ליומן Google",
+    "הדבקת מודעה, והבינה המלאכותית ממלאת פרטים ותגיות לבדיקה",
+    "ייבוא קורות חיים או לינקדאין, וניסוח הרקע בעברית ובאנגלית עם מה שכדאי להבליט",
+    "תשובות לראיון בשתי השפות — לעריכה, לשכפול או לקישור לשיחה",
+    "אנשי קשר ליד התפקידים שבהם הם יכולים לעזור, כולל אנשי קשר מ־Google",
+    "לוח בקרה שמראה אם השבוע תואם את הקצב שהגדרתם",
+  ],
+};
 
 export function statusLabel(lang: Lang, status: string): string {
   return (lang === "he" ? statusHe : statusEn)[status] ?? status;
