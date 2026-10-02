@@ -12,7 +12,7 @@ import { addEntityLink, deleteEntityLink, updateJobPerson } from "@/lib/actions/
 import { ContactChip } from "./contact-chip";
 import { PersonPicker, type LocalPerson, type PickedPerson } from "./person-picker";
 import { SettingsSection } from "./settings-section";
-import { SubmitButton, fieldClass, labelClass, primaryButton } from "./widgets";
+import { SubmitButton, compactFieldClass, compactLabelClass, fieldClass, labelClass, primaryButton } from "./widgets";
 
 export type JobPerson = {
   id: string;
@@ -129,7 +129,9 @@ function JobPersonRow({ lang, hide, person }: { lang: Lang; hide: boolean; perso
           onConnection={setConnection}
           onNote={setNote}
         />
-        <SubmitButton label={t(lang, "save")} />
+        <div>
+          <SubmitButton label={t(lang, "save")} thin />
+        </div>
       </form>
       <form action={deleteEntityLink} className="mt-2">
         <input type="hidden" name="linkId" value={person.id} />
@@ -338,39 +340,41 @@ function RelationshipFields({
   onNote: (value: string) => void;
 }) {
   return (
-    <div className="grid gap-3 md:grid-cols-2">
+    <div className="grid gap-3">
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+        <label className="w-36 shrink-0">
+          <span className={compactLabelClass}>{t(lang, "worksThereQuestion")}</span>
+          <select
+            className={compactFieldClass}
+            name="worksThere"
+            value={worksThere}
+            onChange={(event) => {
+              const next = event.target.value;
+              onWorksThere(next);
+              onConnection(connectionForWorksThere(next, connection));
+            }}
+          >
+            <option value="">—</option>
+            {WORKS_THERE.map((value) => (
+              <option key={value} value={value}>
+                {worksThereLabel(lang, value)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="w-52 shrink-0">
+          <span className={compactLabelClass}>{t(lang, "connectionToJob")}</span>
+          <select className={compactFieldClass} name="connection" value={connection} onChange={(event) => onConnection(event.target.value)}>
+            <option value="">—</option>
+            {JOB_CONNECTIONS.map((value) => (
+              <option key={value} value={value}>
+                {connectionLabel(lang, value)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       <label>
-        <span className={labelClass}>{t(lang, "worksThereQuestion")}</span>
-        <select
-          className={fieldClass}
-          name="worksThere"
-          value={worksThere}
-          onChange={(event) => {
-            const next = event.target.value;
-            onWorksThere(next);
-            onConnection(connectionForWorksThere(next, connection));
-          }}
-        >
-          <option value="">—</option>
-          {WORKS_THERE.map((value) => (
-            <option key={value} value={value}>
-              {worksThereLabel(lang, value)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        <span className={labelClass}>{t(lang, "connectionToJob")}</span>
-        <select className={fieldClass} name="connection" value={connection} onChange={(event) => onConnection(event.target.value)}>
-          <option value="">—</option>
-          {JOB_CONNECTIONS.map((value) => (
-            <option key={value} value={value}>
-              {connectionLabel(lang, value)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="md:col-span-2">
         <span className={labelClass}>{t(lang, "jobPersonNote")}</span>
         <textarea className={fieldClass} name="relationshipNote" rows={2} value={note} onChange={(event) => onNote(event.target.value)} />
       </label>

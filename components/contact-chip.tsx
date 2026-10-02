@@ -15,14 +15,15 @@ export function ContactChip({
   const href = chipHref(link);
   const label = title && title !== "—" ? `${name}` : name;
   const className =
-    "group relative inline-flex max-w-full items-center rounded-full border border-slate-600 bg-slate-800 px-2.5 py-0.5 text-sm text-sky-200 hover:border-sky-500";
+    "group/chip relative inline-flex max-w-full items-center rounded-full border border-slate-600 bg-slate-800 px-2.5 py-0.5 text-sm text-sky-200 hover:border-sky-500";
+  const extra = title && title !== "—" ? title : "";
   const inner = (
     <>
       <span className="truncate">{label}</span>
-      {tooltip ? (
-        <span className="pointer-events-none absolute start-0 top-full z-20 mt-1 hidden max-w-xs whitespace-normal rounded-md border border-slate-600 bg-slate-900 p-2 text-xs text-slate-100 shadow-lg group-hover:block">
+      {extra ? (
+        <span className="pointer-events-none absolute start-0 top-full z-20 mt-1 hidden max-w-xs whitespace-normal rounded-md border border-slate-600 bg-slate-900 p-2 text-xs text-slate-100 shadow-lg group-hover/chip:block">
           <span className="block font-medium">{name}</span>
-          {title && title !== "—" ? <span className="mt-0.5 block text-slate-300">{title}</span> : null}
+          <span className="mt-0.5 block text-slate-300">{extra}</span>
         </span>
       ) : null}
     </>
