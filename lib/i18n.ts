@@ -5,12 +5,11 @@ export type Lang = "en" | "he";
 const dict = {
   en: {
     appName: "Job Hunt Tracker",
-    splashTitle: "Keep the search in one place",
+    splashTitle: "So the next step is obvious",
     splashBody:
-      "Track companies and roles, even when no job is posted yet. Status changes only when you log what happened: a first note of interest, a message, an application, or an interview. Set a follow-up on every job and an optional reminder before that date.",
-      splashBody2:
-      "Prepare interview answers in Hebrew and English, edit or clone a note when you need a copy, and attach one to a conversation. Keep networking contacts next to the roles they can help with. Goals on the dashboard show whether this week matches the pace you chose.",
-    splashSignIn: "Sign in to continue.",
+      "A search slips in the quiet parts: the company you meant to write to, the answer that worked last time, the follow-up that was due on Tuesday. Keep every role here, even before a job is posted. The status moves only when you log what happened, and a follow-up date keeps a quiet role from disappearing.",
+    splashBody2:
+      "Paste a posting and AI fills the company, title, and tags for you to review. Bring in a CV or LinkedIn profile and it drafts your background in Hebrew and English, including which experience to emphasize. Prepare interview answers in both languages, keep the people who can help next to the roles they fit, and use the dashboard to see if this week matches the pace you set.",
     email: "Email",
     password: "Password",
     fullName: "Full name",
@@ -371,12 +370,11 @@ const dict = {
   },
   he: {
     appName: "מעקב חיפוש עבודה",
-    splashTitle: "כל החיפוש במקום אחד",
+    splashTitle: "כדי שהצעד הבא יהיה ברור",
     splashBody:
-      "לעקוב אחרי חברות ותפקידים, גם כשאין משרה מפורסמת. הסטטוס משתנה רק כשרושמים מה קרה: עניין ראשוני, פנייה, הגשת מועמדות או ראיון. לכל משרה יש תאריך המשך, ואפשר תזכורת לפניו.",
-      splashBody2:
-      "מכינים תשובות לראיון בעברית ובאנגלית, עורכים או משכפלים הערה כשצריך עותק, ומקשרים הערה לשיחה. אנשי הקשר יושבים ליד התפקידים שבהם הם יכולים לעזור. לוח הבקרה מראה אם השבוע תואם את הקצב שהגדרתם.",
-    splashSignIn: "יש להתחבר כדי להמשיך.",
+      "חיפוש מתפזר ברגעים השקטים: חברה שרציתם לכתוב אליה, תשובה שעבדה בפעם הקודמת, המשך טיפול שהיה אמור לצאת ביום שלישי. כאן נשמר כל תפקיד, גם לפני שיש משרה מפורסמת. הסטטוס זז רק כשרושמים מה קרה, ותאריך המשך שומר שתפקיד שקט לא ייעלם.",
+    splashBody2:
+      "מדביקים מודעה, והבינה המלאכותית ממלאת חברה, תפקיד ותגיות — ואתם בודקים לפני שזה נשמר. ייבוא של קורות חיים או לינקדאין מנסח את הרקע בעברית ובאנגלית, ומסמן איזה ניסיון להבליט. מכינים תשובות לראיון בשתי השפות, אנשי הקשר יושבים ליד התפקידים שהם יכולים לפתוח, ולוח הבקרה מראה אם השבוע תואם את הקצב שהגדרתם.",
     email: "אימייל",
     password: "סיסמה",
     fullName: "שם מלא",
