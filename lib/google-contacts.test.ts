@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { classifyGoogleError, matchGooglePeople, mergeGooglePeople, peopleFromSearch } from "./google-contacts";
+import { classifyGoogleError, matchGooglePeople, mergeGooglePeople, peopleApiConsoleUrl, peopleFromSearch } from "./google-contacts";
 
 test("classifies Google auth failures separately from a disabled People API", () => {
   assert.equal(
@@ -16,6 +16,16 @@ test("classifies Google auth failures separately from a disabled People API", ()
     "api",
   );
   assert.equal(classifyGoogleError(401, { error: { status: "UNAUTHENTICATED" } }), "refresh");
+});
+
+test("People API enable link is taken from Google's error", () => {
+  assert.equal(
+    peopleApiConsoleUrl(
+      "Enable it by visiting https://console.developers.google.com/apis/api/people.googleapis.com/overview?project=1 then retry.",
+    ),
+    "https://console.developers.google.com/apis/api/people.googleapis.com/overview?project=1",
+  );
+  assert.equal(peopleApiConsoleUrl("Request had insufficient authentication scopes."), undefined);
 });
 
 test("search results keep saved contacts and other contacts", () => {

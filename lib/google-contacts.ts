@@ -13,9 +13,12 @@ export type { GooglePerson };
 
 export type GoogleContactsError = "config" | "refresh" | "scope" | "api" | "google";
 
+export const PEOPLE_API_LIBRARY_URL = "https://console.cloud.google.com/apis/library/people.googleapis.com";
+
 export type GooglePeopleSearch = {
   people: GooglePerson[];
   error?: GoogleContactsError;
+  helpUrl?: string;
 };
 
 type GoogleErrorBody = {
@@ -40,9 +43,10 @@ type EndpointHit = {
   ok: boolean;
   people: GooglePerson[];
   error?: GoogleContactsError;
+  helpUrl?: string;
 };
 
-type Directory = { ok: boolean; people: GooglePerson[]; error?: GoogleContactsError };
+type Directory = { ok: boolean; people: GooglePerson[]; error?: GoogleContactsError; helpUrl?: string };
 
 const directoryLoads = new Map<string, { expires: number; pending: Promise<Directory> }>();
 
@@ -68,6 +72,11 @@ export function classifyGoogleError(status: number, body: GoogleErrorBody | null
   }
   if (status === 401 || text.includes("unauthenticated") || text.includes("invalid_grant")) return "refresh";
   return "google";
+}
+
+export function peopleApiConsoleUrl(message: string | undefined): string | undefined {
+  const match = message?.match(/https:\/\/console\.(?:developers|cloud)\.google\.com\/[^\s)]+/);
+  return match?.[0];
 }
 
 export function peopleFromSearch(json: PeopleSearchResponse): GooglePerson[] {
@@ -97,17 +106,21 @@ export async function searchGooglePeople(accessToken: string, query: string): Pr
   if (scopeError) return { people: [], error: "scope" };
   const first = await queryBoth(accessToken, q);
   if (first.people.length) return { people: first.people.slice(0, 20) };
-  if (first.error === "scope" || first.error === "api" || first.error === "refresh") return { people: [], error: first.error };
+  if (first.error === "scope" || first.error === "api" || first.error === "refresh") {
+    return { people: [], error: first.error, helpUrl: first.helpUrl };
+  }
   // The People API fills its search index lazily, so the first query often comes back empty.
   if (first.ok) {
     const second = await queryBoth(accessToken, q);
     if (second.people.length) return { people: second.people.slice(0, 20) };
-    if (second.error === "scope" || second.error === "api" || second.error === "refresh") return { people: [], error: second.error };
+    if (second.error === "scope" || second.error === "api" || second.error === "refresh") {
+      return { people: [], error: second.error, helpUrl: second.helpUrl };
+    }
   }
   const listed = await cachedDirectory(accessToken);
   const matched = matchGooglePeople(listed.people, q).slice(0, 20);
   if (matched.length || listed.ok || first.ok) return { people: matched };
-  return { people: [], error: listed.error ?? first.error ?? "google" };
+  return { people: [], error: listed.error ?? first.error ?? "google", helpUrl: listed.helpUrl ?? first.helpUrl };
 }
 
 export async function getGooglePerson(accessToken: string, resourceName: string): Promise<GooglePerson | null> {
@@ -136,12 +149,13 @@ async function queryBoth(accessToken: string, query: string): Promise<EndpointHi
     ok: mine.ok || other.ok,
     people: mergeGooglePeople([...mine.people, ...other.people]),
     error: mine.ok || other.ok ? undefined : mine.error ?? other.error,
+    helpUrl: mine.helpUrl ?? other.helpUrl,
   };
 }
 
 async function searchEndpoint(url: string, accessToken: string): Promise<EndpointHit> {
   const response = await googleGet(url, accessToken);
-  if (!response.ok || !response.json) return { ok: false, people: [], error: response.error };
+  if (!response.ok || !response.json) return { ok: false, people: [], error: response.error, helpUrl: response.helpUrl };
   return { ok: true, people: peopleFromSearch(response.json as PeopleSearchResponse) };
 }
 
@@ -175,7 +189,7 @@ async function loadDirectory(accessToken: string): Promise<Directory> {
       "otherContacts",
     ),
   ]);
-  if (!saved.ok && !other.ok) return { ok: false, people: [], error: saved.error ?? other.error };
+  if (!saved.ok && !other.ok) return { ok: false, people: [], error: saved.error ?? other.error, helpUrl: saved.helpUrl ?? other.helpUrl };
   return { ok: true, people: mergeGooglePeople([...saved.people, ...other.people]) };
 }
 
@@ -190,7 +204,7 @@ async function listPeople(
   for (let page = 0; page < DIRECTORY_PAGES && url; page += 1) {
     const response = await googleGet(url, accessToken);
     if (!response.ok || !response.json || typeof response.json !== "object") {
-      if (!ok) return { ok: false, people, error: response.error };
+      if (!ok) return { ok: false, people, error: response.error, helpUrl: response.helpUrl };
       break;
     }
     ok = true;
@@ -229,7 +243,7 @@ async function missingContactsScope(accessToken: string): Promise<boolean> {
   }
 }
 
-async function googleGet(url: string, accessToken: string): Promise<{ ok: boolean; json: unknown; error?: GoogleContactsError }> {
+async function googleGet(url: string, accessToken: string): Promise<{ ok: boolean; json: unknown; error?: GoogleContactsError; helpUrl?: string }> {
   try {
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -237,7 +251,9 @@ async function googleGet(url: string, accessToken: string): Promise<{ ok: boolea
     });
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as GoogleErrorBody | null;
-      return { ok: false, json: null, error: classifyGoogleError(response.status, body) };
+      const error = classifyGoogleError(response.status, body);
+      const consoleUrl = peopleApiConsoleUrl(body?.error?.message);
+      return { ok: false, json: null, error, helpUrl: error === "api" ? consoleUrl ?? PEOPLE_API_LIBRARY_URL : consoleUrl };
     }
     return { ok: true, json: await response.json() };
   } catch {

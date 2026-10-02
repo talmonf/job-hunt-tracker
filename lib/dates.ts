@@ -31,10 +31,15 @@ function weekdayIndex(date: Date, timeZone: string): number {
   return map[weekday] ?? 0;
 }
 
-function formatWeekdayDayMonth(date: Date, timeZone: string, lang: "en" | "he"): string {
+export function formatScheduledDay(date: Date, timeZone: string, lang: "en" | "he" = "en"): string {
   const parts = partsInZone(date, timeZone);
   const weekday = (lang === "he" ? weekdayHe : weekdayEn)[weekdayIndex(date, timeZone)];
-  return `${weekday} ${parts.day}/${parts.month} ${pad(parts.hour)}:${pad(parts.minute)}`;
+  return `${weekday} ${parts.day}/${parts.month}`;
+}
+
+function formatWeekdayDayMonth(date: Date, timeZone: string, lang: "en" | "he"): string {
+  const parts = partsInZone(date, timeZone);
+  return `${formatScheduledDay(date, timeZone, lang)} ${pad(parts.hour)}:${pad(parts.minute)}`;
 }
 
 export function formatScheduledRange(start: Date, end: Date | null, timeZone: string, lang: "en" | "he" = "en"): string {

@@ -74,29 +74,35 @@ export function AuthForm({
         </div>
       </form>
       {google ? (
-        <form action={googleSignIn} className="mt-3">
-          <input type="hidden" name="callbackUrl" value={callbackUrl} />
-          <button
-            className="flex w-full items-center justify-center gap-3 rounded-lg border-2 border-[#4285F4] bg-white px-4 py-2 text-sm font-medium text-[#3c4043] hover:bg-slate-50"
-            type="submit"
-          >
-            <GoogleMark />
-            {t(current, "google")}
-          </button>
-        </form>
+        <>
+          <div className="relative my-4">
+            <div className="absolute inset-x-0 top-1/2 border-t border-slate-600" aria-hidden />
+            <p className="relative mx-auto w-fit bg-slate-900 px-3 text-xs font-semibold text-slate-400">{t(current, "or")}</p>
+          </div>
+          <form action={googleSignIn}>
+            <input type="hidden" name="callbackUrl" value={callbackUrl} />
+            <button
+              className="flex w-full items-center justify-center gap-3 rounded-lg border-2 border-[#4285F4] bg-white px-4 py-2 text-sm font-medium text-[#3c4043] hover:bg-slate-50"
+              type="submit"
+            >
+              <GoogleMark />
+              {t(current, "google")}
+            </button>
+          </form>
+        </>
       ) : null}
       <p className="mt-3 text-start text-sm text-slate-300">
         {mode === "login" ? (
           <>
             {t(current, "needAccount")}{" "}
-            <Link className="text-sky-300" href="/signup">
+            <Link className="text-sky-300" href={authPath("/signup", current, callbackUrl)}>
               {t(current, "signUp")}
             </Link>
           </>
         ) : (
           <>
             {t(current, "haveAccount")}{" "}
-            <Link className="text-sky-300" href="/login">
+            <Link className="text-sky-300" href={authPath("/login", current, callbackUrl)}>
               {t(current, "signIn")}
             </Link>
           </>
@@ -104,6 +110,12 @@ export function AuthForm({
       </p>
     </div>
   );
+}
+
+function authPath(path: "/login" | "/signup", lang: Lang, callbackUrl: string) {
+  const params = new URLSearchParams({ lang });
+  if (callbackUrl && callbackUrl !== "/dashboard") params.set("callbackUrl", callbackUrl);
+  return `${path}?${params.toString()}`;
 }
 
 function GoogleMark() {

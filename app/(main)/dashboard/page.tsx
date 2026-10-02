@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
-import { addLocalDays, formatDate, formatDateTime, formatScheduledRange, formatWeekRange, startOfSundayWeek } from "@/lib/dates";
+import { addLocalDays, formatDateTime, formatScheduledDay, formatScheduledRange, formatWeekRange, startOfSundayWeek } from "@/lib/dates";
 import { channelLabel, meetingKindLabel, statusLabel, t, type Lang } from "@/lib/i18n";
 import { JOB_STATUSES } from "@/lib/events";
 import { dash } from "@/lib/mask";
@@ -109,7 +109,7 @@ export default async function DashboardPage() {
           {nextSteps.map((contact) => (
             <li key={contact.id}>
               <Link className="text-sky-300" href={`/contacts/${contact.id}`}>
-                {formatDate(contact.nextActionDate!, user.timezone)} · {dash(contact.fullName, hide)}
+                {formatScheduledDay(contact.nextActionDate!, user.timezone, lang)} · {upcomingContactDetails(contact, hide)}
               </Link>
             </li>
           ))}
@@ -136,6 +136,20 @@ function upcomingMeetingDetails(
     meetingKindLabel(lang, meeting.stage),
     meeting.channel ? channelLabel(lang, meeting.channel) : "",
     meeting.counterpartyName ? dash(meeting.counterpartyName, hide) : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function upcomingContactDetails(
+  contact: { fullName: string; workplace: string; role: string; nextAction: string },
+  hide: boolean,
+) {
+  return [
+    dash(contact.fullName, hide),
+    contact.workplace.trim() ? dash(contact.workplace, hide) : "",
+    contact.role.trim() ? dash(contact.role, hide) : "",
+    contact.nextAction.trim() ? dash(contact.nextAction, hide) : "",
   ]
     .filter(Boolean)
     .join(" · ");

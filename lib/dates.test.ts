@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   excelSerialToUtcDate,
   formatDate,
+  formatScheduledDay,
   formatScheduledRange,
   formatWeekRange,
   startOfSundayWeek,
@@ -19,6 +20,13 @@ test("wall clock in Jerusalem becomes UTC", () => {
   assert.ok(date);
   assert.equal(date?.toISOString(), "2026-09-22T05:00:00.000Z");
   assert.equal(formatDate(date!, "Asia/Jerusalem"), "22/09/2026");
+});
+
+test("date-only upcoming items use the same weekday and day", () => {
+  const day = wallClockToUtc("2026-10-04T00:00", "Asia/Jerusalem");
+  assert.ok(day);
+  assert.equal(formatScheduledDay(day!, "Asia/Jerusalem", "en"), "Sun 4/10");
+  assert.equal(formatScheduledDay(day!, "Asia/Jerusalem", "he"), "יום א׳ 4/10");
 });
 
 test("scheduled meeting range omits year and repeats the date once", () => {

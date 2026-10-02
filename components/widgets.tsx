@@ -615,7 +615,7 @@ export function ObfuscateToggle({
   return (
     <form action={action}>
       <input type="hidden" name="value" value={hide ? "0" : "1"} />
-      <input type="hidden" name="returnTo" value={returnTo} />
+          <input type="hidden" name="returnTo" value={target} />
       <ToggleBox label={label} checked={hide} />
     </form>
   );
@@ -745,18 +745,20 @@ export function SignOutButton({
 export function LanguageSwitch({
   action,
   lang,
+  returnTo,
 }: {
   action: (formData: FormData) => void;
   lang: Lang;
   returnTo?: string;
 }) {
-  const returnTo = usePathname();
+  const pathname = usePathname();
+  const target = returnTo || pathname;
   return (
     <div className="flex overflow-hidden rounded-md border border-slate-700">
       {(["en", "he"] as const).map((value) => (
         <form key={value} action={action}>
           <input type="hidden" name="ui_language" value={value} />
-          <input type="hidden" name="returnTo" value={returnTo} />
+          <input type="hidden" name="returnTo" value={target} />
           <button
             className={`px-2 py-1 text-xs font-semibold ${lang === value ? "bg-slate-600 text-slate-50 shadow-inner" : "text-slate-400 hover:text-slate-100"}`}
             type="submit"

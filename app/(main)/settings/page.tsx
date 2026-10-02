@@ -55,7 +55,7 @@ export default async function SettingsPage({
         </a>
       </SettingsSection>
 
-      <SettingsSection title={t(lang, "linkGoogle")}>
+      <SettingsSection id="google" defaultOpen={section === "google"} title={t(lang, "linkGoogle")}>
         <h3 className="mb-2 text-base">{t(lang, "calendar")}</h3>
         {googleConfigured() ? (
           user.calendarRefreshToken ? (

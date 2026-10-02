@@ -1,10 +1,8 @@
-import Link from "next/link";
-import { setLoginLanguage } from "@/lib/actions/auth";
 import { publicLang } from "@/lib/public-lang";
 import { AuthForm } from "@/components/auth-form";
-import { LanguageSwitch } from "@/components/widgets";
+import { AuthPageHeader } from "@/components/auth-header";
 import { googleConfigured } from "@/lib/mail";
-import { firstParam } from "@/lib/http";
+import { firstParam, safeCallback } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
 
@@ -15,15 +13,11 @@ export default async function SignupPage({
 }) {
   const search = await searchParams;
   const lang = await publicLang(search);
+  const callbackUrl = safeCallback(firstParam(search.callbackUrl));
   return (
     <div dir={lang === "he" ? "rtl" : "ltr"} className="mx-auto max-w-md px-4 py-10">
-      <div className="mb-4 flex items-center justify-between">
-        <Link className="text-lg font-semibold" href="/">
-          Job Hunt Tracker
-        </Link>
-        <LanguageSwitch action={setLoginLanguage} lang={lang} returnTo="/signup" />
-      </div>
-      <AuthForm mode="signup" lang={lang} callbackUrl="/dashboard" google={googleConfigured()} error={firstParam(search.error)} rule={firstParam(search.rule)} />
+      <AuthPageHeader lang={lang} returnTo={callbackUrl === "/dashboard" ? "/signup" : `/signup?callbackUrl=${encodeURIComponent(callbackUrl)}`} />
+      <AuthForm mode="signup" lang={lang} callbackUrl={callbackUrl} google={googleConfigured()} error={firstParam(search.error)} rule={firstParam(search.rule)} />
     </div>
   );
 }
