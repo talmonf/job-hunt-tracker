@@ -116,7 +116,3 @@ export function NoteFields({
     </form>
   );
 }
-
-export function jobNoteLabel(job: { companyName: string; title: string }): string {
-  return `${job.companyName}${job.title ? ` — ${job.title}` : ""}`;
-}

@@ -4,13 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { allParams, firstParam, preserveQuery } from "@/lib/http";
 import { cloneNote, createNote, deleteNote } from "@/lib/actions/network";
-import { NOTE_TYPES } from "@/lib/notes";
+import { NOTE_TYPES, jobNoteLabel } from "@/lib/notes";
 import { noteTypeLabel, t } from "@/lib/i18n";
 import { dash, maskText } from "@/lib/mask";
 import { assignmentTags } from "@/lib/tags";
 import { EmptyState, Modal, PageFrame } from "@/components/chrome";
 import { ConfirmSubmit, MultiSelect, fieldClass, labelClass } from "@/components/widgets";
-import { NoteFields, jobNoteLabel } from "@/components/note-fields";
+import { NoteFields } from "@/components/note-fields";
 import { TagChips } from "@/components/tag-chip";
 
 export const dynamic = "force-dynamic";

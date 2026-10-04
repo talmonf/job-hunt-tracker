@@ -55,6 +55,10 @@ export function noteTypesFor(kind: NoteSubjectKind): readonly NoteType[] {
   return GENERAL_NOTE_TYPES;
 }
 
+export function jobNoteLabel(job: { companyName: string; title: string }): string {
+  return `${job.companyName}${job.title ? ` — ${job.title}` : ""}`;
+}
+
 export function notePreview(
   note: { title: string; additionalInfo: string; bodyEn: string; bodyHe: string },
   lang: "en" | "he",
