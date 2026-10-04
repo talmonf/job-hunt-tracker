@@ -62,6 +62,7 @@ export type TagUsage = {
   contacts: string[];
   notes: string[];
   employments: string[];
+  companies: string[];
 };
 
 export type TagDeleteResult =
@@ -84,6 +85,7 @@ export async function tagUsage(userId: string, id: string): Promise<TagUsage | n
       contacts: { select: { contact: { select: { fullName: true } } } },
       notes: { select: { note: { select: { title: true } } } },
       employments: { select: { employment: { select: { title: true, company: true } } } },
+      companies: { select: { company: { select: { name: true } } } },
     },
   });
   if (!tag) return null;
@@ -93,11 +95,12 @@ export async function tagUsage(userId: string, id: string): Promise<TagUsage | n
     contacts: tag.contacts.map((row) => row.contact.fullName.trim() || "—").sort(sort),
     notes: tag.notes.map((row) => row.note.title.trim() || "—").sort(sort),
     employments: tag.employments.map((row) => placeLabel(row.employment.title, row.employment.company)).sort(sort),
+    companies: tag.companies.map((row) => row.company.name.trim() || "—").sort(sort),
   };
 }
 
 export function tagIsUsed(usage: TagUsage) {
-  return usage.jobs.length + usage.contacts.length + usage.notes.length + usage.employments.length > 0;
+  return usage.jobs.length + usage.contacts.length + usage.notes.length + usage.employments.length + usage.companies.length > 0;
 }
 
 export async function deleteTag(userId: string, formData: FormData): Promise<TagDeleteResult> {

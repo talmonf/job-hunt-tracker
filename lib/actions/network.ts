@@ -10,7 +10,8 @@ import { noteTypesFor, subjectKind } from "../notes";
 import { isGoogleResourceName, isHttpUrl } from "../entity-links";
 import { displayPersonName } from "../person-name";
 import type { NoteType } from "@prisma/client";
-import { replaceRecordTags } from "../tag-assign";
+import { copyCompanyTags, replaceRecordTags } from "../tag-assign";
+import { readContactCompanyLinks, replaceContactCompanies } from "../companies";
 
 export async function createNote(formData: FormData) {
   const user = await requireUser();
@@ -18,6 +19,7 @@ export async function createNote(formData: FormData) {
   if (!data) redirect("/notes?error=required");
   const note = await prisma.note.create({ data: { userId: user.id, ...data } });
   await replaceRecordTags("note", note.id, user.id, formData);
+  if (note.companyId) await copyCompanyTags("note", note.id, [note.companyId]);
   redirect(`/notes/${note.id}?created=1`);
 }
 
@@ -47,6 +49,7 @@ export async function cloneNote(formData: FormData) {
       title: `${note.title} ${suffix}`,
       jobId: note.jobId,
       contactId: note.contactId,
+      companyId: note.companyId,
       type: note.type,
       additionalInfo: note.additionalInfo,
       bodyEn: note.bodyEn,
@@ -90,6 +93,7 @@ async function noteFields(formData: FormData, userId: string) {
   if (!(noteTypesFor(subject.kind) as readonly string[]).includes(type)) return null;
   let jobId: string | null = null;
   let contactId: string | null = null;
+  let companyId: string | null = null;
   if (subject.kind === "job") {
     const job = await prisma.job.findFirst({ where: { id: subject.id, userId } });
     if (!job) return null;
@@ -98,12 +102,17 @@ async function noteFields(formData: FormData, userId: string) {
     const contact = await prisma.contact.findFirst({ where: { id: subject.id, userId } });
     if (!contact) return null;
     contactId = contact.id;
+  } else if (subject.kind === "company") {
+    const company = await prisma.company.findFirst({ where: { id: subject.id, userId } });
+    if (!company) return null;
+    companyId = company.id;
   }
   return {
     title,
     type,
     jobId,
     contactId,
+    companyId,
     additionalInfo: String(formData.get("additionalInfo") ?? ""),
     bodyEn: String(formData.get("bodyEn") ?? ""),
     bodyHe: String(formData.get("bodyHe") ?? ""),
@@ -120,6 +129,10 @@ function parseSubject(raw: string): { kind: ReturnType<typeof subjectKind>; id: 
     const id = raw.slice("contact:".length);
     return id ? { kind: "contact", id } : null;
   }
+  if (raw.startsWith("company:")) {
+    const id = raw.slice("company:".length);
+    return id ? { kind: "company", id } : null;
+  }
   return null;
 }
 
@@ -127,6 +140,8 @@ export async function createContact(formData: FormData) {
   const user = await requireUser();
   const name = contactName(formData);
   if (!name.fullName) redirect("/contacts?error=required");
+  const links = formData.get("companiesManaged") === "1" ? readContactCompanyLinks(formData) : [];
+  if (links === "invalid") redirect("/contacts?error=date");
   const contact = await prisma.contact.create({
     data: {
       userId: user.id,
@@ -137,6 +152,10 @@ export async function createContact(formData: FormData) {
     },
   });
   await replaceRecordTags("contact", contact.id, user.id, formData);
+  if (links.length) {
+    const companyIds = await replaceContactCompanies(prisma, user.id, contact.id, links);
+    await copyCompanyTags("contact", contact.id, companyIds);
+  }
   const linkId = requiredText(formData.get("entityLinkId"));
   if (linkId) {
     const link = await prisma.entityLink.findFirst({
@@ -167,6 +186,8 @@ export async function updateContact(formData: FormData) {
   const name = contactName(formData);
   const existing = await prisma.contact.findFirst({ where: { id, userId: user.id } });
   if (!existing || !name.fullName) redirect("/contacts?error=required");
+  const links = formData.get("companiesManaged") === "1" ? readContactCompanyLinks(formData) : null;
+  if (links === "invalid") redirect(`/contacts/${id}?error=date`);
   const googleResourceName = googleResourceFromForm(formData);
   const status = statusFromForm(formData);
   await prisma.contact.update({
@@ -179,6 +200,7 @@ export async function updateContact(formData: FormData) {
     },
   });
   await replaceRecordTags("contact", id, user.id, formData);
+  if (links) await replaceContactCompanies(prisma, user.id, id, links);
   redirect(`/contacts/${id}?updated=1`);
 }
 

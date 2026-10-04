@@ -21,6 +21,7 @@ import { TagPicker } from "@/components/tag-picker";
 import { RelatedByTags } from "@/components/related-tags";
 import { SettingsSection } from "@/components/settings-section";
 import { FillJobDetails } from "@/components/fill-job-details";
+import { CompanyNameField } from "@/components/company-picker";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -39,7 +40,7 @@ export default async function JobDetailPage({
   const hide = await hidePersonalInfo();
   const { id } = await params;
   const search = await searchParams;
-  const [job, notes, contacts, employments, catalog, otherJobs] = await Promise.all([
+  const [job, notes, contacts, employments, catalog, otherJobs, companies] = await Promise.all([
     prisma.job.findFirst({
       where: { id, userId: user.id },
       include: {
@@ -69,6 +70,7 @@ export default async function JobDetailPage({
       where: { userId: user.id, NOT: { id } },
       include: { tags: { include: { tag: true } } },
     }),
+    prisma.company.findMany({ where: { userId: user.id }, orderBy: { name: "asc" }, select: { name: true } }),
   ]);
   if (!job) notFound();
   const lang = user.uiLanguage;
@@ -112,7 +114,14 @@ export default async function JobDetailPage({
     jobTagIds,
     (row) => row.fullName,
   ).map((row) => ({ id: row.item.id, label: row.item.fullName, overlap: row.overlap }));
-  const heading = dash(job.title ? `${job.companyName} — ${job.title}` : job.companyName, hide);
+  const heading = (
+    <>
+      <Link className="text-sky-300 hover:text-sky-200" href={`/companies/${job.companyId}`}>
+        {dash(job.companyName, hide)}
+      </Link>
+      {job.title ? ` — ${dash(job.title, hide)}` : ""}
+    </>
+  );
   const jobReturn = `/jobs/${job.id}`;
   const logHref = `/events?modal=new&presetJob=${encodeURIComponent(job.id)}&presetNow=1&returnTo=${encodeURIComponent(jobReturn)}`;
   const detailItems = [
@@ -166,10 +175,7 @@ export default async function JobDetailPage({
         </div>
         <SettingsSection title={t(lang, "jobDetails")} summary={detailSummary}>
           <div className="grid gap-3 md:grid-cols-2">
-            <label>
-              <span className={labelClass}>{t(lang, "company")}</span>
-              <input className={fieldClass} name="companyName" defaultValue={job.companyName} required />
-            </label>
+            <CompanyNameField lang={lang} names={companies.map((company) => company.name)} defaultValue={job.companyName} required />
             <label>
               <span className={labelClass}>{t(lang, "title")}</span>
               <input className={fieldClass} name="title" defaultValue={job.title} />

@@ -9,7 +9,7 @@ import { eventHappenedLabel, eventTypeLabel, t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
 import { dateTimeInputValue, formatDateTime, formatScheduledRange } from "@/lib/dates";
 import { deleteEvent, saveEvent } from "@/lib/actions/jobs";
-import { EmptyState, Modal, PageFrame } from "@/components/chrome";
+import { EmptyState, FilterBar, Modal, PageFrame } from "@/components/chrome";
 import { ConfirmSubmit, DateField, MultiSelect, fieldClass, labelClass } from "@/components/widgets";
 import { EventForm } from "@/components/event-form";
 import { EventSummary } from "@/components/event-summary";
@@ -113,9 +113,7 @@ export default async function EventsPage({
           {t(lang, "logEvent")}
         </Link>
       </div>
-      <form className="mb-4 rounded-lg border border-slate-700 p-3" method="get">
-        <fieldset>
-          <legend className="px-1 text-sm text-slate-200">{t(lang, "filters")}</legend>
+      <FilterBar className="mb-4" legend={t(lang, "filters")}>
           <input type="hidden" name="sort" value={sort} />
           <input type="hidden" name="dir" value={dir} />
           {["created", "updated", "error", "warn"].map((key) =>
@@ -152,8 +150,7 @@ export default async function EventsPage({
           <button className="mt-3 rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950" type="submit">
             {t(lang, "apply")}
           </button>
-        </fieldset>
-      </form>
+      </FilterBar>
       {events.length === 0 ? (
         <EmptyState>{t(lang, "emptyEvents")}</EmptyState>
       ) : (

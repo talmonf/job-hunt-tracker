@@ -6,6 +6,8 @@ import { recomputeJobStatus } from "./job-status";
 import { normalizeContactStatus } from "./contact-status";
 import { contactStatusLabel } from "./i18n";
 import { assignNameByScript } from "./person-name";
+import { ensureCompany } from "./companies";
+import { copyCompanyTags } from "./tag-assign";
 
 const SHEET_GOALS = "הגדרת יעדים";
 const SHEET_JOBS = "ניהול הגשת מועמדויות";
@@ -237,12 +239,16 @@ async function importJobs(userId: string, sheet: ExcelJS.Worksheet, timeZone: st
     const description = textOf(row.getCell(header.columns.description ?? 11).value);
     const reply = textOf(row.getCell(header.columns.reply ?? 12).value);
     const importKey = `mentme:job:${company.toLowerCase()}:${title.toLowerCase()}`;
+    const linked = await ensureCompany(prisma, userId, company);
+    if (!linked) continue;
+    const existed = await prisma.job.findUnique({ where: { userId_importKey: { userId, importKey } }, select: { id: true } });
     const followUpAt = addDays(interest, 7);
     const job = await prisma.job.upsert({
       where: { userId_importKey: { userId, importKey } },
       create: {
         userId,
-        companyName: company,
+        companyId: linked.id,
+        companyName: linked.name,
         title,
         description,
         interestDate: interest,
@@ -250,12 +256,14 @@ async function importJobs(userId: string, sheet: ExcelJS.Worksheet, timeZone: st
         importKey,
       },
       update: {
-        companyName: company,
+        companyId: linked.id,
+        companyName: linked.name,
         title,
         description,
         interestDate: interest,
       },
     });
+    if (!existed) await copyCompanyTags("job", job.id, [linked.id]);
     jobs += 1;
     const urls = uniqueUrls(`${description}\n${notes}\n${how}\n${reply}`);
     if (urls.length) {
@@ -347,18 +355,26 @@ async function importInterviews(userId: string, sheet: ExcelJS.Worksheet, timeZo
     const lessons = textOf(row.getCell(header.columns.lessons ?? 8).value);
     const notes = textOf(row.getCell(header.columns.interviewNotes ?? 15).value);
     const importKey = `mentme:job:${company.toLowerCase()}:${title.toLowerCase()}`;
+    const linked = await ensureCompany(prisma, userId, company);
+    if (!linked) continue;
+    const existed = await prisma.job.findUnique({ where: { userId_importKey: { userId, importKey } }, select: { id: true } });
     const job = await prisma.job.upsert({
       where: { userId_importKey: { userId, importKey } },
       create: {
         userId,
-        companyName: company,
+        companyId: linked.id,
+        companyName: linked.name,
         title,
         interestDate: when,
         followUpAt: addDays(when, 7),
         importKey,
       },
-      update: {},
+      update: {
+        companyId: linked.id,
+        companyName: linked.name,
+      },
     });
+    if (!existed) await copyCompanyTags("job", job.id, [linked.id]);
     const bodyHe = [
       summary && `סיכום: ${summary}`,
       positives && `נקודות חיוביות: ${positives}`,

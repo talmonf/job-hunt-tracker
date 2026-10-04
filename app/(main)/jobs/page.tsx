@@ -10,13 +10,14 @@ import { jobAttributeLabel, statusLabel, t, type Lang } from "@/lib/i18n";
 import { dash, maskText } from "@/lib/mask";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { createJob } from "@/lib/actions/jobs";
-import { EmptyState, Modal, PageFrame } from "@/components/chrome";
+import { EmptyState, FilterBar, Modal, PageFrame } from "@/components/chrome";
 import { AttributeSelect, DateField, DateTimeField, MultiSelect, SubmitButton, compactFieldClass, compactLabelClass, fieldClass, labelClass } from "@/components/widgets";
 import { JobStatusEditor } from "@/components/job-status-editor";
 import { JobUrlsEditor } from "@/components/job-urls";
 import { MentionTextarea } from "@/components/mention-textarea";
 import { TagChips } from "@/components/tag-chip";
 import { TagPicker } from "@/components/tag-picker";
+import { CompanyNameField } from "@/components/company-picker";
 
 export const dynamic = "force-dynamic";
 
@@ -59,13 +60,14 @@ export default async function JobsPage({
     ...(interestFrom || interestTo ? { interestDate: { gte: interestFrom ?? undefined, lte: interestTo ?? undefined } } : {}),
     ...(followFrom || followTo ? { followUpAt: { gte: followFrom ?? undefined, lte: followTo ?? undefined } } : {}),
   };
-  const [jobs, contacts] = await Promise.all([
+  const [jobs, contacts, companies] = await Promise.all([
     prisma.job.findMany({
       where,
       orderBy: { [sort]: dir },
       include: { _count: { select: { urls: true, cvs: true } }, tags: { include: { tag: true } } },
     }),
     prisma.contact.findMany({ where: { userId: user.id }, orderBy: { fullName: "asc" } }),
+    prisma.company.findMany({ where: { userId: user.id }, orderBy: { name: "asc" }, select: { name: true } }),
   ]);
   const localContacts = contacts.map((contact) => ({
     id: contact.id,
@@ -91,8 +93,7 @@ export default async function JobsPage({
           {t(lang, "addJob")}
         </Link>
       </div>
-      <form className="mb-2 rounded-md border border-slate-700 px-2 py-1" method="get">
-        <fieldset className="m-0 min-w-0 border-0 p-0" aria-label={t(lang, "filters")}>
+      <FilterBar className="mb-2" legend={t(lang, "filters")}>
           <input type="hidden" name="sort" value={sort} />
           <input type="hidden" name="dir" value={dir} />
           {["created", "updated", "error", "warn"].map((key) =>
@@ -140,8 +141,7 @@ export default async function JobsPage({
               </button>
             </div>
           </div>
-        </fieldset>
-      </form>
+      </FilterBar>
       {jobs.length === 0 ? (
         <EmptyState>{t(lang, "emptyJobs")}</EmptyState>
       ) : (
@@ -167,11 +167,15 @@ export default async function JobsPage({
               {jobs.map((job) => (
                 <tr key={job.id} className="border-t border-slate-800">
                   <td className="px-3 py-2">
-                    <Link className="text-sky-300" href={`/jobs/${job.id}`}>
+                    <Link className="text-sky-300" href={`/companies/${job.companyId}`}>
                       {dash(job.companyName, hide)}
                     </Link>
                   </td>
-                  <td className="px-3 py-2">{dash(job.title, hide)}</td>
+                  <td className="px-3 py-2">
+                    <Link className="text-sky-300" href={`/jobs/${job.id}`}>
+                      {job.title ? dash(job.title, hide) : t(lang, "openJob")}
+                    </Link>
+                  </td>
                   <td className="px-3 py-2">
                     <TagChips tags={assignmentTags(job.tags)} hide={hide} />
                   </td>
@@ -196,10 +200,7 @@ export default async function JobsPage({
         <Modal title={t(lang, "addJob")} closeHref={closeHref} closeLabel={t(lang, "close")}>
           <form action={createJob} className="grid gap-3">
             <input type="hidden" name="returnTo" value={`/jobs${keep}`} />
-            <label>
-              <span className={labelClass}>{t(lang, "company")}</span>
-              <input className={fieldClass} name="companyName" required />
-            </label>
+            <CompanyNameField lang={lang} names={companies.map((company) => company.name)} required />
             <label>
               <span className={labelClass}>{t(lang, "title")}</span>
               <input className={fieldClass} name="title" />

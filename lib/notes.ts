@@ -35,22 +35,24 @@ export const NOTE_TYPES: NoteType[] = [...JOB_NOTE_TYPES, ...CONTACT_NOTE_TYPES,
   return true;
 });
 
-export type NoteSubjectKind = "job" | "contact" | "general";
+export type NoteSubjectKind = "job" | "contact" | "company" | "general";
 
 export function subjectKind(value: string): NoteSubjectKind {
   if (value.startsWith("job:")) return "job";
   if (value.startsWith("contact:")) return "contact";
+  if (value.startsWith("company:")) return "company";
   return "general";
 }
 
-export function subjectValue(note: { jobId?: string | null; contactId?: string | null }): string {
+export function subjectValue(note: { jobId?: string | null; contactId?: string | null; companyId?: string | null }): string {
   if (note.jobId) return `job:${note.jobId}`;
   if (note.contactId) return `contact:${note.contactId}`;
+  if (note.companyId) return `company:${note.companyId}`;
   return "";
 }
 
 export function noteTypesFor(kind: NoteSubjectKind): readonly NoteType[] {
-  if (kind === "job") return JOB_NOTE_TYPES;
+  if (kind === "job" || kind === "company") return JOB_NOTE_TYPES;
   if (kind === "contact") return CONTACT_NOTE_TYPES;
   return GENERAL_NOTE_TYPES;
 }

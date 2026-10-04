@@ -15,7 +15,7 @@ export function PageFrame({
 }: {
   lang: Lang;
   backHref?: string;
-  title: string;
+  title: ReactNode;
   titleAside?: ReactNode;
   description?: string;
   search?: Record<string, string | string[] | undefined>;
@@ -85,6 +85,10 @@ export function Flash({ lang, search }: { lang: Lang; search: Record<string, str
                                   ? t(lang, "errorAiPdf")
                                   : error === "stripe"
                                     ? t(lang, "errorStripe")
+                                    : error === "jobs"
+                                      ? t(lang, "errorCompanyJobs")
+                                      : error === "companyName"
+                                        ? t(lang, "errorCompanyName")
                       : error
                         ? t(lang, "errorGeneric")
                         : "";
@@ -128,6 +132,25 @@ export function Modal({ title, closeHref, closeLabel, children }: { title: strin
         {children}
       </div>
     </div>
+  );
+}
+
+export function FilterBar({
+  legend,
+  children,
+  className = "mb-3",
+}: {
+  legend: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <form className={className} method="get">
+      <fieldset className="m-0 min-w-0 rounded-lg border border-slate-700 px-3 pb-2">
+        <legend className="bg-slate-900 px-1 text-xs text-slate-300">{legend}</legend>
+        {children}
+      </fieldset>
+    </form>
   );
 }
 

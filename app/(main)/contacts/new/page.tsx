@@ -19,7 +19,7 @@ export default async function NewContactPage({
   const search = await searchParams;
   const linkId = typeof search.link === "string" ? search.link : "";
   const lang = user.uiLanguage;
-  const [link, contacts, catalog] = await Promise.all([
+  const [link, contacts, catalog, companies] = await Promise.all([
     linkId
       ? prisma.entityLink.findFirst({
           where: { id: linkId, userId: user.id, kind: "manual", jobId: { not: null } },
@@ -38,6 +38,7 @@ export default async function NewContactPage({
       },
     }),
     prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
+    prisma.company.findMany({ where: { userId: user.id }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
   const names = link ? assignFieldsByScript(link.firstName, link.lastName) : emptyBilingualName();
   const fullName = displayPersonName(names);
@@ -74,6 +75,7 @@ export default async function NewContactPage({
         localContacts={contacts}
         googleConnected={Boolean(user.contactsRefreshToken)}
         tags={catalog}
+        companies={companies}
         hide={hide}
       />
     </PageFrame>

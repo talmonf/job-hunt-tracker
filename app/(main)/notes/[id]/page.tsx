@@ -29,7 +29,7 @@ export default async function NoteDetailPage({
   const hide = await hidePersonalInfo();
   const { id } = await params;
   const search = await searchParams;
-  const [note, jobs, contacts, catalog] = await Promise.all([
+  const [note, jobs, contacts, companies, catalog] = await Promise.all([
     prisma.note.findFirst({
       where: { id, userId: user.id },
       include: {
@@ -41,6 +41,7 @@ export default async function NoteDetailPage({
     }),
     prisma.job.findMany({ where: { userId: user.id }, orderBy: { companyName: "asc" } }),
     prisma.contact.findMany({ where: { userId: user.id }, orderBy: { fullName: "asc" } }),
+    prisma.company.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
     prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
   ]);
   if (!note) notFound();
@@ -72,6 +73,7 @@ export default async function NoteDetailPage({
         note={note}
         jobs={jobs.map((job) => ({ id: job.id, label: dash(jobNoteLabel(job), hide) }))}
         contacts={contacts.map((contact) => ({ id: contact.id, label: dash(contact.fullName, hide) }))}
+        companies={companies.map((company) => ({ id: company.id, label: dash(company.name, hide) }))}
         localContacts={localContacts}
         googleConnected={googleConnected}
         tags={catalog}

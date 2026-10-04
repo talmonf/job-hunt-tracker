@@ -95,6 +95,16 @@ enum Engagement {
   freelance
 }
 
+enum CompanySize {
+  under_10
+  between_10_30
+  between_31_100
+  between_101_200
+  between_201_1000
+  between_1001_5000
+  over_5000
+}
+
 enum EntityLinkKind {
   google_contact
   linkedin
@@ -139,6 +149,7 @@ model User {
   certificates  Certificate[]
   profileFiles  ProfileFile[]
   jobs          Job[]
+  companies     Company[]
   contacts      Contact[]
   notes         Note[]
   events        Event[]
@@ -236,10 +247,37 @@ model ProfileFile {
   uploadedAt    DateTime @default(now())
 }
 
+model Company {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  nameKey       String
+  offices       String   @default("")
+  websiteHome   String   @default("")
+  websitePeople String   @default("")
+  websiteJobs   String   @default("")
+  linkedinUrl   String   @default("")
+  foundedOn     String       @default("")
+  employeeCount CompanySize?
+  following     Boolean      @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  jobs          Job[]
+  contacts      ContactCompany[]
+  notes         Note[]
+  tags          CompanyTag[]
+
+  @@unique([userId, nameKey])
+  @@index([userId, following])
+}
+
 model Job {
   id                     String    @id @default(cuid())
   userId                 String
   user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId              String
+  company                Company   @relation(fields: [companyId], references: [id], onDelete: Restrict)
   companyName            String
   title                  String    @default("")
   location               String    @default("")
@@ -266,6 +304,7 @@ model Job {
 
   @@unique([userId, importKey])
   @@index([userId, status])
+  @@index([companyId])
 }
 
 model JobUrl {
@@ -321,9 +360,24 @@ model Contact {
   entityLinks        EntityLink[] @relation("LinkContact")
   parentLinks        EntityLink[] @relation("ParentContact")
   tags               ContactTag[]
+  companies          ContactCompany[]
 
   @@unique([userId, importKey])
   @@index([userId, fullName])
+}
+
+model ContactCompany {
+  contactId      String
+  companyId      String
+  contact        Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  company        Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  startedOn      String  @default("")
+  startedUnknown Boolean @default(false)
+  endedOn        String  @default("")
+  endedUnknown   Boolean @default(false)
+
+  @@id([contactId, companyId])
+  @@index([companyId])
 }
 
 model Note {
@@ -335,6 +389,8 @@ model Note {
   job            Job?     @relation(fields: [jobId], references: [id], onDelete: SetNull)
   contactId      String?
   contact        Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  companyId      String?
+  company        Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
   type           NoteType @default(interview_prep)
   additionalInfo String   @default("")
   bodyEn         String   @default("")
@@ -348,6 +404,7 @@ model Note {
   @@index([userId, createdAt])
   @@index([jobId])
   @@index([contactId])
+  @@index([companyId])
 }
 
 model EntityLink {
@@ -461,6 +518,7 @@ model Tag {
   contacts    ContactTag[]
   notes       NoteTag[]
   employments EmploymentTag[]
+  companies   CompanyTag[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -503,6 +561,16 @@ model EmploymentTag {
   tag          Tag        @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([employmentId, tagId])
+  @@index([tagId])
+}
+
+model CompanyTag {
+  companyId String
+  tagId     String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([companyId, tagId])
   @@index([tagId])
 }
 

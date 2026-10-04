@@ -8,8 +8,9 @@ import { EMPLOYMENT_TYPES, ENGAGEMENTS, WORK_ARRANGEMENTS } from "../events";
 import { recomputeJobStatus } from "../job-status";
 import { removeStored, saveUpload } from "../files";
 import { deleteCalendarEvent } from "../calendar";
-import { replaceRecordTags } from "../tag-assign";
+import { copyCompanyTags, replaceRecordTags } from "../tag-assign";
 import { persistEvent } from "../event-write";
+import { ensureCompany } from "../companies";
 
 export async function createJob(formData: FormData) {
   const user = await requireUser();
@@ -18,13 +19,16 @@ export async function createJob(formData: FormData) {
   const description = String(formData.get("description") ?? "");
   const interestDate = parseDateOnly(formData.get("interestDate"), user.timezone);
   if (!companyName || !interestDate) redirect(back(formData, "/jobs", "required"));
+  const company = await ensureCompany(prisma, user.id, companyName);
+  if (!company) redirect(back(formData, "/jobs", "required"));
   const followUpAt = parseDateTime(formData.get("followUpAt"), user.timezone);
   const reminder = readReminder(formData);
   if (reminder === "invalid") redirect(back(formData, "/jobs", "required"));
   const job = await prisma.job.create({
     data: {
       userId: user.id,
-      companyName,
+      companyId: company.id,
+      companyName: company.name,
       title,
       ...readJobAttributes(formData),
       description,
@@ -52,6 +56,7 @@ export async function createJob(formData: FormData) {
     },
   });
   await replaceRecordTags("job", job.id, user.id, formData);
+  await copyCompanyTags("job", job.id, [company.id]);
   redirect("/jobs?created=1");
 }
 
@@ -63,6 +68,8 @@ export async function updateJob(formData: FormData) {
   const interestDate = parseDateOnly(formData.get("interestDate"), user.timezone);
   const followUpAt = parseDateTime(formData.get("followUpAt"), user.timezone);
   if (!companyName || !interestDate) redirect(`/jobs/${job.id}?error=required`);
+  const company = await ensureCompany(prisma, user.id, companyName);
+  if (!company) redirect(`/jobs/${job.id}?error=required`);
   const reminder = readReminder(formData);
   if (reminder === "invalid") redirect(`/jobs/${job.id}?error=required`);
   const reminderChanged =
@@ -72,7 +79,8 @@ export async function updateJob(formData: FormData) {
   await prisma.job.update({
     where: { id: job.id },
     data: {
-      companyName,
+      companyId: company.id,
+      companyName: company.name,
       title: requiredText(formData.get("title")),
       ...readJobAttributes(formData),
       description: String(formData.get("description") ?? ""),

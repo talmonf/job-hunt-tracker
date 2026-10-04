@@ -1,4 +1,6 @@
 -- Numbered migrations (newest first — add new lines at the top after each migration).
+[x] 017_company_details.sql
+[x] 016_companies.sql
 [x] 015_note_contact.sql
 [x] 014_user_directory.sql
 [x] 013_contact_reach.sql

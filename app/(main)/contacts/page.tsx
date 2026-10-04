@@ -7,9 +7,10 @@ import { dateInputValue } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import { notePreview } from "@/lib/notes";
 import { dash, maskText } from "@/lib/mask";
+import { tenureLabel } from "@/lib/tenure";
 import { assignmentTags } from "@/lib/tags";
 import { createContact } from "@/lib/actions/network";
-import { EmptyState, Modal, PageFrame } from "@/components/chrome";
+import { EmptyState, FilterBar, Modal, PageFrame } from "@/components/chrome";
 import { MultiSelect, compactFieldClass, compactLabelClass } from "@/components/widgets";
 import { TagChips } from "@/components/tag-chip";
 import { ContactFields } from "@/components/contact-fields";
@@ -31,7 +32,10 @@ export default async function ContactsPage({
   const willing = firstParam(search.willing);
   const sort = ["fullName", "workplace", "status", "nextActionDate"].includes(firstParam(search.sort)) ? firstParam(search.sort) : "fullName";
   const dir = firstParam(search.dir) === "desc" ? "desc" : "asc";
-  const catalog = await prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } });
+  const [catalog, companies] = await Promise.all([
+    prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
+    prisma.company.findMany({ where: { userId: user.id }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+  ]);
   const tagIds = allParams(search.tag).filter((id) => catalog.some((tag) => tag.id === id));
   const where: Prisma.ContactWhereInput = {
     userId: user.id,
@@ -45,6 +49,7 @@ export default async function ContactsPage({
             { firstNameHe: { contains: q, mode: "insensitive" } },
             { lastNameHe: { contains: q, mode: "insensitive" } },
             { workplace: { contains: q, mode: "insensitive" } },
+            { companies: { some: { company: { name: { contains: q, mode: "insensitive" } } } } },
             { mobile: { contains: q, mode: "insensitive" } },
             { email: { contains: q, mode: "insensitive" } },
             { address: { contains: q, mode: "insensitive" } },
@@ -59,6 +64,7 @@ export default async function ContactsPage({
     include: {
       tags: { include: { tag: true } },
       notes: { orderBy: { updatedAt: "desc" }, take: 1 },
+      companies: { include: { company: true } },
     },
   });
   return (
@@ -69,9 +75,7 @@ export default async function ContactsPage({
           {t(lang, "addContact")}
         </Link>
       </div>
-      <form className="mb-3 rounded-lg border border-slate-700 px-3 py-2" method="get">
-        <fieldset>
-          <legend className="px-1 text-sm">{t(lang, "filters")}</legend>
+      <FilterBar legend={t(lang, "filters")}>
           <input type="hidden" name="sort" value={sort} />
           <input type="hidden" name="dir" value={dir} />
           <div className="mt-1 flex flex-wrap items-end gap-2">
@@ -105,8 +109,7 @@ export default async function ContactsPage({
             ) : null}
             <button className="rounded bg-sky-500 px-2 py-0.5 text-xs font-semibold leading-tight text-slate-950" type="submit">{t(lang, "apply")}</button>
           </div>
-        </fieldset>
-      </form>
+      </FilterBar>
       {contacts.length === 0 ? (
         <EmptyState>{t(lang, "emptyContacts")}</EmptyState>
       ) : (
@@ -118,6 +121,7 @@ export default async function ContactsPage({
                 <th className="px-3 py-2">{t(lang, "tags")}</th>
                 <th className="px-3 py-2">{t(lang, "role")}</th>
                 <Sort label={t(lang, "workplace")} column="workplace" sort={sort} dir={dir} search={search} />
+                <th className="px-3 py-2">{t(lang, "companies")}</th>
                 <Sort label={t(lang, "status")} column="status" sort={sort} dir={dir} search={search} />
                 <Sort label={t(lang, "nextActionDate")} column="nextActionDate" sort={sort} dir={dir} search={search} />
                 <th className="px-3 py-2">{t(lang, "willing")}</th>
@@ -131,6 +135,25 @@ export default async function ContactsPage({
                   <td className="px-3 py-2"><TagChips tags={assignmentTags(contact.tags)} hide={hide} /></td>
                   <td className="px-3 py-2">{dash(contact.role, hide)}</td>
                   <td className="px-3 py-2">{dash(contact.workplace, hide)}</td>
+                  <td className="px-3 py-2">
+                    {contact.companies.length ? (
+                      <span className="flex flex-wrap gap-x-2 gap-y-1">
+                        {contact.companies.map((row) => {
+                          const range = tenureLabel(row, { unknown: t(lang, "dateUnknown"), present: t(lang, "present") });
+                          return (
+                            <span key={row.companyId}>
+                              <Link className="text-sky-300" href={`/companies/${row.companyId}`}>
+                                {dash(row.company.name, hide)}
+                              </Link>
+                              {range ? <span className="text-slate-400"> {range}</span> : null}
+                            </span>
+                          );
+                        })}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td className="px-3 py-2">
                     <ContactStatusEditor contactId={contact.id} status={contact.status} lang={lang} />
                   </td>
@@ -173,6 +196,7 @@ export default async function ContactsPage({
             googleConnected={Boolean(user.contactsRefreshToken)}
             googleAtStart
             tags={catalog}
+            companies={companies}
             hide={hide}
           />
         </Modal>

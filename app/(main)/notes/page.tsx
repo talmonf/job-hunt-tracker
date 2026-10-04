@@ -8,8 +8,8 @@ import { NOTE_TYPES, jobNoteLabel } from "@/lib/notes";
 import { noteTypeLabel, t } from "@/lib/i18n";
 import { dash, maskText } from "@/lib/mask";
 import { assignmentTags } from "@/lib/tags";
-import { EmptyState, Modal, PageFrame } from "@/components/chrome";
-import { ConfirmSubmit, MultiSelect, fieldClass, labelClass } from "@/components/widgets";
+import { EmptyState, FilterBar, Modal, PageFrame } from "@/components/chrome";
+import { ConfirmSubmit, MultiSelect, compactFieldClass, compactLabelClass } from "@/components/widgets";
 import { NoteFields } from "@/components/note-fields";
 import { TagChips } from "@/components/tag-chip";
 
@@ -28,37 +28,50 @@ export default async function NotesPage({
   const types = allParams(search.type).filter((type): type is NoteType =>
     (NOTE_TYPES as readonly string[]).includes(type),
   );
-  const catalog = await prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } });
+  const [catalog, jobs, contacts, companies] = await Promise.all([
+    prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
+    prisma.job.findMany({ where: { userId: user.id }, orderBy: { companyName: "asc" } }),
+    prisma.contact.findMany({ where: { userId: user.id }, orderBy: { fullName: "asc" } }),
+    prisma.company.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
+  ]);
   const tagIds = allParams(search.tag).filter((id) => catalog.some((tag) => tag.id === id));
+  const requestedJob = firstParam(search.job);
+  const requestedContact = firstParam(search.contact);
+  const requestedCompany = firstParam(search.company);
+  const jobId = jobs.some((job) => job.id === requestedJob) ? requestedJob : "";
+  const contactId = contacts.some((contact) => contact.id === requestedContact) ? requestedContact : "";
+  const companyId = companies.some((company) => company.id === requestedCompany) ? requestedCompany : "";
+  const and: Prisma.NoteWhereInput[] = [];
+  if (q) {
+    and.push({
+      OR: [
+        { title: { contains: q, mode: "insensitive" } },
+        { additionalInfo: { contains: q, mode: "insensitive" } },
+        { bodyEn: { contains: q, mode: "insensitive" } },
+        { bodyHe: { contains: q, mode: "insensitive" } },
+        { job: { companyName: { contains: q, mode: "insensitive" } } },
+        { job: { title: { contains: q, mode: "insensitive" } } },
+        { contact: { fullName: { contains: q, mode: "insensitive" } } },
+        { contact: { firstName: { contains: q, mode: "insensitive" } } },
+        { contact: { lastName: { contains: q, mode: "insensitive" } } },
+        { company: { name: { contains: q, mode: "insensitive" } } },
+      ],
+    });
+  }
+  if (companyId) and.push({ OR: [{ companyId }, { job: { companyId } }] });
   const where: Prisma.NoteWhereInput = {
     userId: user.id,
     ...(tagIds.length ? { tags: { some: { tagId: { in: tagIds } } } } : {}),
     ...(types.length ? { type: { in: types } } : {}),
-    ...(q
-      ? {
-          OR: [
-            { title: { contains: q, mode: "insensitive" } },
-            { additionalInfo: { contains: q, mode: "insensitive" } },
-            { bodyEn: { contains: q, mode: "insensitive" } },
-            { bodyHe: { contains: q, mode: "insensitive" } },
-            { job: { companyName: { contains: q, mode: "insensitive" } } },
-            { job: { title: { contains: q, mode: "insensitive" } } },
-            { contact: { fullName: { contains: q, mode: "insensitive" } } },
-            { contact: { firstName: { contains: q, mode: "insensitive" } } },
-            { contact: { lastName: { contains: q, mode: "insensitive" } } },
-          ],
-        }
-      : {}),
+    ...(jobId ? { jobId } : {}),
+    ...(contactId ? { contactId } : {}),
+    ...(and.length ? { AND: and } : {}),
   };
-  const [notes, jobs, contacts] = await Promise.all([
-    prisma.note.findMany({
-      where,
-      include: { job: true, contact: true, tags: { include: { tag: true } } },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.job.findMany({ where: { userId: user.id }, orderBy: { companyName: "asc" } }),
-    prisma.contact.findMany({ where: { userId: user.id }, orderBy: { fullName: "asc" } }),
-  ]);
+  const notes = await prisma.note.findMany({
+    where,
+    include: { job: true, contact: true, company: true, tags: { include: { tag: true } } },
+    orderBy: { createdAt: "desc" },
+  });
   const localContacts = contacts.map((contact) => ({
     id: contact.id,
     fullName: contact.fullName,
@@ -70,56 +83,90 @@ export default async function NotesPage({
   const googleConnected = Boolean(user.contactsRefreshToken);
   const jobOptions = jobs.map((job) => ({ id: job.id, label: dash(jobNoteLabel(job), hide) }));
   const contactOptions = contacts.map((contact) => ({ id: contact.id, label: dash(contact.fullName, hide) }));
+  const companyOptions = companies.map((company) => ({ id: company.id, label: dash(company.name, hide) }));
   return (
     <PageFrame lang={lang} title={t(lang, "notes")} description={t(lang, "notesIntro")} search={search}>
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg">{t(lang, "notes")}</h2>
+      <div className="mb-3 flex justify-end">
         <Link className="rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950" href={`/notes${preserveQuery(search, { modal: "new" }, ["modal"])}`}>
           {t(lang, "addNote")}
         </Link>
       </div>
-      <form className="mb-4 rounded-lg border border-slate-700 p-3" method="get">
-        <fieldset>
-          <legend className="px-1 text-sm">{t(lang, "filters")}</legend>
-          <div className="mt-2 grid gap-3 md:grid-cols-2">
-            <label>
-              <span className={labelClass}>{t(lang, "search")}</span>
-              <input className={fieldClass} name="q" defaultValue={q} />
-            </label>
-            {catalog.length ? (
-              <div>
-                <span className={labelClass}>{t(lang, "tags")}</span>
-                <MultiSelect
-                  name="tag"
-                  selected={tagIds}
-                  anyLabel={t(lang, "any")}
-                  selectAll={t(lang, "selectAll")}
-                  deselectAll={t(lang, "deselectAll")}
-                  done={t(lang, "done")}
-                  selectedWord={t(lang, "selectedCount")}
-                  options={catalog.map((tag) => ({ value: tag.id, label: maskText(tag.name, hide) }))}
-                />
-              </div>
-            ) : null}
-            <label>
-              <span className={labelClass}>{t(lang, "noteType")}</span>
+      <FilterBar className="mb-4" legend={t(lang, "filters")}>
+        <div className="grid gap-2 md:grid-cols-3">
+          <label>
+            <span className={compactLabelClass}>{t(lang, "search")}</span>
+            <input className={compactFieldClass} name="q" defaultValue={q} />
+          </label>
+          {catalog.length ? (
+            <div>
+              <span className={compactLabelClass}>{t(lang, "tags")}</span>
               <MultiSelect
-                name="type"
-                selected={types}
+                compact
+                name="tag"
+                selected={tagIds}
                 anyLabel={t(lang, "any")}
                 selectAll={t(lang, "selectAll")}
                 deselectAll={t(lang, "deselectAll")}
                 done={t(lang, "done")}
                 selectedWord={t(lang, "selectedCount")}
-                options={NOTE_TYPES.map((type) => ({ value: type, label: noteTypeLabel(lang, type) }))}
+                options={catalog.map((tag) => ({ value: tag.id, label: maskText(tag.name, hide) }))}
               />
-            </label>
+            </div>
+          ) : null}
+          <div>
+            <span className={compactLabelClass}>{t(lang, "noteType")}</span>
+            <MultiSelect
+              compact
+              name="type"
+              selected={types}
+              anyLabel={t(lang, "any")}
+              selectAll={t(lang, "selectAll")}
+              deselectAll={t(lang, "deselectAll")}
+              done={t(lang, "done")}
+              selectedWord={t(lang, "selectedCount")}
+              options={NOTE_TYPES.map((type) => ({ value: type, label: noteTypeLabel(lang, type) }))}
+            />
           </div>
-          <button className="mt-3 rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950" type="submit">
+        </div>
+        <div className="mt-2 flex flex-wrap items-end gap-2">
+          <label className="min-w-0 flex-1">
+            <span className={compactLabelClass}>{t(lang, "job")}</span>
+            <select className={compactFieldClass} name="job" defaultValue={jobId}>
+              <option value="">{t(lang, "any")}</option>
+              {jobOptions.map((job) => (
+                <option key={job.id} value={job.id}>
+                  {job.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="min-w-0 flex-1">
+            <span className={compactLabelClass}>{t(lang, "contact")}</span>
+            <select className={compactFieldClass} name="contact" defaultValue={contactId}>
+              <option value="">{t(lang, "any")}</option>
+              {contactOptions.map((contact) => (
+                <option key={contact.id} value={contact.id}>
+                  {contact.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="min-w-0 flex-1">
+            <span className={compactLabelClass}>{t(lang, "company")}</span>
+            <select className={compactFieldClass} name="company" defaultValue={companyId}>
+              <option value="">{t(lang, "any")}</option>
+              {companyOptions.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="ms-auto shrink-0 rounded bg-sky-500 px-2 py-0.5 text-xs font-semibold leading-tight text-slate-950" type="submit">
             {t(lang, "apply")}
           </button>
-        </fieldset>
-      </form>
+        </div>
+      </FilterBar>
       {notes.length === 0 ? (
         <EmptyState>{t(lang, "emptyNotes")}</EmptyState>
       ) : (
@@ -154,6 +201,10 @@ export default async function NotesPage({
                     ) : note.contact ? (
                       <Link className="text-sky-300" href={`/contacts/${note.contact.id}`}>
                         {dash(note.contact.fullName, hide)}
+                      </Link>
+                    ) : note.company ? (
+                      <Link className="text-sky-300" href={`/companies/${note.company.id}`}>
+                        {dash(note.company.name, hide)}
                       </Link>
                     ) : (
                       t(lang, "generalNote")
@@ -190,7 +241,7 @@ export default async function NotesPage({
       )}
       {firstParam(search.modal) === "new" ? (
         <Modal title={t(lang, "addNote")} closeHref={`/notes${preserveQuery(search, {}, ["modal"])}`} closeLabel={t(lang, "close")}>
-          <NoteFields lang={lang} action={createNote} jobs={jobOptions} contacts={contactOptions} localContacts={localContacts} googleConnected={googleConnected} tags={catalog} hide={hide} />
+          <NoteFields lang={lang} action={createNote} jobs={jobOptions} contacts={contactOptions} companies={companyOptions} localContacts={localContacts} googleConnected={googleConnected} tags={catalog} hide={hide} />
         </Modal>
       ) : null}
     </PageFrame>

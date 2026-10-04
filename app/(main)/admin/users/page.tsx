@@ -8,7 +8,7 @@ import { formatDateTime } from "@/lib/dates";
 import { grantCredits } from "@/lib/actions/ai";
 import { createUser, resetUserPassword, setUserActive } from "@/lib/actions/admin";
 import { AudienceTestUserCheck } from "@/components/audience-test-user";
-import { EmptyState, Modal, PageFrame } from "@/components/chrome";
+import { EmptyState, FilterBar, Modal, PageFrame } from "@/components/chrome";
 import { PasswordFieldLabeled, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
 
 export const dynamic = "force-dynamic";
@@ -47,13 +47,10 @@ export default async function UsersPage({
           {t(lang, "addUser")}
         </a>
       </div>
-      <form className="mb-4" method="get">
-        <fieldset className="rounded-lg border border-slate-700 p-3">
-          <legend className="px-1 text-sm">{t(lang, "filters")}</legend>
+      <FilterBar className="mb-4" legend={t(lang, "filters")}>
           <input className={fieldClass} name="q" defaultValue={q} placeholder={t(lang, "search")} />
           <button className="mt-3 rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950" type="submit">{t(lang, "apply")}</button>
-        </fieldset>
-      </form>
+      </FilterBar>
       {users.length === 0 ? (
         <EmptyState>{t(lang, "emptyUsers")}</EmptyState>
       ) : (

@@ -13,6 +13,7 @@ import { shekelsToAgorot } from "../ai/money";
 import { DEFAULT_MODEL, isAiProvider, lastFour } from "../ai/providers";
 import { isOutputLanguage, readProposalForm } from "../ai/proposal";
 import { AiRunError, chargeAndComplete } from "../ai/run";
+import { ensureCompany } from "../companies";
 
 export async function saveProviderKey(formData: FormData) {
   const user = await requireUser();
@@ -237,6 +238,7 @@ export async function acceptProfileImport(formData: FormData) {
         include: { bullets: { orderBy: { position: "asc" } } },
       });
       employmentIds.set(row.key, created.id);
+      await ensureCompany(tx, user.id, row.company);
       row.bullets.forEach((bullet, position) => {
         const saved = created.bullets[position];
         if (saved) bulletIds.set(bullet.key, saved.id);

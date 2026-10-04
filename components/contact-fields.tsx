@@ -15,6 +15,7 @@ import { ContactChip } from "./contact-chip";
 import { ContactGoogleLink } from "./contact-google-link";
 import { SettingsSection } from "./settings-section";
 import { PersonPicker, type LocalPerson, type PickedPerson } from "./person-picker";
+import { CompanyNamesField, type CompanyLinkSelection, type CompanyOption } from "./company-picker";
 
 export function ContactFields({
   lang,
@@ -31,6 +32,8 @@ export function ContactFields({
   actionSummary,
   tags,
   selectedTagIds = [],
+  companies = [],
+  selectedCompanies = [],
   hide,
   entityLinkId = "",
 }: {
@@ -38,6 +41,8 @@ export function ContactFields({
   action: (formData: FormData) => void;
   tags: TagRef[];
   selectedTagIds?: string[];
+  companies?: CompanyOption[];
+  selectedCompanies?: CompanyLinkSelection[];
   hide: boolean;
   contact?: {
     id: string;
@@ -175,6 +180,7 @@ export function ContactFields({
         <span className={labelClass}>{t(lang, "workplace")}</span>
         <input className={fieldClass} name="workplace" value={workplace} onChange={(event) => setWorkplace(event.target.value)} />
       </label>
+      <CompanyNamesField lang={lang} hide={hide} companies={companies} selected={selectedCompanies} />
       <label>
         <span className={labelClass}>{t(lang, "mobile")}</span>
         <input className={fieldClass} dir="ltr" name="mobile" value={mobile} onChange={(event) => setMobile(event.target.value)} />

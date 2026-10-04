@@ -15,6 +15,7 @@ type TagUsage = {
   contacts: string[];
   notes: string[];
   employments: string[];
+  companies: string[];
 };
 
 function byName(a: TagRow, b: TagRow) {
@@ -221,6 +222,7 @@ function TagEditor({
           <UsageGroup title={t(lang, "networking")} items={usage.contacts} />
           <UsageGroup title={t(lang, "notes")} items={usage.notes} />
           <UsageGroup title={t(lang, "employment")} items={usage.employments} />
+          <UsageGroup title={t(lang, "companies")} items={usage.companies} />
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <button className="text-sm text-rose-300 disabled:opacity-60" type="button" onClick={() => remove(true)} disabled={pending !== null}>
               {t(lang, "deleteTagContinue")}

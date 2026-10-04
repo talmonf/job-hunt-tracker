@@ -29,13 +29,14 @@ export default async function ContactDetailPage({
   const hide = await hidePersonalInfo();
   const { id } = await params;
   const search = await searchParams;
-  const [contact, notes, contacts, jobs, employments, catalog] = await Promise.all([
+  const [contact, notes, contacts, jobs, employments, catalog, companies] = await Promise.all([
     prisma.contact.findFirst({
       where: { id, userId: user.id },
       include: {
         events: { orderBy: { occurredAt: "desc" } },
         parentLinks: { orderBy: { createdAt: "asc" } },
         tags: { include: { tag: true } },
+        companies: { include: { company: true } },
       },
     }),
     prisma.note.findMany({
@@ -57,6 +58,7 @@ export default async function ContactDetailPage({
       include: { tags: { include: { tag: true } } },
     }),
     prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
+    prisma.company.findMany({ where: { userId: user.id }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
   if (!contact) notFound();
   const lang = user.uiLanguage;
@@ -166,6 +168,15 @@ export default async function ContactDetailPage({
         actionSummary={actionSummary}
         tags={catalog}
         selectedTagIds={contactTagIds}
+        companies={companies}
+        selectedCompanies={contact.companies.map((row) => ({
+          id: row.company.id,
+          name: row.company.name,
+          startedOn: row.startedOn,
+          startedUnknown: row.startedUnknown,
+          endedOn: row.endedOn,
+          endedUnknown: row.endedUnknown,
+        }))}
         hide={hide}
       />
       <RelatedByTags
