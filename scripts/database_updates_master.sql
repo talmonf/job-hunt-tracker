@@ -1,4 +1,5 @@
 -- Numbered migrations (newest first — add new lines at the top after each migration).
+[x] 018_ai_usage_cost_usd.sql
 [x] 017_company_details.sql
 [x] 016_companies.sql
 [x] 015_note_contact.sql

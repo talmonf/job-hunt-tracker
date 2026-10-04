@@ -12,6 +12,26 @@ export function formatIls(agorot: number): string {
   return `${sign}₪${shekels}.${fraction}`;
 }
 
+export function formatUsd(micros: number): string {
+  const sign = micros < 0 ? "-" : "";
+  const abs = Math.abs(micros);
+  const dollars = Math.floor(abs / 1_000_000);
+  const fraction = String(abs % 1_000_000).padStart(6, "0");
+  return `${sign}$${dollars}.${fraction}`;
+}
+
+export function providerCostUsdMicros(input: {
+  inputTokens: number;
+  outputTokens: number;
+  inputUsdPerMillion: number;
+  outputUsdPerMillion: number;
+}): number {
+  const micros =
+    Math.max(0, input.inputTokens) * input.inputUsdPerMillion +
+    Math.max(0, input.outputTokens) * input.outputUsdPerMillion;
+  return Math.round(micros);
+}
+
 export function providerCostAgorot(input: {
   inputTokens: number;
   outputTokens: number;

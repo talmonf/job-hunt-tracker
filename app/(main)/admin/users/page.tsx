@@ -5,6 +5,8 @@ import { firstParam, preserveQuery } from "@/lib/http";
 import { ruleText, t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
 import { formatDateTime } from "@/lib/dates";
+import { AI_PROVIDERS } from "@/lib/ai/providers";
+import { toolLabel } from "@/lib/ai/labels";
 import { grantCredits } from "@/lib/actions/ai";
 import { createUser, resetUserPassword, setUserActive } from "@/lib/actions/admin";
 import { AudienceTestUserCheck } from "@/components/audience-test-user";
@@ -33,6 +35,7 @@ export default async function UsersPage({
         }
       : undefined,
     orderBy: { createdAt: "desc" },
+    include: { aiKeys: { select: { provider: true, model: true }, orderBy: { provider: "asc" } } },
   });
   const resetId = firstParam(search.id);
   const rule = firstParam(search.rule);
@@ -63,6 +66,7 @@ export default async function UsersPage({
                 <th className="px-3 py-2">{t(lang, "registeredWith")}</th>
                 <th className="px-3 py-2">{t(lang, "registeredAt")}</th>
                 <th className="px-3 py-2">{t(lang, "lastAccess")}</th>
+                <th className="px-3 py-2">{t(lang, "aiTool")}</th>
                 <th className="px-3 py-2">{t(lang, "audienceTestUser")}</th>
                 <th className="px-3 py-2" />
               </tr>
@@ -75,6 +79,17 @@ export default async function UsersPage({
                   <td className="px-3 py-2">{user.registeredWith === "google" ? t(lang, "googleSignup") : t(lang, "passwordSignup")}</td>
                   <td className="px-3 py-2">{formatDateTime(user.createdAt, admin.timezone)}</td>
                   <td className="px-3 py-2">{user.lastAccessAt ? formatDateTime(user.lastAccessAt, admin.timezone) : "—"}</td>
+                  <td className="px-3 py-2">
+                    {user.aiKeys.length === 0 ? "—" : (
+                      <ul>
+                        {[...user.aiKeys]
+                          .sort((a, b) => AI_PROVIDERS.indexOf(a.provider) - AI_PROVIDERS.indexOf(b.provider))
+                          .map((key) => (
+                            <li key={key.provider}>{toolLabel(lang, key.provider)} · {key.model}</li>
+                          ))}
+                      </ul>
+                    )}
+                  </td>
                   <td className="px-3 py-2">
                     <AudienceTestUserCheck id={user.id} checked={user.audienceTestUser} label={t(lang, "audienceTestUser")} />
                   </td>

@@ -622,9 +622,11 @@ model AiUsage {
   paySource        AiPaySource
   estimatedAgorot  Int
   debitAgorot      Int         @default(0)
+  costUsdMicros    Int         @default(0)
   createdAt        DateTime    @default(now())
 
   @@index([userId, createdAt])
+  @@index([createdAt])
 }
 
 model AiPlatform {

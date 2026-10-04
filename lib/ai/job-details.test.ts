@@ -27,19 +27,44 @@ describe("job details from a description", () => {
       location: "Haifa",
       employmentType: "full_time",
       workArrangement: "hybrid",
-      engagement: "",
+      engagement: "employee",
     });
   });
 
-  it("leaves every field blank when the model returns nothing usable", () => {
+  it("defaults employment and engagement when the posting does not state them", () => {
+    const result = normalizeJobDetails(
+      { companyName: "Hello Heart", employmentType: "", workArrangement: "office", engagement: "contract" },
+      [],
+    );
+    assert.deepEqual(result.fields, {
+      companyName: "Hello Heart",
+      title: "",
+      location: "",
+      employmentType: "full_time",
+      workArrangement: "",
+      engagement: "employee",
+    });
+  });
+
+  it("keeps stated part-time, remote, and freelance values", () => {
+    const result = normalizeJobDetails(
+      { employmentType: "part_time", workArrangement: "remote", engagement: "freelance" },
+      [],
+    );
+    assert.equal(result.fields.employmentType, "part_time");
+    assert.equal(result.fields.workArrangement, "remote");
+    assert.equal(result.fields.engagement, "freelance");
+  });
+
+  it("leaves company, title, and location blank when the model returns nothing usable", () => {
     const result = normalizeJobDetails({ companyName: 12, employmentType: "", tagNames: "React" }, []);
     assert.deepEqual(result.fields, {
       companyName: "",
       title: "",
       location: "",
-      employmentType: "",
+      employmentType: "full_time",
       workArrangement: "",
-      engagement: "",
+      engagement: "employee",
     });
     assert.deepEqual(result.tagIds, []);
     assert.deepEqual(result.proposedTags, []);
@@ -49,7 +74,14 @@ describe("job details from a description", () => {
     const names = ["react", "React", " ", "Go", "go", "Fintech", "a", "b", "c", "d", "e", "f", "g"];
     const result = normalizeJobDetails({ tagNames: names }, catalog);
     assert.deepEqual(result.tagIds, ["t1"]);
-    assert.deepEqual(result.proposedTags, ["Go", "Fintech", "a", "b", "c", "d", "e", "f"]);
-    assert.equal(result.proposedTags.length, 8);
+    assert.deepEqual(result.proposedTags, ["Go", "Fintech", "a", "b", "c", "d", "e", "f", "g"]);
+  });
+
+  it("keeps at most 20 new tag names", () => {
+    const names = Array.from({ length: 21 }, (_, index) => `Tag ${index + 1}`);
+    const result = normalizeJobDetails({ tagNames: names }, []);
+    assert.equal(result.proposedTags.length, 20);
+    assert.equal(result.proposedTags[0], "Tag 1");
+    assert.equal(result.proposedTags[19], "Tag 20");
   });
 });

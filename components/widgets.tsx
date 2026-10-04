@@ -819,6 +819,7 @@ export function UserMenu({
   adminLabel,
   changePasswordLabel,
   usersLabel,
+  aiUsageLabel,
   children,
 }: {
   initials: string;
@@ -827,6 +828,7 @@ export function UserMenu({
   adminLabel: string;
   changePasswordLabel: string;
   usersLabel: string;
+  aiUsageLabel: string;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -873,9 +875,14 @@ export function UserMenu({
             {changePasswordLabel}
           </Link>
           {isAdmin ? (
-            <Link role="menuitem" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-800" href="/admin/users">
-              {usersLabel}
-            </Link>
+            <>
+              <Link role="menuitem" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-800" href="/admin/users">
+                {usersLabel}
+              </Link>
+              <Link role="menuitem" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-800" href="/admin/ai-usage">
+                {aiUsageLabel}
+              </Link>
+            </>
           ) : null}
           {children}
         </div>

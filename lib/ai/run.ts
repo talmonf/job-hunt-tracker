@@ -1,7 +1,7 @@
 import { prisma } from "../prisma";
 import { decryptSecret } from "../crypto";
 import { completeText, estimateTokens, type Completion } from "./call";
-import { creditDebitAgorot, providerCostAgorot } from "./money";
+import { creditDebitAgorot, providerCostAgorot, providerCostUsdMicros } from "./money";
 import { DEFAULT_MODEL, modelPrice, platformKey, type AiProviderId } from "./providers";
 
 export class AiRunError extends Error {
@@ -45,10 +45,11 @@ export async function chargeAndComplete(input: {
       maxTokens: input.maxTokens,
       json: input.feature !== "test",
     });
+    const actualPrice = modelPrice(completion.model);
     const actualProvider = providerCostAgorot({
       inputTokens: completion.inputTokens,
       outputTokens: completion.outputTokens,
-      ...modelPrice(completion.model),
+      ...actualPrice,
       usdToIls,
     });
     const actualDebit = input.paySource === "credits" ? creditDebitAgorot(actualProvider, markupPercent) : 0;
@@ -64,6 +65,11 @@ export async function chargeAndComplete(input: {
         paySource: input.paySource,
         estimatedAgorot: actualProvider,
         debitAgorot,
+        costUsdMicros: providerCostUsdMicros({
+          inputTokens: completion.inputTokens,
+          outputTokens: completion.outputTokens,
+          ...actualPrice,
+        }),
       },
     });
     await prisma.user.update({ where: { id: input.userId }, data: { aiPaySource: input.paySource } });
