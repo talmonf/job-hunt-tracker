@@ -9,6 +9,7 @@ import { primaryButton } from "./widgets";
 function errorKey(error: FillJobError): MessageKey {
   if (error === "aiKey") return "errorAiKey";
   if (error === "aiBalance") return "errorAiBalance";
+  if (error === "aiGrant") return "errorAiGrant";
   if (error === "empty") return "fillJobDetailsEmpty";
   return "errorAiProvider";
 }

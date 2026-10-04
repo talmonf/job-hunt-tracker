@@ -8,7 +8,7 @@
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "test": "tsx --test lib/password.test.ts lib/dates.test.ts lib/events.test.ts lib/contact-status.test.ts lib/mentions.test.ts lib/tags.test.ts lib/person-name.test.ts lib/google-contacts.test.ts lib/entity-links.test.ts lib/ai/money.test.ts lib/ai/parse-profile.test.ts lib/ai/job-details.test.ts lib/companies.test.ts lib/partial-date.test.ts"
+    "test": "tsx --test lib/password.test.ts lib/dates.test.ts lib/events.test.ts lib/contact-status.test.ts lib/mentions.test.ts lib/tags.test.ts lib/person-name.test.ts lib/google-contacts.test.ts lib/entity-links.test.ts lib/ai/money.test.ts lib/ai/parse-profile.test.ts lib/ai/job-details.test.ts lib/ai/platform-access.test.ts lib/companies.test.ts lib/partial-date.test.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

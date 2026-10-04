@@ -2,10 +2,11 @@ import { prisma } from "../prisma";
 import { decryptSecret } from "../crypto";
 import { completeText, estimateTokens, type Completion } from "./call";
 import { creditDebitAgorot, providerCostAgorot, providerCostUsdMicros } from "./money";
+import { hasPlatformGrant } from "./platform-access";
 import { DEFAULT_MODEL, modelPrice, platformKey, type AiProviderId } from "./providers";
 
 export class AiRunError extends Error {
-  constructor(readonly code: "aiKey" | "aiBalance" | "aiProvider") {
+  constructor(readonly code: "aiKey" | "aiBalance" | "aiProvider" | "aiGrant") {
     super(code);
   }
 }
@@ -26,6 +27,9 @@ export async function chargeAndComplete(input: {
   const saved = await prisma.aiProviderKey.findUnique({
     where: { userId_provider: { userId: input.userId, provider: input.provider } },
   });
+  if (input.paySource === "credits" && !(await hasPlatformGrant(input.userId, input.provider))) {
+    throw new AiRunError("aiGrant");
+  }
   const apiKey = input.paySource === "key" ? (saved ? decryptSecret(saved.ciphertext) : null) : platformKey(input.provider);
   if (!apiKey) throw new AiRunError(input.paySource === "key" ? "aiKey" : "aiProvider");
   const model = input.paySource === "key" && saved?.model ? saved.model : DEFAULT_MODEL[input.provider];

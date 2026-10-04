@@ -30,13 +30,14 @@ export default async function SettingsPage({
   const search = await searchParams;
   const lang = user.uiLanguage;
   const section = firstParam(search.section);
-  const [goals, tags, keys, usage, platform, packs] = await Promise.all([
+  const [goals, tags, keys, usage, platform, packs, platformGrants] = await Promise.all([
     prisma.userGoals.findUnique({ where: { userId: user.id } }),
     prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" }, select: { id: true, name: true, color: true } }),
     prisma.aiProviderKey.findMany({ where: { userId: user.id }, select: { provider: true, lastFour: true, model: true } }),
     prisma.aiUsage.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 30 }),
     prisma.aiPlatform.findUnique({ where: { id: "default" } }),
     prisma.creditPack.findMany({ orderBy: { sortOrder: "asc" } }),
+    prisma.platformKeyGrant.findMany({ where: { userId: user.id }, select: { provider: true } }),
   ]);
   const networkingDaily = goals?.networkingPerDay ?? (goals?.networkingPerWeek != null ? goals.networkingPerWeek / 5 : 0);
   const searchMinutes = goals?.searchMinutesOverride ?? ((goals?.applicationsPerDay ?? 0) + networkingDaily) * 30;
@@ -143,6 +144,7 @@ export default async function SettingsPage({
         usdToIls={platform?.usdToIls ?? 3.7}
         packs={packs}
         stripeReady={Boolean(process.env.STRIPE_SECRET_KEY && process.env.AUTH_URL)}
+        platformGrants={platformGrants.map((grant) => grant.provider)}
       />
     </PageFrame>
   );

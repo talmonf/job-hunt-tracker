@@ -8,6 +8,7 @@ import { requireAdmin } from "../session";
 import { passwordRule } from "../password";
 import { requiredText } from "../forms";
 import { isBuiltinAdmin } from "../admin";
+import { isBuiltinPlatformProvider } from "../ai/platform-access";
 
 export async function createUser(formData: FormData) {
   const admin = await requireAdmin();
@@ -54,6 +55,21 @@ export async function setAudienceTestUser(id: string, added: boolean) {
   await requireAdmin();
   if (!id) return;
   await prisma.user.updateMany({ where: { id }, data: { audienceTestUser: added } });
+  revalidatePath("/admin/users");
+}
+
+export async function setPlatformKeyGrant(userId: string, provider: string, allowed: boolean) {
+  await requireAdmin();
+  if (!userId || !isBuiltinPlatformProvider(provider)) return;
+  if (allowed) {
+    await prisma.platformKeyGrant.upsert({
+      where: { userId_provider: { userId, provider } },
+      create: { userId, provider },
+      update: {},
+    });
+  } else {
+    await prisma.platformKeyGrant.deleteMany({ where: { userId, provider } });
+  }
   revalidatePath("/admin/users");
 }
 

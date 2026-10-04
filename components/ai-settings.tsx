@@ -1,7 +1,8 @@
 import type { AiPaySource, AiProvider } from "@prisma/client";
 import type { Lang } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
-import { AI_PROVIDERS, DEFAULT_MODEL, platformKey } from "@/lib/ai/providers";
+import { AI_PROVIDERS, DEFAULT_MODEL, isAiProvider, platformKey } from "@/lib/ai/providers";
+import { platformGrantAllows } from "@/lib/ai/platform-access";
 import { formatIls } from "@/lib/ai/money";
 import {
   deleteCreditPack,
@@ -42,6 +43,7 @@ export function AiSettings({
   usdToIls,
   packs,
   stripeReady,
+  platformGrants,
 }: {
   lang: Lang;
   paySource: AiPaySource;
@@ -53,9 +55,10 @@ export function AiSettings({
   usdToIls: number;
   packs: Pack[];
   stripeReady: boolean;
+  platformGrants: string[];
 }) {
   const saved = new Map(keys.map((row) => [row.provider, row]));
-  const creditsReady = AI_PROVIDERS.some((provider) => platformKey(provider));
+  const creditsReady = platformGrants.some((provider) => isAiProvider(provider) && platformKey(provider));
   const configured = keys.length > 0 || (paySource === "credits" && creditsReady);
   return (
     <SettingsSection
@@ -93,7 +96,12 @@ export function AiSettings({
                 </label>
                 <SubmitButton label={t(lang, "save")} />
               </form>
-              <p className="mt-2 text-xs text-slate-400">{row ? `${t(lang, "keySaved")} ••••${row.lastFour}` : t(lang, "keyMissing")} · {platformKey(provider) ? t(lang, "platformReady") : t(lang, "platformMissing")}</p>
+              <p className="mt-2 text-xs text-slate-400">
+                {row ? `${t(lang, "keySaved")} ••••${row.lastFour}` : t(lang, "keyMissing")}
+                {platformGrantAllows(provider, platformGrants)
+                  ? ` · ${platformKey(provider) ? t(lang, "platformReady") : t(lang, "platformMissing")}`
+                  : ""}
+              </p>
               <div className="mt-2 flex gap-3">
                 <form action={testProviderKey}>
                   <input type="hidden" name="provider" value={provider} />

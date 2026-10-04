@@ -157,6 +157,7 @@ model User {
   entityLinks   EntityLink[]
   tags          Tag[]
   aiKeys        AiProviderKey[]
+  platformKeyGrants PlatformKeyGrant[]
   aiUsage       AiUsage[]
   creditLedger  CreditLedger[]
   profileLabels ProfileLabel[]
@@ -595,6 +596,14 @@ enum ImportStatus {
   pending
   accepted
   discarded
+}
+
+model PlatformKeyGrant {
+  userId   String
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider AiProvider
+
+  @@id([userId, provider])
 }
 
 model AiProviderKey {

@@ -81,6 +81,8 @@ export function Flash({ lang, search }: { lang: Lang; search: Record<string, str
                               ? t(lang, "errorAiBalance")
                               : error === "aiProvider"
                                 ? t(lang, "errorAiProvider")
+                                : error === "aiGrant"
+                                  ? t(lang, "errorAiGrant")
                                 : error === "aiPdf"
                                   ? t(lang, "errorAiPdf")
                                   : error === "stripe"

@@ -7,10 +7,11 @@ import { createTag } from "./tags";
 import { parseJsonObject } from "../ai/json";
 import { JOB_DESCRIPTION_CLIP, jobDetailsSystem, normalizeJobDetails, type JobDetailFields } from "../ai/job-details";
 import { AI_PROVIDERS, isAiProvider, platformKey, type AiProviderId } from "../ai/providers";
+import { grantedPlatformProviders, platformGrantAllows } from "../ai/platform-access";
 import { AiRunError, chargeAndComplete } from "../ai/run";
 import { firstFreeTagColor } from "../tags";
 
-export type FillJobError = "empty" | "aiKey" | "aiBalance" | "aiProvider";
+export type FillJobError = "empty" | "aiKey" | "aiBalance" | "aiProvider" | "aiGrant";
 
 export type FillJobResult =
   | { ok: true; fields: JobDetailFields; tagIds: string[]; proposedTags: string[] }
@@ -20,13 +21,14 @@ export type ProposedTagResult =
   | { ok: true; tag: { id: string; name: string; color: TagColor } }
   | { ok: false; error: "required" | "tagName" };
 
-async function resolveProvider(userId: string, paySource: "key" | "credits"): Promise<AiProviderId | null> {
+async function resolveProvider(userId: string, paySource: "key" | "credits", granted: readonly string[]): Promise<AiProviderId | null> {
   const [latest, keys] = await Promise.all([
     prisma.aiUsage.findFirst({ where: { userId }, orderBy: { createdAt: "desc" }, select: { provider: true } }),
     prisma.aiProviderKey.findMany({ where: { userId }, select: { provider: true } }),
   ]);
   const saved = new Set(keys.map((row) => row.provider));
-  const usable = (provider: AiProviderId) => (paySource === "key" ? saved.has(provider) : Boolean(platformKey(provider)));
+  const usable = (provider: AiProviderId) =>
+    paySource === "key" ? saved.has(provider) : platformGrantAllows(provider, granted) && Boolean(platformKey(provider));
   if (latest && isAiProvider(latest.provider) && usable(latest.provider)) return latest.provider;
   return AI_PROVIDERS.find(usable) ?? null;
 }
@@ -36,8 +38,9 @@ export async function fillJobFromDescription(description: string): Promise<FillJ
   const text = description.trim();
   if (!text) return { ok: false, error: "empty" };
   const paySource = user.aiPaySource === "credits" ? "credits" : "key";
-  const provider = await resolveProvider(user.id, paySource);
-  if (!provider) return { ok: false, error: paySource === "credits" ? "aiProvider" : "aiKey" };
+  const granted = paySource === "credits" ? await grantedPlatformProviders(user.id) : [];
+  const provider = await resolveProvider(user.id, paySource, granted);
+  if (!provider) return { ok: false, error: paySource === "credits" ? (granted.length ? "aiProvider" : "aiGrant") : "aiKey" };
   const tags = await prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" }, select: { id: true, name: true } });
   try {
     const completion = await chargeAndComplete({
