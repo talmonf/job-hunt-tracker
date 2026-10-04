@@ -173,7 +173,8 @@ export default async function JobDetailPage({
         <div className="mb-3">
           <TagPicker lang={lang} hide={hide} tags={catalog} selected={jobTagIds} compact />
         </div>
-        <SettingsSection title={t(lang, "jobDetails")} summary={detailSummary}>
+        <SettingsSection title={t(lang, "jobDetails")} summary={detailSummary} defaultOpen>
+          <FillJobDetails lang={lang} />
           <div className="grid gap-3 md:grid-cols-2">
             <CompanyNameField lang={lang} names={companies.map((company) => company.name)} defaultValue={job.companyName} required />
             <label>
@@ -222,7 +223,6 @@ export default async function JobDetailPage({
                 googleConnected={googleConnected}
                 allowUrl={false}
               />
-              <FillJobDetails lang={lang} />
             </div>
           </div>
         </SettingsSection>

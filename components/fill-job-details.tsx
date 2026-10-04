@@ -91,7 +91,7 @@ export function FillJobDetails({ lang }: { lang: Lang }) {
   }
 
   return (
-    <div className="mt-2">
+    <div className="mb-3">
       <button className={`${primaryButton} inline-flex items-center gap-2`} type="button" onClick={fill} disabled={pending} aria-busy={pending}>
         {pending ? (
           <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
@@ -100,6 +100,7 @@ export function FillJobDetails({ lang }: { lang: Lang }) {
         )}
         {t(lang, "fillJobDetails")}
       </button>
+      <p className="mt-1 text-xs text-slate-400">{t(lang, "fillJobDetailsHint")}</p>
       {error ? <p className="mt-2 rounded-md border border-rose-700 px-3 py-2 text-sm text-rose-200">{t(lang, error)}</p> : null}
       {proposed.length ? (
         <div className="mt-2">

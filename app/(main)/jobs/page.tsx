@@ -18,6 +18,7 @@ import { MentionTextarea } from "@/components/mention-textarea";
 import { TagChips } from "@/components/tag-chip";
 import { TagPicker } from "@/components/tag-picker";
 import { CompanyNameField } from "@/components/company-picker";
+import { FillJobDetails } from "@/components/fill-job-details";
 
 export const dynamic = "force-dynamic";
 
@@ -198,7 +199,7 @@ export default async function JobsPage({
       )}
       {firstParam(search.modal) === "new" ? (
         <Modal title={t(lang, "addJob")} closeHref={closeHref} closeLabel={t(lang, "close")}>
-          <form action={createJob} className="grid gap-3">
+          <form id="job-form" action={createJob} className="grid gap-3">
             <input type="hidden" name="returnTo" value={`/jobs${keep}`} />
             <CompanyNameField lang={lang} names={companies.map((company) => company.name)} required />
             <label>
@@ -221,6 +222,7 @@ export default async function JobsPage({
               googleConnected={googleConnected}
               allowUrl={false}
             />
+            <FillJobDetails lang={lang} />
             <JobUrlsEditor lang={lang} />
             <div>
               <span className={labelClass}>{t(lang, "interestDate")}</span>
