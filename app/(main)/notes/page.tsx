@@ -10,6 +10,7 @@ import { dash, maskText } from "@/lib/mask";
 import { assignmentTags } from "@/lib/tags";
 import { EmptyState, FilterBar, Modal, PageFrame } from "@/components/chrome";
 import { ConfirmSubmit, MultiSelect, compactFieldClass, compactLabelClass } from "@/components/widgets";
+import { HoverText } from "@/components/hover-text";
 import { NoteFields } from "@/components/note-fields";
 import { TagChips } from "@/components/tag-chip";
 
@@ -92,7 +93,7 @@ export default async function NotesPage({
         </Link>
       </div>
       <FilterBar className="mb-4" legend={t(lang, "filters")}>
-        <div className="grid gap-2 md:grid-cols-3">
+        <div className="grid items-end gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
           <label>
             <span className={compactLabelClass}>{t(lang, "search")}</span>
             <input className={compactFieldClass} name="q" defaultValue={q} />
@@ -112,7 +113,9 @@ export default async function NotesPage({
                 options={catalog.map((tag) => ({ value: tag.id, label: maskText(tag.name, hide) }))}
               />
             </div>
-          ) : null}
+          ) : (
+            <div className="hidden md:block" />
+          )}
           <div>
             <span className={compactLabelClass}>{t(lang, "noteType")}</span>
             <MultiSelect
@@ -127,9 +130,8 @@ export default async function NotesPage({
               options={NOTE_TYPES.map((type) => ({ value: type, label: noteTypeLabel(lang, type) }))}
             />
           </div>
-        </div>
-        <div className="mt-2 flex flex-wrap items-end gap-2">
-          <label className="min-w-0 flex-1">
+          <span className="hidden md:block" />
+          <label className="min-w-0">
             <span className={compactLabelClass}>{t(lang, "job")}</span>
             <select className={compactFieldClass} name="job" defaultValue={jobId}>
               <option value="">{t(lang, "any")}</option>
@@ -140,7 +142,7 @@ export default async function NotesPage({
               ))}
             </select>
           </label>
-          <label className="min-w-0 flex-1">
+          <label className="min-w-0">
             <span className={compactLabelClass}>{t(lang, "contact")}</span>
             <select className={compactFieldClass} name="contact" defaultValue={contactId}>
               <option value="">{t(lang, "any")}</option>
@@ -151,7 +153,7 @@ export default async function NotesPage({
               ))}
             </select>
           </label>
-          <label className="min-w-0 flex-1">
+          <label className="min-w-0">
             <span className={compactLabelClass}>{t(lang, "company")}</span>
             <select className={compactFieldClass} name="company" defaultValue={companyId}>
               <option value="">{t(lang, "any")}</option>
@@ -162,7 +164,7 @@ export default async function NotesPage({
               ))}
             </select>
           </label>
-          <button className="ms-auto shrink-0 rounded bg-sky-500 px-2 py-0.5 text-xs font-semibold leading-tight text-slate-950" type="submit">
+          <button className="shrink-0 rounded bg-sky-500 px-2 py-0.5 text-xs font-semibold leading-tight text-slate-950" type="submit">
             {t(lang, "apply")}
           </button>
         </div>
@@ -211,7 +213,9 @@ export default async function NotesPage({
                     )}
                   </td>
                   <td className="px-3 py-2">{noteTypeLabel(lang, note.type)}</td>
-                  <td className="max-w-xs truncate px-3 py-2 text-slate-300">{dash(note.additionalInfo, hide)}</td>
+                  <td className="max-w-xs px-3 py-2 text-slate-300">
+                    <HoverText text={dash(plainMentions(note.additionalInfo), hide)} />
+                  </td>
                   <td className="px-3 py-2">
                     <div className="flex flex-wrap gap-3 whitespace-nowrap">
                       <Link className="text-sky-300" href={`/notes/${note.id}`}>
@@ -246,4 +250,8 @@ export default async function NotesPage({
       ) : null}
     </PageFrame>
   );
+}
+
+function plainMentions(text: string): string {
+  return text.replace(/\[\[([^[\]]+?)\|[^[\]]+?\]\]/g, "$1");
 }
