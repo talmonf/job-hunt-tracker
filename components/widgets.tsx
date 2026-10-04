@@ -343,6 +343,149 @@ export function DateTimeField({
   );
 }
 
+export function AppointmentRangeField({
+  startName,
+  endName,
+  startDefault,
+  endDefault,
+  lang,
+  dateLabel,
+  fromLabel,
+  toLabel,
+}: {
+  startName: string;
+  endName: string;
+  startDefault?: string;
+  endDefault?: string;
+  lang: Lang;
+  dateLabel: string;
+  fromLabel: string;
+  toLabel: string;
+}) {
+  const start = splitDateTime(startDefault ?? "", false);
+  const end = splitDateTime(endDefault ?? "", false);
+  const [text, setText] = useState(start.date || end.date);
+  const [fromHour, setFromHour] = useState(start.hour);
+  const [fromMinute, setFromMinute] = useState(start.minute);
+  const [toHour, setToHour] = useState(end.hour);
+  const [toMinute, setToMinute] = useState(end.minute);
+  const isoDate = displayDateToIso(text);
+  const startsAt = isoDate && fromHour && fromMinute ? `${isoDate}T${fromHour}:${fromMinute}` : "";
+  const endsAt = isoDate && toHour && toMinute ? `${isoDate}T${toHour}:${toMinute}` : "";
+
+  function applyDateText(next: string) {
+    setText(next);
+    if (displayDateToIso(next)) {
+      setFromHour((current) => current || "09");
+      setFromMinute((current) => current || "00");
+      return;
+    }
+    if (!next.trim()) {
+      setFromHour("");
+      setFromMinute("");
+    }
+  }
+
+  return (
+    <div>
+      <span className={labelClass}>{dateLabel}</span>
+      <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
+        <DatePicker lang={lang} text={text} onTextChange={applyDateText} required onPick={applyDateText} />
+        <TimePair
+          lang={lang}
+          caption={fromLabel}
+          hour={fromHour}
+          minute={fromMinute}
+          required={Boolean(isoDate)}
+          onHour={(next) => {
+            setFromHour(next);
+            if (next && !fromMinute) setFromMinute("00");
+          }}
+          onMinute={(next) => {
+            setFromMinute(next);
+            if (next && !fromHour) setFromHour("09");
+          }}
+        />
+        <TimePair
+          lang={lang}
+          caption={toLabel}
+          hour={toHour}
+          minute={toMinute}
+          required={false}
+          onHour={(next) => {
+            if (!next) {
+              setToHour("");
+              setToMinute("");
+              return;
+            }
+            setToHour(next);
+            setToMinute((current) => current || "00");
+          }}
+          onMinute={(next) => {
+            if (!next) {
+              setToHour("");
+              setToMinute("");
+              return;
+            }
+            setToMinute(next);
+            setToHour((current) => current || "09");
+          }}
+        />
+      </div>
+      <input type="hidden" name={startName} value={startsAt} />
+      <input type="hidden" name={endName} value={endsAt} />
+    </div>
+  );
+}
+
+function TimePair({
+  lang,
+  caption,
+  hour,
+  minute,
+  required,
+  onHour,
+  onMinute,
+}: {
+  lang: Lang;
+  caption: string;
+  hour: string;
+  minute: string;
+  required: boolean;
+  onHour: (value: string) => void;
+  onMinute: (value: string) => void;
+}) {
+  return (
+    <div>
+      <span className={labelClass}>{caption}</span>
+      <div className="flex gap-2">
+        <label className="block" dir="ltr">
+          <span className={labelClass}>{t(lang, "timeHour")}</span>
+          <select className={timeSelectClass} value={hour} required={required} onChange={(event) => onHour(event.target.value)}>
+            {required ? null : <option value="" />}
+            {HOURS.map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block" dir="ltr">
+          <span className={labelClass}>{t(lang, "timeMinute")}</span>
+          <select className={timeSelectClass} value={minute} required={required} onChange={(event) => onMinute(event.target.value)}>
+            {required ? null : <option value="" />}
+            {MINUTES.map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+    </div>
+  );
+}
+
 function DatePicker({
   lang,
   text,

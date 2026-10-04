@@ -88,8 +88,7 @@ export default async function EventsPage({
   const presetStatus = (JOB_STATUSES as readonly string[]).includes(firstParam(search.presetStatus)) ? firstParam(search.presetStatus) : "";
   const requestedReturn = sameSitePath(firstParam(search.returnTo));
   const closeHref = requestedReturn || `/events${keep}`;
-  const defaultOccurredAt =
-    editing || firstParam(search.presetNow) !== "1" ? undefined : dateTimeInputValue(new Date(), user.timezone);
+  const defaultOccurredAt = editing ? undefined : dateTimeInputValue(new Date(), user.timezone);
   const jobOptions = jobs.map((job) => ({
     id: job.id,
     label: dash(`${job.companyName}${job.title ? ` — ${job.title}` : ""}`, hide),

@@ -5,7 +5,7 @@ import type { Lang } from "@/lib/i18n";
 import { channelLabel, eventTypeLabel, stageLabel, statusLabel, t } from "@/lib/i18n";
 import { CHANNELS, EVENT_TYPES, JOB_STATUSES, STAGES } from "@/lib/events";
 import type { LoggedHistoryEvent } from "@/lib/job-activity";
-import { DateTimeField, fieldClass, labelClass, SubmitButton } from "./widgets";
+import { AppointmentRangeField, DateTimeField, fieldClass, labelClass, SubmitButton } from "./widgets";
 
 export type InlineEventResult =
   | { ok: true; status: string | null; event: LoggedHistoryEvent | null; warn?: "calendar" }
@@ -151,21 +151,23 @@ export function EventForm({
         </div>
       )}
       <div>
-        <span className={labelClass}>{type === "application" ? t(lang, "applicationSentAt") : t(lang, "when")}</span>
+        <span className={labelClass}>
+          {type === "application" ? t(lang, "applicationSentAt") : type === "meeting" ? t(lang, "recordedAt") : t(lang, "when")}
+        </span>
         <DateTimeField name="occurredAt" defaultValue={event?.occurredAt || defaultOccurredAt} required lang={lang} />
       </div>
       {type === "meeting" ? (
         <>
-          <div>
-            <span className={labelClass}>{t(lang, "meetingFrom")}</span>
-            <DateTimeField name="startsAt" defaultValue={event?.startsAt} required lang={lang} />
-          </div>
-          <div>
-            <span className={labelClass}>
-              {t(lang, "meetingTo")} ({t(lang, "optional")})
-            </span>
-            <DateTimeField name="endsAt" defaultValue={event?.endsAt} lang={lang} />
-          </div>
+          <AppointmentRangeField
+            lang={lang}
+            startName="startsAt"
+            endName="endsAt"
+            startDefault={event?.startsAt}
+            endDefault={event?.endsAt}
+            dateLabel={t(lang, "appointment")}
+            fromLabel={t(lang, "meetingFrom")}
+            toLabel={`${t(lang, "meetingTo")} (${t(lang, "optional")})`}
+          />
           <p className="text-xs text-slate-400">{t(lang, "calendarDefaultLength")}</p>
           <label>
             <span className={labelClass}>{t(lang, "stage")}</span>
