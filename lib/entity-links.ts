@@ -82,6 +82,42 @@ export function looksLikeHttpUrl(value: string): boolean {
   return HTTP_URL.test(value.trim());
 }
 
+export type LinkIdentity = {
+  contactId?: string | null;
+  googleResourceName?: string | null;
+  url?: string | null;
+};
+
+export type LinkIdentityFilter =
+  | { contactId: string }
+  | { googleResourceName: string }
+  | { url: string };
+
+export function linkIdentityFilters(identity: LinkIdentity): LinkIdentityFilter[] {
+  const filters: LinkIdentityFilter[] = [];
+  const contactId = identity.contactId?.trim();
+  if (contactId) filters.push({ contactId });
+  const resource = identity.googleResourceName?.trim();
+  if (resource) filters.push({ googleResourceName: resource });
+  const url = identity.url?.trim();
+  if (url) filters.push({ url });
+  return filters;
+}
+
+export function sameLinkIdentity(a: LinkIdentity, b: LinkIdentity): boolean {
+  const right = linkIdentityFilters(b);
+  return linkIdentityFilters(a).some((filter) =>
+    right.some((other) => {
+      if ("contactId" in filter && "contactId" in other) return filter.contactId === other.contactId;
+      if ("googleResourceName" in filter && "googleResourceName" in other) {
+        return filter.googleResourceName === other.googleResourceName;
+      }
+      if ("url" in filter && "url" in other) return filter.url === other.url;
+      return false;
+    }),
+  );
+}
+
 export function toChipLink(link: {
   id: string;
   kind: EntityLinkKind;

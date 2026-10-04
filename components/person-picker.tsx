@@ -17,6 +17,12 @@ export type LocalPerson = {
   linkedinUrl?: string;
 };
 
+export type BlockedPeople = {
+  contactIds?: readonly string[];
+  resourceNames?: readonly string[];
+  urls?: readonly string[];
+};
+
 export type PickedPerson = {
   kind: EntityLinkKind;
   displayName: string;
@@ -92,6 +98,7 @@ export function PersonPicker({
   allowUrl = false,
   googleOnly = false,
   hideUrl = false,
+  blocked,
   onPick,
 }: {
   lang: Lang;
@@ -100,6 +107,7 @@ export function PersonPicker({
   allowUrl?: boolean;
   googleOnly?: boolean;
   hideUrl?: boolean;
+  blocked?: BlockedPeople;
   onPick: (person: PickedPerson) => void;
 }) {
   const [query, setQuery] = useState("");
@@ -190,27 +198,33 @@ export function PersonPicker({
           label={t(lang, "localContacts")}
           empty={locals.length === 0}
         >
-          {locals.map((contact) => (
-            <button
-              key={contact.id}
-              className="block w-full truncate rounded px-2 py-1 text-start text-sm hover:bg-slate-800"
-              type="button"
-              onClick={() =>
-                onPick({
-                  kind: "local_contact",
-                  displayName: contact.fullName,
-                  title: contact.role,
-                  workplace: contact.workplace,
-                  contactId: contact.id,
-                  googleResourceName: contact.googleResourceName ?? undefined,
-                  url: contact.linkedinUrl,
-                })
-              }
-            >
-              {contact.fullName}
-              {contact.role ? <span className="text-slate-400"> · {contact.role}</span> : null}
-            </button>
-          ))}
+          {locals.map((contact) => {
+            const taken = isBlocked(blocked, {
+              contactId: contact.id,
+              resourceName: contact.googleResourceName,
+              url: contact.linkedinUrl,
+            });
+            return (
+              <PersonChoice
+                key={contact.id}
+                label={contact.fullName}
+                detail={contact.role}
+                taken={taken}
+                takenLabel={t(lang, "alreadyLinked")}
+                onChoose={() =>
+                  onPick({
+                    kind: "local_contact",
+                    displayName: contact.fullName,
+                    title: contact.role,
+                    workplace: contact.workplace,
+                    contactId: contact.id,
+                    googleResourceName: contact.googleResourceName ?? undefined,
+                    url: contact.linkedinUrl,
+                  })
+                }
+              />
+            );
+          })}
         </ResultGroup>
       ) : null}
       {googleConnected ? (
@@ -224,35 +238,37 @@ export function PersonPicker({
               <SearchErrorLine lang={lang} error={searchError} />
             </p>
           ) : null}
-          {googleHits.map((person) => (
-            <button
-              key={person.resourceName}
-              className="block w-full truncate rounded px-2 py-1 text-start text-sm hover:bg-slate-800"
-              type="button"
-              onClick={() =>
-                onPick({
-                  kind: "google_contact",
-                  displayName: person.displayName,
-                  title: person.title,
-                  workplace: person.workplace,
-                  googleResourceName: person.resourceName,
-                  givenName: person.givenName,
-                  familyName: person.familyName,
-                  firstName: person.firstName,
-                  lastName: person.lastName,
-                  firstNameHe: person.firstNameHe,
-                  lastNameHe: person.lastNameHe,
-                  linkedinUrl: person.linkedinUrl,
-                  mobile: person.mobile,
-                  email: person.email,
-                  address: person.address,
-                })
-              }
-            >
-              {person.displayName}
-              {person.title ? <span className="text-slate-400"> · {person.title}</span> : null}
-            </button>
-          ))}
+          {googleHits.map((person) => {
+            const taken = isBlocked(blocked, { resourceName: person.resourceName, url: person.linkedinUrl });
+            return (
+              <PersonChoice
+                key={person.resourceName}
+                label={person.displayName}
+                detail={person.title}
+                taken={taken}
+                takenLabel={t(lang, "alreadyLinked")}
+                onChoose={() =>
+                  onPick({
+                    kind: "google_contact",
+                    displayName: person.displayName,
+                    title: person.title,
+                    workplace: person.workplace,
+                    googleResourceName: person.resourceName,
+                    givenName: person.givenName,
+                    familyName: person.familyName,
+                    firstName: person.firstName,
+                    lastName: person.lastName,
+                    firstNameHe: person.firstNameHe,
+                    lastNameHe: person.lastNameHe,
+                    linkedinUrl: person.linkedinUrl,
+                    mobile: person.mobile,
+                    email: person.email,
+                    address: person.address,
+                  })
+                }
+              />
+            );
+          })}
         </ResultGroup>
       ) : null}
       {hideUrl ? null : (
@@ -287,6 +303,48 @@ export function PersonPicker({
         </div>
       )}
     </div>
+  );
+}
+
+function isBlocked(
+  blocked: BlockedPeople | undefined,
+  person: { contactId?: string | null; resourceName?: string | null; url?: string | null },
+): boolean {
+  if (!blocked) return false;
+  const contactId = person.contactId?.trim();
+  if (contactId && blocked.contactIds?.includes(contactId)) return true;
+  const resource = person.resourceName?.trim();
+  if (resource && blocked.resourceNames?.includes(resource)) return true;
+  const url = person.url?.trim();
+  if (url && blocked.urls?.some((item) => item.trim() === url)) return true;
+  return false;
+}
+
+function PersonChoice({
+  label,
+  detail,
+  taken,
+  takenLabel,
+  onChoose,
+}: {
+  label: string;
+  detail?: string;
+  taken: boolean;
+  takenLabel: string;
+  onChoose: () => void;
+}) {
+  return (
+    <button
+      className={`block w-full truncate rounded px-2 py-1 text-start text-sm ${taken ? "cursor-not-allowed text-slate-500" : "hover:bg-slate-800"}`}
+      type="button"
+      disabled={taken}
+      onClick={() => {
+        if (!taken) onChoose();
+      }}
+    >
+      {label}
+      {taken ? <span className="text-slate-500"> · {takenLabel}</span> : detail ? <span className="text-slate-400"> · {detail}</span> : null}
+    </button>
   );
 }
 

@@ -13,6 +13,7 @@ import {
   isHttpUrl,
   kindFromUrl,
   labelFromUrl,
+  linkIdentityFilters,
 } from "../entity-links";
 
 type ParentIds = {
@@ -28,15 +29,29 @@ export async function addEntityLink(formData: FormData) {
   if (!parent) redirect(`${dest}?error=required`);
   const parsed = await parseLinkInput(user.id, formData, parent.allowUrl, Boolean(parent.ids.jobId));
   if (!parsed) redirect(`${dest}?error=required`);
-  await prisma.entityLink.create({
-    data: {
-      userId: user.id,
-      ...parent.ids,
-      ...parsed,
-      ...(parent.ids.jobId ? readRelationship(formData) : {}),
-    },
+  if (parent.ids.parentContactId && parsed.contactId === parent.ids.parentContactId) redirect(dest);
+  const filters = linkIdentityFilters(parsed);
+  const parentKey = parent.ids.jobId ?? parent.ids.noteId ?? parent.ids.parentContactId ?? "";
+  let created = false;
+  await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`${user.id}:${parentKey}`}))`;
+    if (filters.length) {
+      const existing = await tx.entityLink.findFirst({
+        where: { userId: user.id, ...parent.ids, OR: filters },
+      });
+      if (existing) return;
+    }
+    await tx.entityLink.create({
+      data: {
+        userId: user.id,
+        ...parent.ids,
+        ...parsed,
+        ...(parent.ids.jobId ? readRelationship(formData) : {}),
+      },
+    });
+    created = true;
   });
-  redirect(`${dest}?created=1`);
+  redirect(created ? `${dest}?created=1` : dest);
 }
 
 export async function updateJobPerson(formData: FormData) {
