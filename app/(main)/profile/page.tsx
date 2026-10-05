@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { firstParam, preserveQuery } from "@/lib/http";
-import { dateInputValue, formatMonthYear } from "@/lib/dates";
+import { dateInputValue, formatDate, formatMonthYear } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
 import { assignmentTags, type TagRef } from "@/lib/tags";
@@ -9,7 +9,6 @@ import {
   deleteCertificate,
   deleteEducation,
   deleteEmployment,
-  deleteProfileFile,
   deleteVolunteer,
   importLinkedInPdf,
   saveAbout,
@@ -19,10 +18,9 @@ import {
   saveVolunteer,
   uploadProfileFile,
 } from "@/lib/actions/profile";
-import { prepareProfileImport } from "@/lib/actions/ai";
-import { AI_PROVIDERS } from "@/lib/ai/providers";
 import { normalizeProposal } from "@/lib/ai/proposal";
 import { Modal, PageFrame } from "@/components/chrome";
+import { CvLibrary } from "@/components/cv-library";
 import { ProfileReview } from "@/components/profile-review";
 import { DateField, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
 import { TagChips } from "@/components/tag-chip";
@@ -184,56 +182,26 @@ export default async function ProfilePage({
         </section>
       ) : null}
 
-      <h2 id="source" className="mb-2 mt-8 scroll-mt-20 text-lg">{t(lang, "sourceFile")}</h2>
-      <p className="mb-2 text-sm text-slate-400">{t(lang, "sourceHint")}</p>
-      <form action={prepareProfileImport} className="mb-3 grid gap-3">
-        <div className="flex flex-wrap gap-3">
-          <label>
-            <span className={labelClass}>{t(lang, "outputLanguage")}</span>
-            <select className={fieldClass} name="language" defaultValue={lang}>
-              <option value="en">{t(lang, "languageEn")}</option>
-              <option value="he">{t(lang, "languageHe")}</option>
-              <option value="both">{t(lang, "languageBoth")}</option>
-            </select>
-          </label>
-          <label>
-            <span className={labelClass}>{t(lang, "provider")}</span>
-            <select className={fieldClass} name="provider" defaultValue="openrouter">
-              {AI_PROVIDERS.map((provider) => (
-                <option key={provider} value={provider}>{provider}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span className={labelClass}>{t(lang, "paySource")}</span>
-            <select className={fieldClass} name="paySource" defaultValue={user.aiPaySource}>
-              <option value="key">{t(lang, "payWithKey")}</option>
-              <option value="credits">{t(lang, "payWithCredits")}</option>
-            </select>
-          </label>
-        </div>
-        <ul className="space-y-1 text-sm">
-          {files.map((file) => (
-            <li key={file.id} className="flex items-center justify-between gap-3">
-              <label className="flex items-center gap-2">
-                <input type="checkbox" name="fileId" value={file.id} />
-                <a className="text-sky-300" href={`/files/profile/${file.id}`}>{dash(file.filename, hide)}</a>
-              </label>
-              <button className="text-rose-300" type="submit" form={`delete-file-${file.id}`}>{t(lang, "delete")}</button>
-            </li>
-          ))}
-        </ul>
-        <SubmitButton label={t(lang, "importSelected")} thin />
-      </form>
-      {files.map((file) => (
-        <form key={file.id} id={`delete-file-${file.id}`} action={deleteProfileFile}>
-          <input type="hidden" name="id" value={file.id} />
+      <section id="source" className="mt-8 scroll-mt-20">
+        <h2 className="mb-2 text-lg">
+          {t(lang, "sourceFile")} <span className="text-slate-400">{files.length}</span>
+        </h2>
+        <p className="mb-2 text-sm text-slate-400">{t(lang, "sourceHint")}</p>
+        <form action={uploadProfileFile} className="mb-3 flex items-center gap-2">
+          <input name="file" type="file" accept="application/pdf,.pdf" />
+          <SubmitButton label={t(lang, "attach")} thin />
         </form>
-      ))}
-      <form action={uploadProfileFile} className="flex items-center gap-2">
-        <input name="file" type="file" accept="application/pdf,.pdf" />
-        <SubmitButton label={t(lang, "attach")} />
-      </form>
+        <CvLibrary
+          lang={lang}
+          defaultLanguage={lang}
+          paySource={user.aiPaySource}
+          files={files.map((file) => ({
+            id: file.id,
+            filename: dash(file.filename, hide),
+            uploadedOn: formatDate(file.uploadedAt, user.timezone),
+          }))}
+        />
+      </section>
       {draftRow && (!firstParam(search.draft) || firstParam(search.draft) === draftRow.id) ? (
         <ProfileReview proposal={normalizeProposal(draftRow.payload, false)} draftId={draftRow.id} lang={lang} />
       ) : null}

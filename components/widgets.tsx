@@ -55,11 +55,11 @@ export function AttributeSelect({
   );
 }
 
-export function SubmitButton({ label, pending: forced, thin = false }: { label: string; pending?: boolean; thin?: boolean }) {
+export function SubmitButton({ label, pending: forced, thin = false, disabled = false }: { label: string; pending?: boolean; thin?: boolean; disabled?: boolean }) {
   const { pending: formPending } = useFormStatus();
   const pending = forced ?? formPending;
   return (
-    <button className={`${thin ? thinPrimaryButton : primaryButton} inline-flex items-center gap-2`} disabled={pending} type="submit" aria-busy={pending}>
+    <button className={`${thin ? thinPrimaryButton : primaryButton} inline-flex items-center gap-2`} disabled={pending || disabled} type="submit" aria-busy={pending}>
       {pending ? (
         <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
       ) : null}
