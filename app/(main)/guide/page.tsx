@@ -26,7 +26,7 @@ export default async function GuidePage() {
         <h2 className="mb-2 text-lg">{t(lang, "guideLinkedInTitle")}</h2>
         <p className="text-sm text-slate-300">{t(lang, "guideLinkedInSave")}</p>
         <p className="mt-2 text-sm text-slate-300">{t(lang, "guideLinkedInUpload")}</p>
-        <a className="mt-2 inline-block text-sm text-sky-300" href="/profile#source" target="_blank" rel="noopener noreferrer">
+        <a className="mt-2 inline-block text-sm text-sky-300" href="/profile" target="_blank" rel="noopener noreferrer">
           {t(lang, "guideLinkedInLink")}
         </a>
         <p className="mt-2 text-sm text-slate-300">{t(lang, "guideAiNote")}</p>

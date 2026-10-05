@@ -1,11 +1,14 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import { requireUser } from "../session";
 import { parseDateOnly, requiredText } from "../forms";
 import { removeStored, saveUpload } from "../files";
 import { replaceRecordTags } from "../tag-assign";
+import { extractPdfText } from "../ai/pdf-text";
+import { parseProfileText } from "../ai/parse-profile";
 
 export async function saveAbout(formData: FormData) {
   const user = await requireUser();
@@ -158,6 +161,30 @@ export async function deleteCertificate(formData: FormData) {
   const user = await requireUser();
   await prisma.certificate.deleteMany({ where: { id: requiredText(formData.get("id")), userId: user.id } });
   redirect("/profile?updated=1");
+}
+
+export async function importLinkedInPdf(formData: FormData) {
+  const user = await requireUser();
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) redirect("/profile?error=required");
+  const filename = file.name || "linkedin.pdf";
+  if (file.type !== "application/pdf" && !filename.toLowerCase().endsWith(".pdf")) redirect("/profile?error=aiPdf");
+  let text = "";
+  try {
+    text = (await extractPdfText(new Uint8Array(await file.arrayBuffer()))).trim();
+  } catch {
+    redirect("/profile?error=aiPdf");
+  }
+  if (!text) redirect("/profile?error=aiPdf");
+  const saved = await saveUpload(user.id, "profile", file);
+  if (!saved) redirect("/profile?error=storage");
+  await prisma.profileFile.create({ data: { userId: user.id, ...saved, extractedText: text } });
+  const proposal = parseProfileText(text);
+  await prisma.profileImport.updateMany({ where: { userId: user.id, status: "pending" }, data: { status: "discarded" } });
+  const draft = await prisma.profileImport.create({
+    data: { userId: user.id, payload: proposal as unknown as Prisma.InputJsonValue },
+  });
+  redirect(`/profile?draft=${draft.id}`);
 }
 
 export async function uploadProfileFile(formData: FormData) {

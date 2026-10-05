@@ -11,6 +11,7 @@ import {
   deleteEmployment,
   deleteProfileFile,
   deleteVolunteer,
+  importLinkedInPdf,
   saveAbout,
   saveCertificate,
   saveEducation,
@@ -62,8 +63,33 @@ export default async function ProfilePage({
   const modal = firstParam(search.modal);
   const editId = firstParam(search.id);
   const closeHref = `/profile${preserveQuery(search, {}, ["modal", "id"])}`;
+  const profileEmpty =
+    !(profile?.headline ?? "").trim() &&
+    !(profile?.aboutEn ?? "").trim() &&
+    !(profile?.aboutHe ?? "").trim() &&
+    employments.length === 0 &&
+    educations.length === 0 &&
+    volunteers.length === 0 &&
+    certificates.length === 0;
   return (
     <PageFrame lang={lang} title={t(lang, "profile")} description={t(lang, "profileIntro")} search={search}>
+      {profileEmpty ? (
+        <form action={importLinkedInPdf} className="mb-6 flex flex-wrap items-center gap-2">
+          <input name="file" type="file" accept="application/pdf,.pdf" required />
+          <SubmitButton label={t(lang, "importLinkedIn")} thin />
+          <details className="relative">
+            <summary
+              className="flex h-6 w-6 cursor-pointer list-none items-center justify-center rounded-full border border-slate-500 text-sm text-slate-200 [&::-webkit-details-marker]:hidden"
+              aria-label={t(lang, "importLinkedInHelp")}
+            >
+              ?
+            </summary>
+            <p className="absolute z-10 mt-1 w-80 max-w-[calc(100vw-2rem)] rounded-md border border-slate-600 bg-slate-900 p-2 text-sm leading-relaxed text-slate-100 shadow-lg">
+              {t(lang, "guideLinkedInSave")}
+            </p>
+          </details>
+        </form>
+      ) : null}
       <form action={saveAbout} className="grid gap-3">
         <label>
           <span className={labelClass}>{t(lang, "headline")}</span>
@@ -77,7 +103,7 @@ export default async function ProfilePage({
           <span className={labelClass}>{t(lang, "aboutHe")}</span>
           <textarea className={fieldClass} name="aboutHe" rows={4} defaultValue={profile?.aboutHe ?? ""} />
         </label>
-        <SubmitButton label={t(lang, "save")} />
+        <SubmitButton label={t(lang, "save")} thin />
       </form>
 
       <Section title={t(lang, "employment")} addHref={`/profile${preserveQuery(search, { modal: "employment" }, ["modal", "id"])}`} addLabel={t(lang, "add")}>
@@ -197,7 +223,7 @@ export default async function ProfilePage({
             </li>
           ))}
         </ul>
-        <SubmitButton label={t(lang, "importSelected")} />
+        <SubmitButton label={t(lang, "importSelected")} thin />
       </form>
       {files.map((file) => (
         <form key={file.id} id={`delete-file-${file.id}`} action={deleteProfileFile}>
