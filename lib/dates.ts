@@ -10,6 +10,11 @@ export function formatDate(date: Date, timeZone: string): string {
   return `${pad(parts.day)}/${pad(parts.month)}/${parts.year}`;
 }
 
+export function formatMonthYear(date: Date, timeZone: string): string {
+  const parts = partsInZone(date, timeZone);
+  return `${pad(parts.month)}/${parts.year}`;
+}
+
 export function formatDateTime(date: Date, timeZone: string): string {
   const parts = partsInZone(date, timeZone);
   return `${pad(parts.day)}/${pad(parts.month)}/${parts.year} ${pad(parts.hour)}:${pad(parts.minute)}`;

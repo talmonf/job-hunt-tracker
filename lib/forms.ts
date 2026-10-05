@@ -26,6 +26,16 @@ export function parseDateOnly(value: FormDataEntryValue | null, timeZone: string
   return wallClockToUtc(text, timeZone);
 }
 
+export function parseCareerDate(value: FormDataEntryValue | string | null, timeZone: string): Date | null {
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+  const monthYear = /^(\d{2})\/(\d{4})$/.exec(text);
+  if (monthYear) return wallClockToUtc(`${monthYear[2]}-${monthYear[1]}-01`, timeZone);
+  const year = /^(\d{4})$/.exec(text);
+  if (year) return wallClockToUtc(`${year[1]}-01-01`, timeZone);
+  return parseDateOnly(text, timeZone);
+}
+
 export function parseDateTime(value: FormDataEntryValue | null, timeZone: string): Date | null {
   const text = String(value ?? "").trim();
   if (!text) return null;

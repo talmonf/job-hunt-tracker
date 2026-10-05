@@ -56,8 +56,8 @@ export function ProfileReview({ proposal, draftId, lang }: { proposal: Proposal;
           <input type="hidden" name={`emp_${index}_bulletCount`} value={row.bullets.length + 1} />
           <label><span className={labelClass}>{t(lang, "title")}</span><input className={fieldClass} name={`emp_${index}_title`} defaultValue={row.title} /></label>
           <label><span className={labelClass}>{t(lang, "company")}</span><input className={fieldClass} name={`emp_${index}_company`} defaultValue={row.company} /></label>
-          <label><span className={labelClass}>{t(lang, "start")}</span><input className={fieldClass} name={`emp_${index}_start`} defaultValue={row.startDate} placeholder="YYYY-MM-DD" /></label>
-          <label><span className={labelClass}>{t(lang, "end")}</span><input className={fieldClass} name={`emp_${index}_end`} defaultValue={row.endDate} placeholder="YYYY-MM-DD" /></label>
+          <label><span className={labelClass}>{t(lang, "start")}</span><input className={fieldClass} name={`emp_${index}_start`} defaultValue={row.startDate} placeholder="MM/YYYY" /></label>
+          <label><span className={labelClass}>{t(lang, "end")}</span><input className={fieldClass} name={`emp_${index}_end`} defaultValue={row.endDate} placeholder="MM/YYYY" /></label>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" name={`emp_${index}_current`} value="1" defaultChecked={row.isCurrent} /> {t(lang, "currentRole")}</label>
           {row.bullets.map((bullet, bulletIndex) => (
             <BulletFields key={bullet.key} lang={lang} prefix={`emp_${index}_b_${bulletIndex}`} bulletKey={bullet.key} textEn={bullet.textEn} textHe={bullet.textHe} />

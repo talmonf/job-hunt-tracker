@@ -43,7 +43,14 @@ export default async function SettingsPage({
   const searchMinutes = goals?.searchMinutesOverride ?? ((goals?.applicationsPerDay ?? 0) + networkingDaily) * 30;
   return (
     <PageFrame lang={lang} title={t(lang, "settings")} description={t(lang, "settingsIntro")} search={search}>
-      <SettingsSection title={t(lang, "importExport")}>
+      <SettingsSection defaultOpen title={t(lang, "guideTitle")}>
+        <p className="mb-2 text-sm text-slate-300">{t(lang, "guideSettingsHint")}</p>
+        <a className="text-sm text-sky-300" href="/guide">
+          {t(lang, "guideSettingsLink")}
+        </a>
+      </SettingsSection>
+
+      <SettingsSection id="import" className="scroll-mt-20" defaultOpen={section === "import"} title={t(lang, "importExport")}>
         <form action={importMentme} encType="multipart/form-data" className="flex flex-wrap items-end gap-3">
           <label>
             <span className={labelClass}>{t(lang, "importFile")}</span>

@@ -91,10 +91,18 @@ function text(value: unknown): string {
 
 function dateText(value: unknown): string {
   const raw = text(value);
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-  if (/^\d{4}-\d{2}$/.test(raw)) return `${raw}-01`;
-  if (/^\d{4}$/.test(raw)) return `${raw}-01-01`;
-  return "";
+  const monthYear = /^(\d{1,2})\/(\d{4})$/.exec(raw);
+  if (monthYear) {
+    const month = Number(monthYear[1]);
+    if (month < 1 || month > 12) return "";
+    return `${String(month).padStart(2, "0")}/${monthYear[2]}`;
+  }
+  if (/^\d{4}$/.test(raw)) return raw;
+  const iso = /^(\d{4})-(\d{2})(?:-\d{2})?$/.exec(raw);
+  if (!iso) return "";
+  const month = Number(iso[2]);
+  if (month < 1 || month > 12) return "";
+  return `${iso[2]}/${iso[1]}`;
 }
 
 function flag(value: unknown): boolean {

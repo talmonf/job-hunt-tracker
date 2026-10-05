@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { firstParam, preserveQuery } from "@/lib/http";
-import { dateInputValue, formatDate } from "@/lib/dates";
+import { dateInputValue, formatMonthYear } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
 import { assignmentTags, type TagRef } from "@/lib/tags";
@@ -84,7 +84,7 @@ export default async function ProfilePage({
         {employments.map((row) => (
           <article key={row.id} className="rounded-md border border-slate-700 p-3 text-sm">
             <div className="font-medium">{dash(row.title, hide)} · {dash(row.company, hide)}</div>
-            <div className="text-slate-400">{row.startDate ? formatDate(row.startDate, user.timezone) : "—"} – {row.isCurrent ? t(lang, "currentRole") : row.endDate ? formatDate(row.endDate, user.timezone) : "—"}</div>
+            <div className="text-slate-400">{row.startDate ? formatMonthYear(row.startDate, user.timezone) : "—"} – {row.isCurrent ? t(lang, "currentRole") : row.endDate ? formatMonthYear(row.endDate, user.timezone) : "—"}</div>
             <BulletList
               hide={hide}
               lines={
@@ -107,6 +107,7 @@ export default async function ProfilePage({
           <article key={row.id} className="rounded-md border border-slate-700 p-3 text-sm">
             <div className="font-medium">{dash(row.school, hide)}</div>
             <div>{dash([row.degree, row.field].filter(Boolean).join(" · "), hide)}</div>
+            <div className="text-slate-400">{row.startDate ? formatMonthYear(row.startDate, user.timezone) : "—"} – {row.endDate ? formatMonthYear(row.endDate, user.timezone) : "—"}</div>
             <RowActions editHref={`/profile${preserveQuery(search, { modal: "education", id: row.id }, ["modal", "id"])}`} deleteAction={deleteEducation} id={row.id} langEdit={t(lang, "edit")} langDelete={t(lang, "delete")} />
           </article>
         ))}
@@ -123,7 +124,7 @@ export default async function ProfilePage({
         {certificates.map((row) => (
           <article key={row.id} className="rounded-md border border-slate-700 p-3 text-sm">
             <div className="font-medium">{dash(row.name, hide)}</div>
-            <div>{dash(row.issuer, hide)} {row.issuedOn ? `· ${formatDate(row.issuedOn, user.timezone)}` : ""}</div>
+            <div>{dash(row.issuer, hide)} {row.issuedOn ? `· ${formatMonthYear(row.issuedOn, user.timezone)}` : ""}</div>
             <RowActions editHref={`/profile${preserveQuery(search, { modal: "certificate", id: row.id }, ["modal", "id"])}`} deleteAction={deleteCertificate} id={row.id} langEdit={t(lang, "edit")} langDelete={t(lang, "delete")} />
           </article>
         ))}
@@ -157,7 +158,7 @@ export default async function ProfilePage({
         </section>
       ) : null}
 
-      <h2 className="mb-2 mt-8 text-lg">{t(lang, "sourceFile")}</h2>
+      <h2 id="source" className="mb-2 mt-8 scroll-mt-20 text-lg">{t(lang, "sourceFile")}</h2>
       <p className="mb-2 text-sm text-slate-400">{t(lang, "sourceHint")}</p>
       <form action={prepareProfileImport} className="mb-3 grid gap-3">
         <div className="flex flex-wrap gap-3">

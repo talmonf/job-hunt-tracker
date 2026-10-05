@@ -14,7 +14,7 @@ certificates: [{key,name,issuer,issuedOn,url}],
 labels: [{key,kind,name}] where kind is "skill" or "theme",
 flavors: [{key,name,employmentKeys,bulletKeys,labelKeys}],
 conflicts: [{field,values}].
-Dates are YYYY-MM-DD or empty. isCurrent is boolean.
+Dates are MM/YYYY, or YYYY when the source has no month. Leave the day out. Empty when unknown. isCurrent is boolean.
 A flavor is a named emphasis on one history, listing which roles, bullets, and skill labels to feature. It is not a second biography.
 When there is one source, leave flavors empty unless the document itself separates two emphases.
 When there are several sources, build one canonical history and propose flavors from the differences.

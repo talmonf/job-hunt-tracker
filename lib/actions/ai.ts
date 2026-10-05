@@ -5,7 +5,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import { requireAdmin, requireUser } from "../session";
 import { encryptSecret } from "../crypto";
-import { parseDateOnly, requiredText } from "../forms";
+import { parseCareerDate, requiredText } from "../forms";
 import { readStored } from "../files";
 import { buildProposal } from "../ai/draft";
 import { extractPdfText } from "../ai/pdf-text";
@@ -221,8 +221,8 @@ export async function acceptProfileImport(formData: FormData) {
           userId: user.id,
           title: row.title || row.company,
           company: row.company || row.title,
-          startDate: parseDateOnly(row.startDate, user.timezone),
-          endDate: row.isCurrent ? null : parseDateOnly(row.endDate, user.timezone),
+          startDate: parseCareerDate(row.startDate, user.timezone),
+          endDate: row.isCurrent ? null : parseCareerDate(row.endDate, user.timezone),
           isCurrent: row.isCurrent,
           descriptionEn: row.bullets.map((bullet) => bullet.textEn).filter(Boolean).join("\n"),
           descriptionHe: row.bullets.map((bullet) => bullet.textHe).filter(Boolean).join("\n"),
@@ -251,8 +251,8 @@ export async function acceptProfileImport(formData: FormData) {
           school: row.school,
           degree: row.degree,
           field: row.field,
-          startDate: parseDateOnly(row.startDate, user.timezone),
-          endDate: parseDateOnly(row.endDate, user.timezone),
+          startDate: parseCareerDate(row.startDate, user.timezone),
+          endDate: parseCareerDate(row.endDate, user.timezone),
         },
       });
     }
@@ -262,8 +262,8 @@ export async function acceptProfileImport(formData: FormData) {
           userId: user.id,
           organization: row.organization,
           role: row.role,
-          startDate: parseDateOnly(row.startDate, user.timezone),
-          endDate: parseDateOnly(row.endDate, user.timezone),
+          startDate: parseCareerDate(row.startDate, user.timezone),
+          endDate: parseCareerDate(row.endDate, user.timezone),
           descriptionEn: row.textEn,
           descriptionHe: row.textHe,
         },
@@ -275,7 +275,7 @@ export async function acceptProfileImport(formData: FormData) {
           userId: user.id,
           name: row.name,
           issuer: row.issuer,
-          issuedOn: parseDateOnly(row.issuedOn, user.timezone),
+          issuedOn: parseCareerDate(row.issuedOn, user.timezone),
           url: row.url,
         },
       });

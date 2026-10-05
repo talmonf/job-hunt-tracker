@@ -117,6 +117,14 @@ export async function startCalendarLink() {
   redirect(url.toString());
 }
 
+export async function dismissGuide() {
+  const user = await requireUser();
+  if (!user.guideSeenAt) {
+    await prisma.user.update({ where: { id: user.id }, data: { guideSeenAt: new Date() } });
+  }
+  redirect("/dashboard");
+}
+
 export async function importMentme(formData: FormData) {
   const user = await requireUser();
   const file = formData.get("file");
