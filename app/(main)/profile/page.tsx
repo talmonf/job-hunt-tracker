@@ -71,6 +71,14 @@ export default async function ProfilePage({
     certificates.length === 0;
   return (
     <PageFrame lang={lang} title={t(lang, "profile")} description={t(lang, "profileIntro")} search={search}>
+      {draftRow && (!firstParam(search.draft) || firstParam(search.draft) === draftRow.id) ? (
+        <p className="mb-4 rounded-md border border-sky-800 px-3 py-2 text-sm text-slate-100">
+          {t(lang, "importReviewReady")}{" "}
+          <a className="text-sky-300 hover:text-sky-200" href="#import-review">
+            {t(lang, "importReview")}
+          </a>
+        </p>
+      ) : null}
       {profileEmpty ? (
         <form action={importLinkedInPdf} className="mb-6 flex flex-wrap items-center gap-2">
           <input name="file" type="file" accept="application/pdf,.pdf" required />

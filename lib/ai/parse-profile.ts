@@ -181,15 +181,56 @@ function roleFromHead(
 ): ProposedEmployment {
   const dated = parseDateLine(dateLine);
   const key = `${kind === "employment" ? "e" : "v"}${index + 1}`;
-  const bullets: ProposedBullet[] = tail
-    .map((line) => line.replace(/^[•·\-–—]\s*/, "").trim())
-    .filter(Boolean)
-    .map((line, bulletIndex) => ({
-      key: `${key}b${bulletIndex + 1}`,
-      textEn: hebrewOnly(line) ? "" : line,
-      textHe: /[\u0590-\u05FF]/.test(line) ? line : "",
-    }));
+  const bullets: ProposedBullet[] = assembleBullets(tail).map((line, bulletIndex) => ({
+    key: `${key}b${bulletIndex + 1}`,
+    textEn: hebrewOnly(line) ? "" : line,
+    textHe: /[\u0590-\u05FF]/.test(line) ? line : "",
+  }));
   return { key, title, company, startDate: dated.startDate, endDate: dated.endDate, isCurrent: dated.isCurrent, bullets };
+}
+
+const BULLET_MARK = /^[•·●▪◦‣⁃\-–—]\s*/;
+const ABBREVIATION = /(?:^|[\s(])(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|Inc|Ltd|Corp|Co|St|vs|etc|e\.g|i\.e|U\.S|U\.K)\.$/;
+
+function assembleBullets(lines: string[]): string[] {
+  const chunks: string[] = [];
+  for (const raw of lines) {
+    const marked = BULLET_MARK.test(raw);
+    const text = raw.replace(BULLET_MARK, "").trim();
+    if (!text) continue;
+    const previous = chunks.at(-1);
+    if (!previous || marked || !continuesSentence(previous, text)) chunks.push(text);
+    else chunks[chunks.length - 1] = joinWrap(previous, text);
+  }
+  return chunks.flatMap(splitSentences);
+}
+
+function continuesSentence(previous: string, next: string): boolean {
+  if (/^[a-z]/.test(next)) return true;
+  if (/[,:;]$/.test(previous) || /[A-Za-z]-$/.test(previous)) return true;
+  if (/[.!?]["']?$/.test(previous)) return false;
+  return previous.length >= 60;
+}
+
+function joinWrap(previous: string, next: string): string {
+  if (/[A-Za-z]-$/.test(previous)) return `${previous.slice(0, -1)}${next}`;
+  return `${previous} ${next}`;
+}
+
+function splitSentences(text: string): string[] {
+  const parts: string[] = [];
+  let start = 0;
+  for (const match of text.matchAll(/[.!?]["']?(?=\s+[\p{Lu}\u0590-\u05FF])/gu)) {
+    const end = (match.index ?? 0) + match[0].length;
+    const chunk = text.slice(start, end);
+    if (ABBREVIATION.test(chunk) || (/(?:^|\s)\p{Lu}\.$/u.test(chunk) && !/[!?]/.test(match[0]))) continue;
+    parts.push(chunk.trim());
+    const gap = text.slice(end).match(/^\s+/)?.[0].length ?? 0;
+    start = end + gap;
+  }
+  const tail = text.slice(start).trim();
+  if (tail) parts.push(tail);
+  return parts;
 }
 
 function studies(lines: string[]) {

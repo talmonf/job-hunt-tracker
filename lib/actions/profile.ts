@@ -184,7 +184,7 @@ export async function importLinkedInPdf(formData: FormData) {
   const draft = await prisma.profileImport.create({
     data: { userId: user.id, payload: proposal as unknown as Prisma.InputJsonValue },
   });
-  redirect(`/profile?draft=${draft.id}`);
+  redirect(`/profile?draft=${draft.id}#import-review`);
 }
 
 export async function uploadProfileFile(formData: FormData) {

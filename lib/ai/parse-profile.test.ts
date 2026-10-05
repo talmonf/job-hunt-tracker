@@ -138,9 +138,16 @@ Bachelor of Science (B.Sc.), Mathematics and Computer Science · (January
         ["ViryaNet", "Senior Product Manager", "09/2006", "01/2010"],
       ],
     );
-    assert.equal(proposal.employments[2].bullets.at(-1)?.textEn, "class discovered");
+    assert.equal(
+      proposal.employments[2].bullets.at(-1)?.textEn,
+      "Built and maintained a SQL-based monitoring system to detect integration and platform issues in production, expanding coverage with each new issue class discovered",
+    );
     assert.equal(proposal.employments[2].bullets.some((bullet) => bullet.textEn === "Accruent"), false);
     assert.equal(proposal.employments[3].bullets[0].textEn, "Owned product requirements and roadmap");
+    assert.equal(
+      proposal.employments[4].bullets[0].textEn,
+      "Managed 2 PMs over 4+ years, establishing PM craft standards across discovery, prioritization and stakeholder management",
+    );
     assert.deepEqual(
       proposal.educations.map((row) => [row.school, row.degree, row.field, row.startDate, row.endDate]),
       [
@@ -152,6 +159,29 @@ Bachelor of Science (B.Sc.), Mathematics and Computer Science · (January
           "01/1992",
           "12/1994",
         ],
+      ],
+    );
+  });
+
+  it("joins wrapped lines into sentences", () => {
+    const proposal = parseProfileText(`Experience
+Self-Employed
+Product Builder
+March 2026 - Present
+I own the full 0→1 cycle solo, from requirements and design through hands-on.
+AI-assisted development to analytics that show what people actually use.
+Home Finance Management: Application to track household finances,
+with reminder emails and Google Calendar integration. A bootstrapping
+RiseUp import (linked bank accounts and credit cards) automatically creates
+the underlying entities (bank accounts, credit cards, insurance policies).
+`);
+    assert.deepEqual(
+      proposal.employments[0].bullets.map((bullet) => bullet.textEn),
+      [
+        "I own the full 0→1 cycle solo, from requirements and design through hands-on.",
+        "AI-assisted development to analytics that show what people actually use.",
+        "Home Finance Management: Application to track household finances, with reminder emails and Google Calendar integration.",
+        "A bootstrapping RiseUp import (linked bank accounts and credit cards) automatically creates the underlying entities (bank accounts, credit cards, insurance policies).",
       ],
     );
   });
