@@ -1,13 +1,26 @@
 import ExcelJS from "exceljs";
-import type { Channel, MeetingStage } from "@prisma/client";
 import { prisma } from "./prisma";
-import { excelSerialToUtcDate, wallClockToUtc, addDays, formatDate } from "./dates";
+import { addLocalDays, formatDate, localDateString } from "./dates";
 import { recomputeJobStatus } from "./job-status";
 import { normalizeContactStatus } from "./contact-status";
 import { contactStatusLabel } from "./i18n";
 import { assignNameByScript } from "./person-name";
 import { ensureCompany } from "./companies";
 import { copyCompanyTags } from "./tag-assign";
+import {
+  applicationOutcome,
+  applicationSummary,
+  channelFromText,
+  followUpNoteFromReminder,
+  hoursToMinutes,
+  interviewNoteBody,
+  interviewStage,
+  isTerminalJobStatus,
+  parseImportedDate,
+  splitContactDetails,
+} from "./excel-map";
+
+export { channelFromText } from "./excel-map";
 
 const SHEET_GOALS = "הגדרת יעדים";
 const SHEET_JOBS = "ניהול הגשת מועמדויות";
@@ -208,9 +221,9 @@ async function importGoals(userId: string, sheet: ExcelJS.Worksheet) {
       data.networkingPerDay = daily;
       data.networkingPerWeek = weekly;
     } else if (task.includes("שעות") && task.includes("חיפוש")) {
-      data.searchMinutesOverride = daily == null ? null : toMinutes(daily);
-    } else if (task.includes("תרגול")) data.interviewPracticeMinutesPerDay = daily == null ? 0 : toMinutes(daily);
-    else if (task.includes("למידה")) data.learningMinutesPerDay = daily == null ? 0 : toMinutes(daily);
+      data.searchMinutesOverride = daily == null ? null : hoursToMinutes(daily, row.getCell(2).numFmt ?? "");
+    } else if (task.includes("תרגול")) data.interviewPracticeMinutesPerDay = daily == null ? 0 : hoursToMinutes(daily, row.getCell(2).numFmt ?? "");
+    else if (task.includes("למידה")) data.learningMinutesPerDay = daily == null ? 0 : hoursToMinutes(daily, row.getCell(2).numFmt ?? "");
   });
   if (Object.keys(data).length === 0) return 0;
   await prisma.userGoals.upsert({
@@ -228,21 +241,24 @@ async function importJobs(userId: string, sheet: ExcelJS.Worksheet, timeZone: st
   let events = 0;
   for (let rowNumber = header.row + 1; rowNumber <= sheet.rowCount; rowNumber += 1) {
     const row = sheet.getRow(rowNumber);
-    const company = textOf(row.getCell(header.columns.company ?? 1).value).trim();
+    const company = importedText(row.getCell(header.columns.company ?? 1).value);
     if (!company) continue;
-    const title = textOf(row.getCell(header.columns.title ?? 2).value).trim();
+    const title = importedText(row.getCell(header.columns.title ?? 2).value);
     const interest = parseDate(row.getCell(header.columns.date ?? 3).value, timeZone) ?? new Date();
-    const how = textOf(row.getCell(header.columns.how ?? 5).value);
+    const how = importedText(row.getCell(header.columns.how ?? 5).value);
     const tailored = yesNo(row.getCell(header.columns.tailored ?? 6).value);
-    const response = textOf(row.getCell(header.columns.response ?? 7).value);
-    const notes = textOf(row.getCell(header.columns.notes ?? 10).value);
-    const description = textOf(row.getCell(header.columns.description ?? 11).value);
-    const reply = textOf(row.getCell(header.columns.reply ?? 12).value);
+    const response = importedText(row.getCell(header.columns.response ?? 7).value);
+    const reminder = columnText(row, header.columns.reminder);
+    const gotUpdate = columnText(row, header.columns.gotUpdate);
+    const notes = importedText(row.getCell(header.columns.notes ?? 10).value);
+    const description = importedText(row.getCell(header.columns.description ?? 11).value);
+    const reply = importedText(row.getCell(header.columns.reply ?? 12).value);
     const importKey = `mentme:job:${company.toLowerCase()}:${title.toLowerCase()}`;
     const linked = await ensureCompany(prisma, userId, company);
     if (!linked) continue;
     const existed = await prisma.job.findUnique({ where: { userId_importKey: { userId, importKey } }, select: { id: true } });
-    const followUpAt = addDays(interest, 7);
+    const followUpAt = addLocalDays(interest, 7, timeZone);
+    const followUpNote = followUpNoteFromReminder(reminder);
     const job = await prisma.job.upsert({
       where: { userId_importKey: { userId, importKey } },
       create: {
@@ -253,6 +269,7 @@ async function importJobs(userId: string, sheet: ExcelJS.Worksheet, timeZone: st
         description,
         interestDate: interest,
         followUpAt,
+        followUpNote,
         importKey,
       },
       update: {
@@ -261,6 +278,8 @@ async function importJobs(userId: string, sheet: ExcelJS.Worksheet, timeZone: st
         title,
         description,
         interestDate: interest,
+        followUpAt,
+        ...(followUpNote ? { followUpNote } : {}),
       },
     });
     if (!existed) await copyCompanyTags("job", job.id, [linked.id]);
@@ -271,13 +290,13 @@ async function importJobs(userId: string, sheet: ExcelJS.Worksheet, timeZone: st
       await prisma.jobUrl.createMany({ data: urls.map((url) => ({ jobId: job.id, url })) });
     }
     const eventKey = `mentme:application:${importKey}`;
-    const rejected = /לא עברתי|reject|דחי/i.test(response);
-    const summary = [how, notes, reply].filter(Boolean).join("\n");
+    const resultingStatus = applicationOutcome(response) ?? "applied";
+    const summary = applicationSummary({ how, response, gotUpdate, notes, reply });
     const existing = await prisma.event.findUnique({ where: { userId_importKey: { userId, importKey: eventKey } } });
     if (existing) {
       await prisma.event.update({
         where: { id: existing.id },
-        data: { summary, tailoredCv: tailored, occurredAt: interest, resultingStatus: rejected ? "rejected" : "applied" },
+        data: { summary, tailoredCv: tailored, occurredAt: interest, resultingStatus },
       });
     } else {
       await prisma.event.create({
@@ -286,7 +305,7 @@ async function importJobs(userId: string, sheet: ExcelJS.Worksheet, timeZone: st
           jobId: job.id,
           type: "application",
           occurredAt: interest,
-          resultingStatus: rejected ? "rejected" : "applied",
+          resultingStatus,
           summary,
           tailoredCv: tailored,
           importKey: eventKey,
@@ -305,34 +324,48 @@ async function importContacts(userId: string, sheet: ExcelJS.Worksheet, timeZone
   let count = 0;
   for (let rowNumber = header.row + 1; rowNumber <= sheet.rowCount; rowNumber += 1) {
     const row = sheet.getRow(rowNumber);
-    const fullName = textOf(row.getCell(header.columns.name ?? 1).value).trim();
+    const fullName = importedText(row.getCell(header.columns.name ?? 1).value);
     if (!fullName) continue;
-    const workplace = textOf(row.getCell(header.columns.workplace ?? 3).value).trim();
+    const workplace = importedText(row.getCell(header.columns.workplace ?? 3).value);
     const importKey = `mentme:contact:${fullName.toLowerCase()}:${workplace.toLowerCase()}`;
     const names = assignNameByScript(fullName);
+    const details = splitContactDetails(importedText(row.getCell(header.columns.details ?? 12).value));
     const data = {
       fullName,
       firstName: names.firstName,
       lastName: names.lastName,
       firstNameHe: names.firstNameHe,
       lastNameHe: names.lastNameHe,
-      role: textOf(row.getCell(header.columns.role ?? 2).value),
+      role: importedText(row.getCell(header.columns.role ?? 2).value),
       workplace,
-      howWeMet: textOf(row.getCell(header.columns.source ?? 4).value),
-      lastChannel: textOf(row.getCell(header.columns.channel ?? 5).value),
-      status: normalizeContactStatus(textOf(row.getCell(header.columns.status ?? 6).value)),
-      summary: textOf(row.getCell(header.columns.summary ?? 7).value),
+      howWeMet: importedText(row.getCell(header.columns.source ?? 4).value),
+      lastChannel: importedText(row.getCell(header.columns.channel ?? 5).value),
+      status: normalizeContactStatus(importedText(row.getCell(header.columns.status ?? 6).value)),
+      summary: importedText(row.getCell(header.columns.summary ?? 7).value),
       contactedAt: parseDate(row.getCell(header.columns.contacted ?? 8).value, timeZone),
       nextActionDate: parseDate(row.getCell(header.columns.nextDate ?? 10).value, timeZone),
-      nextAction: textOf(row.getCell(header.columns.nextAction ?? 11).value),
-      contactDetails: textOf(row.getCell(header.columns.details ?? 12).value),
+      nextAction: importedText(row.getCell(header.columns.nextAction ?? 11).value),
+      contactDetails: details.contactDetails,
+      email: details.email,
+      mobile: details.mobile,
+      linkedinUrl: details.linkedinUrl,
       willingToRecommend: yesNo(row.getCell(header.columns.recommend ?? 13).value) === true,
     };
-    await prisma.contact.upsert({
+    const existed = await prisma.contact.findUnique({ where: { userId_importKey: { userId, importKey } }, select: { id: true } });
+    const contact = await prisma.contact.upsert({
       where: { userId_importKey: { userId, importKey } },
       create: { userId, importKey, ...data },
       update: data,
     });
+    const company = await ensureCompany(prisma, userId, workplace);
+    if (company) {
+      await prisma.contactCompany.upsert({
+        where: { contactId_companyId: { contactId: contact.id, companyId: company.id } },
+        create: { contactId: contact.id, companyId: company.id },
+        update: {},
+      });
+      if (!existed) await copyCompanyTags("contact", contact.id, [company.id]);
+    }
     count += 1;
   }
   return count;
@@ -344,16 +377,22 @@ async function importInterviews(userId: string, sheet: ExcelJS.Worksheet, timeZo
   let events = 0;
   for (let rowNumber = header.row + 1; rowNumber <= sheet.rowCount; rowNumber += 1) {
     const row = sheet.getRow(rowNumber);
-    const company = textOf(row.getCell(header.columns.company ?? 1).value).trim();
+    const company = importedText(row.getCell(header.columns.company ?? 1).value);
     if (!company) continue;
-    const title = textOf(row.getCell(header.columns.interviewTitle ?? 2).value).trim();
+    const title = importedText(row.getCell(header.columns.interviewTitle ?? 2).value);
     const when = parseDate(row.getCell(header.columns.interviewDate ?? 3).value, timeZone) ?? new Date();
-    const kind = textOf(row.getCell(header.columns.interviewType ?? 4).value);
-    const summary = textOf(row.getCell(header.columns.overall ?? 5).value);
-    const positives = textOf(row.getCell(header.columns.positives ?? 6).value);
-    const negatives = textOf(row.getCell(header.columns.negatives ?? 7).value);
-    const lessons = textOf(row.getCell(header.columns.lessons ?? 8).value);
-    const notes = textOf(row.getCell(header.columns.interviewNotes ?? 15).value);
+    const kind = importedText(row.getCell(header.columns.interviewType ?? 4).value);
+    const summary = importedText(row.getCell(header.columns.overall ?? 5).value);
+    const positives = importedText(row.getCell(header.columns.positives ?? 6).value);
+    const negatives = importedText(row.getCell(header.columns.negatives ?? 7).value);
+    const lessons = importedText(row.getCell(header.columns.lessons ?? 8).value);
+    const thankYou = columnText(row, header.columns.thankYou);
+    const reminder = columnText(row, header.columns.reminder);
+    const gotUpdate = columnText(row, header.columns.gotUpdate);
+    const feedback = columnText(row, header.columns.feedback);
+    const askedFeedback = columnText(row, header.columns.askedFeedback);
+    const thanked = columnText(row, header.columns.thanked);
+    const notes = columnText(row, header.columns.interviewNotes);
     const importKey = `mentme:job:${company.toLowerCase()}:${title.toLowerCase()}`;
     const linked = await ensureCompany(prisma, userId, company);
     if (!linked) continue;
@@ -366,7 +405,7 @@ async function importInterviews(userId: string, sheet: ExcelJS.Worksheet, timeZo
         companyName: linked.name,
         title,
         interestDate: when,
-        followUpAt: addDays(when, 7),
+        followUpAt: addLocalDays(when, 7, timeZone),
         importKey,
       },
       update: {
@@ -375,24 +414,50 @@ async function importInterviews(userId: string, sheet: ExcelJS.Worksheet, timeZo
       },
     });
     if (!existed) await copyCompanyTags("job", job.id, [linked.id]);
-    const bodyHe = [
-      summary && `סיכום: ${summary}`,
-      positives && `נקודות חיוביות: ${positives}`,
-      negatives && `פחות טוב: ${negatives}`,
-      lessons && `לקחים: ${lessons}`,
-      notes && `הערות: ${notes}`,
-    ]
-      .filter(Boolean)
-      .join("\n\n");
-    const eventKey = `mentme:interview:${company.toLowerCase()}:${title.toLowerCase()}:${when.toISOString().slice(0, 10)}`;
+    const bodyHe = interviewNoteBody({
+      kind,
+      summary,
+      positives,
+      negatives,
+      lessons,
+      thankYou,
+      reminder,
+      gotUpdate,
+      feedback,
+      askedFeedback,
+      thanked,
+      notes,
+    });
+    const eventKey = `mentme:interview:${company.toLowerCase()}:${title.toLowerCase()}:${localDateString(when, timeZone)}`;
+    const application = await prisma.event.findUnique({
+      where: { userId_importKey: { userId, importKey: `mentme:application:${importKey}` } },
+      select: { resultingStatus: true },
+    });
+    const meetingStatus = isTerminalJobStatus(application?.resultingStatus) ? null : "interviewing";
+    const meeting = {
+      summary,
+      occurredAt: when,
+      startsAt: when,
+      stage: interviewStage(kind),
+      channel: channelFromText(kind),
+      resultingStatus: meetingStatus,
+    };
     const existing = await prisma.event.findUnique({ where: { userId_importKey: { userId, importKey: eventKey } } });
     if (existing?.noteId) {
       await prisma.note.update({ where: { id: existing.noteId }, data: { bodyHe } });
-      await prisma.event.update({
-        where: { id: existing.id },
-        data: { summary, occurredAt: when, startsAt: when, stage: interviewStage(kind) },
+      await prisma.event.update({ where: { id: existing.id }, data: meeting });
+    } else if (existing) {
+      const note = await prisma.note.create({
+        data: {
+          userId,
+          title: `סיכום ראיון: ${company}`,
+          jobId: job.id,
+          type: "interview_debrief",
+          bodyHe,
+        },
       });
-    } else if (!existing) {
+      await prisma.event.update({ where: { id: existing.id }, data: { ...meeting, noteId: note.id } });
+    } else {
       const note = await prisma.note.create({
         data: {
           userId,
@@ -407,11 +472,7 @@ async function importInterviews(userId: string, sheet: ExcelJS.Worksheet, timeZo
           userId,
           jobId: job.id,
           type: "meeting",
-          occurredAt: when,
-          startsAt: when,
-          resultingStatus: "interviewing",
-          stage: interviewStage(kind),
-          summary,
+          ...meeting,
           noteId: note.id,
           importKey: eventKey,
         },
@@ -441,8 +502,10 @@ function findHeader(sheet: ExcelJS.Worksheet, firstHint: string): { row: number;
       if (name.includes("איך הגשתי")) columns.how = col;
       if (name.includes("התאמתי")) columns.tailored = col;
       if (name.includes("התשובה שקיבלתי") && !name.includes("העתק")) columns.response = col;
-      if (name === "הערות") columns.notes = col;
-      if (name.includes("תיאור התפקיד")) columns.description = col;
+      if (name.includes("מייל תזכורת")) columns.reminder = col;
+      if (name.includes("קיבלתי עדכון")) columns.gotUpdate = col;
+      if (name === "הערות" || (name.startsWith("הערות") && !name.includes("פידבק"))) columns.notes = col;
+      if (name.includes("תיאור התפקיד") || (name.includes("תיאור המשרה") && name.includes("העתק"))) columns.description = col;
       if (name.includes("לתשובה שקיבלתי")) columns.reply = col;
       if (name.includes("למי פניתי")) columns.name = col;
       if (name.includes("תפקיד איש הקשר")) columns.role = col;
@@ -463,7 +526,11 @@ function findHeader(sheet: ExcelJS.Worksheet, firstHint: string): { row: number;
       if (name.includes("חיוביות")) columns.positives = col;
       if (name.includes("פחות הלכו")) columns.negatives = col;
       if (name.includes("לקחים")) columns.lessons = col;
-      if (name.includes("הוספת פידבק")) columns.interviewNotes = col;
+      if (name.includes("הודעת תודה")) columns.thankYou = col;
+      if (name.includes("ביקשתי")) columns.askedFeedback = col;
+      if (name.includes("קיבלתי פידבק") && !name.includes("ביקשתי") && !name.includes("הוספת")) columns.feedback = col;
+      if (name.includes("הודיתי")) columns.thanked = col;
+      if (name.includes("הוספת פידבק") || (name.includes("הערות") && name.includes("פידבק"))) columns.interviewNotes = col;
     });
     if (Object.keys(columns).length >= 3 && normalize(textOf(row.getCell(1).value)).includes(normalize(firstHint))) {
       found = { row: rowNumber, columns };
@@ -481,35 +548,41 @@ function literalNumber(cell: ExcelJS.Cell): number | null {
   return null;
 }
 
-function toMinutes(value: number): number {
-  if (value > 0 && value < 1) return Math.round(value * 24 * 60);
-  return Math.round(value * 60);
-}
-
 function textOf(value: ExcelJS.CellValue): string {
   if (value == null) return "";
   if (value instanceof Date) return value.toISOString();
   if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
-  if (typeof value === "object" && "richText" in value) return value.richText.map((part) => part.text).join("");
-  if (typeof value === "object" && "text" in value && typeof value.text === "string") return value.text;
+  if (typeof value === "object" && "richText" in value) {
+    const text = value.richText.map((part) => part.text).join("");
+    const hyperlink = "hyperlink" in value && typeof value.hyperlink === "string" ? value.hyperlink : "";
+    if (hyperlink && !text.includes(hyperlink)) return `${text} ${hyperlink}`.trim();
+    return text;
+  }
+  if (typeof value === "object" && "text" in value && typeof value.text === "string") {
+    const hyperlink = "hyperlink" in value && typeof value.hyperlink === "string" ? value.hyperlink : "";
+    if (!hyperlink || hyperlink === value.text) return value.text;
+    return `${value.text} ${hyperlink}`.trim();
+  }
+  if (typeof value === "object" && "hyperlink" in value && typeof value.hyperlink === "string") return value.hyperlink;
   if (typeof value === "object" && "result" in value) return textOf(value.result as ExcelJS.CellValue);
   if (typeof value === "object" && "formula" in value) return "";
   return "";
 }
 
+function importedText(value: ExcelJS.CellValue): string {
+  const text = textOf(value).trim();
+  if (text === "true") return "כן";
+  if (text === "false") return "לא";
+  return text;
+}
+
+function columnText(row: ExcelJS.Row, column: number | undefined): string {
+  if (!column) return "";
+  return importedText(row.getCell(column).value);
+}
+
 function parseDate(value: ExcelJS.CellValue, timeZone: string): Date | null {
-  const raw = value && typeof value === "object" && "result" in value ? (value.result as ExcelJS.CellValue) : value;
-  if (raw instanceof Date) return raw;
-  if (typeof raw === "number" && raw > 20000) {
-    const utc = excelSerialToUtcDate(raw);
-    const iso = utc.toISOString().slice(0, 10);
-    return wallClockToUtc(`${iso}T00:00`, timeZone);
-  }
-  if (typeof raw === "string") {
-    const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(raw.trim());
-    if (match) return wallClockToUtc(`${match[3]}-${match[2].padStart(2, "0")}-${match[1].padStart(2, "0")}T00:00`, timeZone);
-  }
-  return null;
+  return parseImportedDate(value, timeZone);
 }
 
 function yesNo(value: ExcelJS.CellValue): boolean | null {
@@ -525,23 +598,5 @@ function normalize(value: string): string {
 
 function uniqueUrls(text: string): string[] {
   const found = text.match(/https?:\/\/[^\s)]+/g) ?? [];
-  return [...new Set(found)];
-}
-
-function interviewStage(kind: string): MeetingStage {
-  const text = kind.toLowerCase();
-  if (text.includes("hr") || text.includes("אישיות")) return "hr";
-  if (text.includes("טכני") || text.includes("technical")) return "technical";
-  if (text.includes("סופי") || text.includes("final")) return "final";
-  if (text.includes("מנהל") || text.includes("manager")) return "manager";
-  return "other";
-}
-
-export function channelFromText(value: string): Channel | null {
-  const text = value.toLowerCase();
-  if (text.includes("whatsapp") || text.includes("וואטסאפ")) return "whatsapp";
-  if (text.includes("inmail")) return "linkedin_inmail";
-  if (text.includes("mail") || text.includes("מייל") || text.includes("אימייל")) return "email";
-  if (text.includes("phone") || text.includes("טלפון")) return "phone";
-  return null;
+  return [...new Set(found.map((url) => url.replace(/[.,;:]+$/, "")))];
 }

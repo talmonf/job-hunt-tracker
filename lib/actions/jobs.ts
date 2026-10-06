@@ -99,6 +99,30 @@ export async function updateJob(formData: FormData) {
   redirect(`/jobs/${job.id}?updated=1`);
 }
 
+export async function completeFollowUp(formData: FormData) {
+  const user = await requireUser();
+  const job = await ownedJob(user.id, requiredText(formData.get("jobId")));
+  if (!job) redirect(withReturnTo(formData, "/dashboard", ""));
+  await prisma.job.update({
+    where: { id: job.id },
+    data: { followUpAt: null, followUpReminderSentAt: null },
+  });
+  redirect(withReturnTo(formData, "/dashboard", "updated=1"));
+}
+
+export async function rescheduleFollowUp(formData: FormData) {
+  const user = await requireUser();
+  const job = await ownedJob(user.id, requiredText(formData.get("jobId")));
+  if (!job) redirect(withReturnTo(formData, "/dashboard", ""));
+  const followUpAt = parseDateTime(formData.get("followUpAt"), user.timezone);
+  if (!followUpAt) redirect(withReturnTo(formData, "/dashboard", "error=date"));
+  await prisma.job.update({
+    where: { id: job.id },
+    data: { followUpAt, followUpReminderSentAt: null },
+  });
+  redirect(withReturnTo(formData, "/dashboard", "updated=1"));
+}
+
 export async function deleteJob(formData: FormData) {
   const user = await requireUser();
   const job = await ownedJob(user.id, requiredText(formData.get("jobId")));
