@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs";
+import type { JobStatus } from "@prisma/client";
 import { prisma } from "./prisma";
 import { addLocalDays, formatDate, localDateString } from "./dates";
 import { recomputeJobStatus } from "./job-status";
@@ -433,7 +434,7 @@ async function importInterviews(userId: string, sheet: ExcelJS.Worksheet, timeZo
       where: { userId_importKey: { userId, importKey: `mentme:application:${importKey}` } },
       select: { resultingStatus: true },
     });
-    const meetingStatus = isTerminalJobStatus(application?.resultingStatus) ? null : "interviewing";
+    const meetingStatus: JobStatus | null = isTerminalJobStatus(application?.resultingStatus) ? null : "interviewing";
     const meeting = {
       summary,
       occurredAt: when,
