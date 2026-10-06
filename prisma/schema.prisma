@@ -77,6 +77,7 @@ enum NoteType {
   reminder
   idea
   general
+  work_experience
 }
 
 enum EmploymentType {
@@ -201,6 +202,7 @@ model Employment {
   tags          EmploymentTag[]
   bullets       EmploymentBullet[]
   flavors       FlavorEmployment[]
+  notes         Note[]
 }
 
 model Education {
@@ -393,6 +395,8 @@ model Note {
   contact        Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
   companyId      String?
   company        Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  employmentId   String?
+  employment     Employment? @relation(fields: [employmentId], references: [id], onDelete: SetNull)
   type           NoteType @default(interview_prep)
   additionalInfo String   @default("")
   bodyEn         String   @default("")
@@ -407,6 +411,7 @@ model Note {
   @@index([jobId])
   @@index([contactId])
   @@index([companyId])
+  @@index([employmentId])
 }
 
 model EntityLink {

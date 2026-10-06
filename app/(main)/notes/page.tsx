@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { allParams, firstParam, preserveQuery } from "@/lib/http";
 import { cloneNote, createNote, deleteNote } from "@/lib/actions/network";
-import { NOTE_TYPES, jobNoteLabel } from "@/lib/notes";
+import { NOTE_TYPES, employmentNoteLabel, jobNoteLabel } from "@/lib/notes";
 import { noteTypeLabel, t } from "@/lib/i18n";
 import { dash, maskText } from "@/lib/mask";
 import { assignmentTags } from "@/lib/tags";
@@ -29,11 +29,12 @@ export default async function NotesPage({
   const types = allParams(search.type).filter((type): type is NoteType =>
     (NOTE_TYPES as readonly string[]).includes(type),
   );
-  const [catalog, jobs, contacts, companies] = await Promise.all([
+  const [catalog, jobs, contacts, companies, employments] = await Promise.all([
     prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
     prisma.job.findMany({ where: { userId: user.id }, orderBy: { companyName: "asc" } }),
     prisma.contact.findMany({ where: { userId: user.id }, orderBy: { fullName: "asc" } }),
     prisma.company.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
+    prisma.employment.findMany({ where: { userId: user.id }, orderBy: { startDate: "desc" } }),
   ]);
   const tagIds = allParams(search.tag).filter((id) => catalog.some((tag) => tag.id === id));
   const requestedJob = firstParam(search.job);
@@ -56,6 +57,8 @@ export default async function NotesPage({
         { contact: { firstName: { contains: q, mode: "insensitive" } } },
         { contact: { lastName: { contains: q, mode: "insensitive" } } },
         { company: { name: { contains: q, mode: "insensitive" } } },
+        { employment: { title: { contains: q, mode: "insensitive" } } },
+        { employment: { company: { contains: q, mode: "insensitive" } } },
       ],
     });
   }
@@ -70,7 +73,7 @@ export default async function NotesPage({
   };
   const notes = await prisma.note.findMany({
     where,
-    include: { job: true, contact: true, company: true, tags: { include: { tag: true } } },
+    include: { job: true, contact: true, company: true, employment: true, tags: { include: { tag: true } } },
     orderBy: { createdAt: "desc" },
   });
   const localContacts = contacts.map((contact) => ({
@@ -85,6 +88,10 @@ export default async function NotesPage({
   const jobOptions = jobs.map((job) => ({ id: job.id, label: dash(jobNoteLabel(job), hide) }));
   const contactOptions = contacts.map((contact) => ({ id: contact.id, label: dash(contact.fullName, hide) }));
   const companyOptions = companies.map((company) => ({ id: company.id, label: dash(company.name, hide) }));
+  const employmentOptions = employments.map((row) => ({ id: row.id, label: dash(employmentNoteLabel(row), hide) }));
+  const requestedSubject = firstParam(search.subject);
+  const requestedEmploymentId = requestedSubject.startsWith("employment:") ? requestedSubject.slice("employment:".length) : "";
+  const initialSubject = employments.some((row) => row.id === requestedEmploymentId) ? `employment:${requestedEmploymentId}` : "";
   return (
     <PageFrame lang={lang} title={t(lang, "notes")} description={t(lang, "notesIntro")} search={search}>
       <div className="mb-3 flex justify-end">
@@ -208,6 +215,10 @@ export default async function NotesPage({
                       <Link className="text-sky-300" href={`/companies/${note.company.id}`}>
                         {dash(note.company.name, hide)}
                       </Link>
+                    ) : note.employment ? (
+                      <Link className="text-sky-300" href={`/profile#employment-${note.employment.id}`}>
+                        {dash(employmentNoteLabel(note.employment), hide)}
+                      </Link>
                     ) : (
                       t(lang, "generalNote")
                     )}
@@ -245,7 +256,19 @@ export default async function NotesPage({
       )}
       {firstParam(search.modal) === "new" ? (
         <Modal title={t(lang, "addNote")} closeHref={`/notes${preserveQuery(search, {}, ["modal"])}`} closeLabel={t(lang, "close")}>
-          <NoteFields lang={lang} action={createNote} jobs={jobOptions} contacts={contactOptions} companies={companyOptions} localContacts={localContacts} googleConnected={googleConnected} tags={catalog} hide={hide} />
+          <NoteFields
+            lang={lang}
+            action={createNote}
+            jobs={jobOptions}
+            contacts={contactOptions}
+            companies={companyOptions}
+            employments={employmentOptions}
+            initialSubject={initialSubject}
+            localContacts={localContacts}
+            googleConnected={googleConnected}
+            tags={catalog}
+            hide={hide}
+          />
         </Modal>
       ) : null}
     </PageFrame>

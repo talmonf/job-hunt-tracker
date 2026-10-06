@@ -14,6 +14,7 @@ import { DEFAULT_MODEL, isAiProvider, lastFour } from "../ai/providers";
 import { isOutputLanguage, readProposalForm } from "../ai/proposal";
 import { AiRunError, chargeAndComplete } from "../ai/run";
 import { ensureCompany } from "../companies";
+import { employmentNoteLabel, experienceNoteBodies } from "../notes";
 
 export async function saveProviderKey(formData: FormData) {
   const user = await requireUser();
@@ -238,6 +239,22 @@ export async function acceptProfileImport(formData: FormData) {
         include: { bullets: { orderBy: { position: "asc" } } },
       });
       employmentIds.set(row.key, created.id);
+      if (row.createNote) {
+        const title = employmentNoteLabel(row);
+        if (title) {
+          const bodies = experienceNoteBodies(row.bullets);
+          await tx.note.create({
+            data: {
+              userId: user.id,
+              title,
+              type: "work_experience",
+              employmentId: created.id,
+              bodyEn: bodies.bodyEn,
+              bodyHe: bodies.bodyHe,
+            },
+          });
+        }
+      }
       await ensureCompany(tx, user.id, row.company);
       row.bullets.forEach((bullet, position) => {
         const saved = created.bullets[position];

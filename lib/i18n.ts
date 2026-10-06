@@ -112,7 +112,7 @@ const dict = {
     emptyEvents: "No events yet. Add one using the button above.",
     jobsIntro: "Roles and companies you are tracking.",
     eventsIntro: "What happened across jobs and contacts.",
-    notesIntro: "Notes for a job, a contact, a company, or just for yourself. Edit, delete, or clone when you need a copy.",
+    notesIntro: "Notes for a job, a contact, a company, a profile role, or just for yourself. Edit, delete, or clone when you need a copy.",
     contactsIntro: "People in my network, not just for searching for jobs!",
     settingsIntro: "AI keys and credits, goals, tags, calendar, Google Contacts, email, and the MentMe workbook.",
     profileIntro: "The experience a tailored CV will use later.",
@@ -241,6 +241,7 @@ const dict = {
     field: "Field",
     organization: "Organization",
     role: "Role",
+    profileRole: "Profile role",
     issuer: "Issuer",
     issuedOn: "Issued",
     start: "Start",
@@ -441,6 +442,7 @@ const dict = {
     importReview: "Review import",
     importReviewReady: "A LinkedIn import is ready to review.",
     importReviewHint: "Edit this, then accept. Accepting replaces the profile sections above. The PDF files stay.",
+    createExperienceNote: "Create a work experience note from this role.",
     usedModel: "A model filled gaps in the file.",
     conflicts: "Sources disagree",
     labels: "Labels",
@@ -480,7 +482,7 @@ const dict = {
     guideWorkTitle: "How to work",
     guideJobs: "On Jobs, add a role even before a posting exists. Paste a posting and use Fill from posting, then review the company, title, location, and tags before saving.",
     guideStatus: "A role's status moves when you log what happened: interest, outreach, an application, or a meeting. Set a follow-up so a quiet role stays visible.",
-    guidePeople: "Companies holds the organizations you are tracking. Networking holds the people, including contacts you link from Google under Settings. A note can belong to a job, a contact, a company, or just to you.",
+    guidePeople: "Companies holds the organizations you are tracking. Networking holds the people, including contacts you link from Google under Settings. A note can belong to a job, a contact, a company, a profile role, or just to you.",
     guideDashboard: "The dashboard compares this week with the goals under Settings, then My goals. Search time follows the MentMe formula unless you set an override.",
     guideOptional: "You can also link Google Calendar, turn on the upcoming-dates email, switch language, and hide personal info from the header.",
   },
@@ -593,7 +595,7 @@ const dict = {
     emptyEvents: "אין עדיין אירועים. הוסיפו אחד באמצעות הכפתור למעלה.",
     jobsIntro: "תפקידים וחברות במעקב.",
     eventsIntro: "מה שקרה במשרות ובאנשי הקשר.",
-    notesIntro: "הערות למשרה, לאיש קשר, לחברה, או לעצמכם. אפשר לערוך, למחוק או לשכפל.",
+    notesIntro: "הערות למשרה, לאיש קשר, לחברה, לתפקיד בפרופיל, או לעצמכם. אפשר לערוך, למחוק או לשכפל.",
     contactsIntro: "אנשים ברשת שלי, לא רק לחיפוש עבודה!",
     settingsIntro: "מפתחות וקרדיטים לבינה מלאכותית, יעדים, תגיות, יומן, אנשי קשר ב־Google, דוא״ל, וקובץ MentMe.",
     profileIntro: "הניסיון שישמש אחר כך להתאמת קורות חיים.",
@@ -722,6 +724,7 @@ const dict = {
     field: "תחום",
     organization: "ארגון",
     role: "תפקיד",
+    profileRole: "תפקיד בפרופיל",
     issuer: "מנפיק",
     issuedOn: "תאריך הנפקה",
     start: "התחלה",
@@ -922,6 +925,7 @@ const dict = {
     importReview: "בדיקת הייבוא",
     importReviewReady: "ייבוא מלינקדאין מוכן לבדיקה.",
     importReviewHint: "אפשר לערוך ואז לאשר. האישור מחליף את סעיפי הפרופיל למעלה. קובצי ה־PDF נשארים.",
+    createExperienceNote: "ליצור הערת ניסיון תעסוקתי מתפקיד זה.",
     usedModel: "מודל השלים פערים בקובץ.",
     conflicts: "המקורות לא מסכימים",
     labels: "תוויות",
@@ -961,7 +965,7 @@ const dict = {
     guideWorkTitle: "איך עובדים",
     guideJobs: "במשרות מוסיפים תפקיד גם לפני שיש מודעה. מדביקים מודעה ומשתמשים במילוי מהמודעה, ואז בודקים חברה, תפקיד, מיקום ותגיות לפני השמירה.",
     guideStatus: "הסטטוס של תפקיד זז כשרושמים מה קרה: עניין, פנייה, הגשה או פגישה. קובעים המשך טיפול כדי שתפקיד שקט יישאר גלוי.",
-    guidePeople: "חברות הן הארגונים שאתם עוקבים אחריהם. נטוורקינג הם האנשים, כולל אנשי קשר שמקשרים מ־Google בהגדרות. הערה יכולה להיות של משרה, של איש קשר, של חברה, או רק שלכם.",
+    guidePeople: "חברות הן הארגונים שאתם עוקבים אחריהם. נטוורקינג הם האנשים, כולל אנשי קשר שמקשרים מ־Google בהגדרות. הערה יכולה להיות של משרה, של איש קשר, של חברה, של תפקיד בפרופיל, או רק שלכם.",
     guideDashboard: "לוח הבקרה משווה את השבוע ליעדים תחת הגדרות, ואז היעדים שלי. זמן החיפוש לפי נוסחת MentMe, אלא אם מגדירים ערך חלופי.",
     guideOptional: "אפשר גם לקשר את יומן Google, להפעיל את דוא״ל התאריכים הקרובים, להחליף שפה, ולהסתיר מידע אישי מהכותרת.",
   },
@@ -1189,6 +1193,7 @@ const noteTypeEn: Record<string, string> = {
   reminder: "Reminder",
   idea: "Idea",
   general: "General",
+  work_experience: "Work experience",
 };
 
 const noteTypeHe: Record<string, string> = {
@@ -1207,6 +1212,7 @@ const noteTypeHe: Record<string, string> = {
   reminder: "תזכורת",
   idea: "רעיון",
   general: "כללי",
+  work_experience: "ניסיון תעסוקתי",
 };
 
 export function noteTypeLabel(lang: Lang, type: string): string {

@@ -10,6 +10,7 @@ export type ProposedEmployment = {
   endDate: string;
   isCurrent: boolean;
   bullets: ProposedBullet[];
+  createNote: boolean;
 };
 
 export type ProposedEducation = {
@@ -126,6 +127,7 @@ export function normalizeProposal(raw: unknown, usedModel = false): Proposal {
       startDate: dateText(item.startDate),
       endDate: dateText(item.endDate),
       isCurrent: flag(item.isCurrent),
+      createNote: item.createNote === undefined ? true : flag(item.createNote),
       bullets: list(item.bullets)
         .map((bullet, bulletIndex) => {
           const point = record(bullet);
@@ -271,6 +273,7 @@ export function readProposalForm(formData: FormData): Proposal {
       startDate: dateText(formData.get(`emp_${index}_start`)),
       endDate: dateText(formData.get(`emp_${index}_end`)),
       isCurrent: formData.get(`emp_${index}_current`) === "1",
+      createNote: formData.get(`emp_${index}_note`) === "1",
       bullets,
     });
   }

@@ -38,12 +38,12 @@ export default async function ProfilePage({
   const hide = await hidePersonalInfo();
   const search = await searchParams;
   const lang = user.uiLanguage;
-  const [profile, employments, educations, volunteers, certificates, files, catalog, labels, flavors, draftRow] = await Promise.all([
+  const [profile, employments, educations, volunteers, certificates, files, catalog, labels, flavors, draftRow, experienceNotes] = await Promise.all([
     prisma.profile.findUnique({ where: { userId: user.id } }),
     prisma.employment.findMany({
       where: { userId: user.id },
       orderBy: { startDate: "desc" },
-      include: { tags: { include: { tag: true } }, bullets: { orderBy: { position: "asc" } } },
+      include: { tags: { include: { tag: true } }, bullets: { orderBy: { position: "asc" } }, notes: { orderBy: { createdAt: "desc" }, select: { id: true, title: true } } },
     }),
     prisma.education.findMany({ where: { userId: user.id }, orderBy: { startDate: "desc" } }),
     prisma.volunteerRole.findMany({ where: { userId: user.id }, orderBy: { startDate: "desc" } }),
@@ -57,6 +57,7 @@ export default async function ProfilePage({
       include: { employments: true, bullets: true, labels: { include: { label: true } } },
     }),
     prisma.profileImport.findFirst({ where: { userId: user.id, status: "pending" }, orderBy: { createdAt: "desc" } }),
+    prisma.note.findMany({ where: { userId: user.id, type: "work_experience" }, select: { title: true } }),
   ]);
   const modal = firstParam(search.modal);
   const editId = firstParam(search.id);
@@ -114,7 +115,7 @@ export default async function ProfilePage({
 
       <Section title={t(lang, "employment")} addHref={`/profile${preserveQuery(search, { modal: "employment" }, ["modal", "id"])}`} addLabel={t(lang, "add")}>
         {employments.map((row) => (
-          <article key={row.id} className="rounded-md border border-slate-700 p-3 text-sm">
+          <article id={`employment-${row.id}`} key={row.id} className="scroll-mt-20 rounded-md border border-slate-700 p-3 text-sm">
             <div className="font-medium">{dash(row.title, hide)} · {dash(row.company, hide)}</div>
             <div className="text-slate-400">{row.startDate ? formatMonthYear(row.startDate, user.timezone) : "—"} – {row.isCurrent ? t(lang, "currentRole") : row.endDate ? formatMonthYear(row.endDate, user.timezone) : "—"}</div>
             <BulletList
@@ -130,6 +131,22 @@ export default async function ProfilePage({
                 <TagChips tags={assignmentTags(row.tags)} hide={hide} />
               </div>
             ) : null}
+            {row.notes.length ? (
+              <ul className="mt-2 space-y-1">
+                {row.notes.map((note) => (
+                  <li key={note.id}>
+                    <a className="text-sky-300" href={`/notes/${note.id}`}>
+                      {dash(note.title, hide)}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <div className="mt-2">
+              <a className="text-sky-300" href={`/notes?modal=new&subject=${encodeURIComponent(`employment:${row.id}`)}`}>
+                {t(lang, "addNote")}
+              </a>
+            </div>
             <RowActions editHref={`/profile${preserveQuery(search, { modal: "employment", id: row.id }, ["modal", "id"])}`} deleteAction={deleteEmployment} id={row.id} langEdit={t(lang, "edit")} langDelete={t(lang, "delete")} />
           </article>
         ))}
@@ -211,7 +228,12 @@ export default async function ProfilePage({
         />
       </section>
       {draftRow && (!firstParam(search.draft) || firstParam(search.draft) === draftRow.id) ? (
-        <ProfileReview proposal={normalizeProposal(draftRow.payload, false)} draftId={draftRow.id} lang={lang} />
+        <ProfileReview
+          proposal={normalizeProposal(draftRow.payload, false)}
+          draftId={draftRow.id}
+          lang={lang}
+          existingNoteTitles={experienceNotes.map((note) => note.title)}
+        />
       ) : null}
 
       {modal === "employment" ? (

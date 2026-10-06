@@ -186,7 +186,7 @@ function roleFromHead(
     textEn: hebrewOnly(line) ? "" : line,
     textHe: /[\u0590-\u05FF]/.test(line) ? line : "",
   }));
-  return { key, title, company, startDate: dated.startDate, endDate: dated.endDate, isCurrent: dated.isCurrent, bullets };
+  return { key, title, company, startDate: dated.startDate, endDate: dated.endDate, isCurrent: dated.isCurrent, createNote: true, bullets };
 }
 
 const BULLET_MARK = /^[•·●▪◦‣⁃\-–—]\s*/;

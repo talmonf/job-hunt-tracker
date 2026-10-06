@@ -50,6 +50,7 @@ export async function cloneNote(formData: FormData) {
       jobId: note.jobId,
       contactId: note.contactId,
       companyId: note.companyId,
+      employmentId: note.employmentId,
       type: note.type,
       additionalInfo: note.additionalInfo,
       bodyEn: note.bodyEn,
@@ -94,6 +95,7 @@ async function noteFields(formData: FormData, userId: string) {
   let jobId: string | null = null;
   let contactId: string | null = null;
   let companyId: string | null = null;
+  let employmentId: string | null = null;
   if (subject.kind === "job") {
     const job = await prisma.job.findFirst({ where: { id: subject.id, userId } });
     if (!job) return null;
@@ -106,6 +108,10 @@ async function noteFields(formData: FormData, userId: string) {
     const company = await prisma.company.findFirst({ where: { id: subject.id, userId } });
     if (!company) return null;
     companyId = company.id;
+  } else if (subject.kind === "employment") {
+    const employment = await prisma.employment.findFirst({ where: { id: subject.id, userId } });
+    if (!employment) return null;
+    employmentId = employment.id;
   }
   return {
     title,
@@ -113,6 +119,7 @@ async function noteFields(formData: FormData, userId: string) {
     jobId,
     contactId,
     companyId,
+    employmentId,
     additionalInfo: String(formData.get("additionalInfo") ?? ""),
     bodyEn: String(formData.get("bodyEn") ?? ""),
     bodyHe: String(formData.get("bodyHe") ?? ""),
@@ -132,6 +139,10 @@ function parseSubject(raw: string): { kind: ReturnType<typeof subjectKind>; id: 
   if (raw.startsWith("company:")) {
     const id = raw.slice("company:".length);
     return id ? { kind: "company", id } : null;
+  }
+  if (raw.startsWith("employment:")) {
+    const id = raw.slice("employment:".length);
+    return id ? { kind: "employment", id } : null;
   }
   return null;
 }

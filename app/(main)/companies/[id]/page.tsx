@@ -10,7 +10,7 @@ import { tenureLabel } from "@/lib/tenure";
 import { isHttpUrl } from "@/lib/entity-links";
 import { deleteCompany, updateCompany } from "@/lib/actions/companies";
 import { createNote } from "@/lib/actions/network";
-import { jobNoteLabel } from "@/lib/notes";
+import { employmentNoteLabel, jobNoteLabel } from "@/lib/notes";
 import { PageFrame } from "@/components/chrome";
 import { CompanyForm } from "@/components/company-form";
 import { ConfirmSubmit } from "@/components/widgets";
@@ -34,7 +34,7 @@ export default async function CompanyDetailPage({
   const lang = user.uiLanguage;
   const requested = firstParam(search.tab);
   const tab = TABS.includes(requested as (typeof TABS)[number]) ? (requested as (typeof TABS)[number]) : "jobs";
-  const [company, companyOptions, jobs, contacts, catalog] = await Promise.all([
+  const [company, companyOptions, jobs, contacts, employments, catalog] = await Promise.all([
     prisma.company.findFirst({
       where: { id, userId: user.id },
       include: {
@@ -47,6 +47,7 @@ export default async function CompanyDetailPage({
     prisma.company.findMany({ where: { userId: user.id }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
     prisma.job.findMany({ where: { userId: user.id }, orderBy: { companyName: "asc" } }),
     prisma.contact.findMany({ where: { userId: user.id }, orderBy: { fullName: "asc" } }),
+    prisma.employment.findMany({ where: { userId: user.id }, orderBy: { startDate: "desc" } }),
     prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
   ]);
   if (!company) notFound();
@@ -145,6 +146,7 @@ export default async function CompanyDetailPage({
             jobs={jobs.map((job) => ({ id: job.id, label: dash(jobNoteLabel(job), hide) }))}
             contacts={contacts.map((contact) => ({ id: contact.id, label: dash(contact.fullName, hide) }))}
             companies={companyOptions.map((item) => ({ id: item.id, label: dash(item.name, hide) }))}
+            employments={employments.map((row) => ({ id: row.id, label: dash(employmentNoteLabel(row), hide) }))}
             initialSubject={`company:${company.id}`}
             localContacts={localContacts}
             googleConnected={Boolean(user.contactsRefreshToken)}

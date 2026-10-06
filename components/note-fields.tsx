@@ -17,6 +17,7 @@ export function NoteFields({
   jobs,
   contacts,
   companies = [],
+  employments = [],
   initialSubject: presetSubject = "",
   localContacts = [],
   googleConnected = false,
@@ -26,10 +27,11 @@ export function NoteFields({
 }: {
   lang: Lang;
   action: (formData: FormData) => void;
-  note?: Pick<Note, "id" | "title" | "jobId" | "contactId" | "companyId" | "type" | "additionalInfo" | "bodyEn" | "bodyHe">;
+  note?: Pick<Note, "id" | "title" | "jobId" | "contactId" | "companyId" | "employmentId" | "type" | "additionalInfo" | "bodyEn" | "bodyHe">;
   jobs: { id: string; label: string }[];
   contacts: { id: string; label: string }[];
   companies?: { id: string; label: string }[];
+  employments?: { id: string; label: string }[];
   initialSubject?: string;
   localContacts?: LocalPerson[];
   googleConnected?: boolean;
@@ -55,7 +57,7 @@ export function NoteFields({
     <form action={action} className="grid gap-3">
       {note ? <input type="hidden" name="noteId" value={note.id} /> : null}
       <input type="hidden" name="subject" value={subject} />
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <SearchSelect
           label={t(lang, "job")}
           options={jobs}
@@ -79,6 +81,14 @@ export function NoteFields({
           emptyLabel={t(lang, "none")}
           searchLabel={t(lang, "search")}
           onChange={(id) => onSubject(id ? `company:${id}` : "")}
+        />
+        <SearchSelect
+          label={t(lang, "profileRole")}
+          options={employments}
+          value={subjectId(subject, "employment")}
+          emptyLabel={t(lang, "none")}
+          searchLabel={t(lang, "search")}
+          onChange={(id) => onSubject(id ? `employment:${id}` : "")}
         />
       </div>
       <label>
@@ -128,7 +138,7 @@ export function NoteFields({
   );
 }
 
-function subjectId(subject: string, kind: "job" | "contact" | "company"): string {
+function subjectId(subject: string, kind: "job" | "contact" | "company" | "employment"): string {
   const prefix = `${kind}:`;
   return subject.startsWith(prefix) ? subject.slice(prefix.length) : "";
 }

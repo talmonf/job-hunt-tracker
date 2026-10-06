@@ -1,14 +1,26 @@
 import type { Proposal } from "@/lib/ai/proposal";
 import type { Lang } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
+import { employmentNoteLabel } from "@/lib/notes";
 import { acceptProfileImport, discardProfileImport } from "@/lib/actions/ai";
 import { SubmitButton, fieldClass, labelClass } from "@/components/widgets";
 
 const monthFieldClass =
   "box-border w-[calc(9ch+1rem+2px)] shrink-0 rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-start text-sm text-slate-100 outline-none focus:border-sky-500";
 
-export function ProfileReview({ proposal, draftId, lang }: { proposal: Proposal; draftId: string; lang: Lang }) {
-  const employments = [...proposal.employments, { key: "extra-emp", title: "", company: "", startDate: "", endDate: "", isCurrent: false, bullets: [] }];
+export function ProfileReview({
+  proposal,
+  draftId,
+  lang,
+  existingNoteTitles = [],
+}: {
+  proposal: Proposal;
+  draftId: string;
+  lang: Lang;
+  existingNoteTitles?: string[];
+}) {
+  const taken = new Set(existingNoteTitles.map((title) => title.trim()).filter(Boolean));
+  const employments = [...proposal.employments, { key: "extra-emp", title: "", company: "", startDate: "", endDate: "", isCurrent: false, bullets: [], createNote: false }];
   const educations = [...proposal.educations, { key: "extra-edu", school: "", degree: "", field: "", startDate: "", endDate: "" }];
   const volunteers = [...proposal.volunteers, { key: "extra-vol", organization: "", role: "", startDate: "", endDate: "", textEn: "", textHe: "" }];
   const certificates = [...proposal.certificates, { key: "extra-cert", name: "", issuer: "", issuedOn: "", url: "" }];
@@ -70,6 +82,10 @@ export function ProfileReview({ proposal, draftId, lang }: { proposal: Proposal;
             <BulletFields key={bullet.key} lang={lang} prefix={`emp_${index}_b_${bulletIndex}`} bulletKey={bullet.key} textEn={bullet.textEn} textHe={bullet.textHe} />
           ))}
           <BulletFields lang={lang} prefix={`emp_${index}_b_${row.bullets.length}`} bulletKey={`${row.key}b-extra`} textEn="" textHe="" />
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" name={`emp_${index}_note`} value="1" defaultChecked={row.createNote && !taken.has(employmentNoteLabel(row))} />
+            {t(lang, "createExperienceNote")}
+          </label>
         </fieldset>
       ))}
       <h3 className="text-base">{t(lang, "studies")}</h3>
