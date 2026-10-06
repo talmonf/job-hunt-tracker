@@ -17,14 +17,15 @@ describe("sponsored feature access", () => {
     assert.equal(isSponsoredFeature("test"), false);
   });
 
-  it("picks the first configured platform key in Google, OpenAI, Anthropic order", () => {
-    assert.equal(sponsoredProvider(() => false), null);
-    assert.equal(sponsoredProvider(() => true), "google");
+  it("uses a built-in key that is checked for the user", () => {
+    assert.equal(sponsoredProvider(() => true, []), null);
+    assert.equal(sponsoredProvider(() => true, ["anthropic"]), "anthropic");
+    assert.equal(sponsoredProvider((provider) => provider === "google", ["anthropic"]), null);
+    assert.equal(sponsoredProvider(() => true, ["google", "anthropic"]), "google");
     assert.equal(
-      sponsoredProvider((provider) => provider === "openai" || provider === "anthropic"),
+      sponsoredProvider((provider) => provider === "openai" || provider === "anthropic", ["openai", "anthropic"]),
       "openai",
     );
-    assert.equal(sponsoredProvider((provider) => provider === "anthropic"), "anthropic");
-    assert.equal(sponsoredProvider((provider) => provider === "openrouter"), null);
+    assert.equal(sponsoredProvider(() => true, ["openrouter"]), null);
   });
 });

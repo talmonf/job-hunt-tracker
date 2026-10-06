@@ -248,6 +248,7 @@ export function DateTimeField({
   compact = false,
   dateLabel,
   clearable = false,
+  inlineLabels = false,
 }: {
   name: string;
   defaultValue?: string;
@@ -256,6 +257,7 @@ export function DateTimeField({
   compact?: boolean;
   dateLabel?: string;
   clearable?: boolean;
+  inlineLabels?: boolean;
 }) {
   const initial = splitDateTime(defaultValue ?? "", required);
   const [text, setText] = useState(initial.date);
@@ -282,14 +284,15 @@ export function DateTimeField({
 
   const activeLabel = compact ? compactLabelClass : labelClass;
   const activeTime = compact ? compactTimeSelectClass : timeSelectClass;
+  const timeLabel = inlineLabels ? "text-[11px] leading-none text-slate-400" : activeLabel;
   return (
-    <div className={`flex flex-wrap items-end ${compact ? "gap-1" : "gap-2"}`}>
+    <div className={`flex flex-wrap ${inlineLabels ? "items-center gap-x-1.5 gap-y-1" : `items-end ${compact ? "gap-1" : "gap-2"}`}`}>
       <div className="shrink-0">
         {dateLabel ? <span className={activeLabel}>{dateLabel}</span> : null}
         <DatePicker lang={lang} text={text} compact={compact} onTextChange={applyDateText} required={required} onPick={applyDateText} />
       </div>
-      <label className="block" dir="ltr">
-        <span className={activeLabel}>{t(lang, "timeHour")}</span>
+      <label className={inlineLabels ? "flex items-center gap-1" : "block"} dir="ltr">
+        <span className={timeLabel}>{t(lang, "timeHour")}</span>
         <select
           className={activeTime}
           value={hour}
@@ -308,8 +311,8 @@ export function DateTimeField({
           ))}
         </select>
       </label>
-      <label className="block" dir="ltr">
-        <span className={activeLabel}>{t(lang, "timeMinute")}</span>
+      <label className={inlineLabels ? "flex items-center gap-1" : "block"} dir="ltr">
+        <span className={timeLabel}>{t(lang, "timeMinute")}</span>
         <select
           className={activeTime}
           value={minute}
@@ -330,7 +333,7 @@ export function DateTimeField({
       </label>
       {clearable && (text || hour || minute) ? (
         <button
-          className={`text-sky-300 hover:text-sky-200 ${compact ? "pb-0.5 text-xs" : "pb-1.5 text-sm"}`}
+          className={`text-sky-300 hover:text-sky-200 ${inlineLabels ? "text-xs" : compact ? "pb-0.5 text-xs" : "pb-1.5 text-sm"}`}
           type="button"
           onClick={() => {
             setText("");

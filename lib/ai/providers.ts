@@ -8,7 +8,7 @@ export function isAiProvider(value: string): value is AiProviderId {
 
 export const DEFAULT_MODEL: Record<AiProviderId, string> = {
   anthropic: "claude-sonnet-4-5",
-  google: "gemini-2.5-flash",
+  google: "gemini-3.5-flash-lite",
   openai: "gpt-4o-mini",
   openrouter: "openai/gpt-4o-mini",
 };
@@ -16,6 +16,7 @@ export const DEFAULT_MODEL: Record<AiProviderId, string> = {
 const PRICES: Record<string, { inputUsdPerMillion: number; outputUsdPerMillion: number }> = {
   "claude-sonnet-4-5": { inputUsdPerMillion: 3, outputUsdPerMillion: 15 },
   "gemini-2.5-flash": { inputUsdPerMillion: 0.3, outputUsdPerMillion: 2.5 },
+  "gemini-3.5-flash-lite": { inputUsdPerMillion: 0.3, outputUsdPerMillion: 2.5 },
   "gpt-4o-mini": { inputUsdPerMillion: 0.15, outputUsdPerMillion: 0.6 },
   "openai/gpt-4o-mini": { inputUsdPerMillion: 0.15, outputUsdPerMillion: 0.6 },
 };

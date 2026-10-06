@@ -10,7 +10,7 @@ import { EMPLOYMENT_TYPES, ENGAGEMENTS, WORK_ARRANGEMENTS } from "@/lib/events";
 import { deleteCv, deleteJob, updateJob, uploadCv } from "@/lib/actions/jobs";
 import { toChipLink } from "@/lib/entity-links";
 import { PageFrame } from "@/components/chrome";
-import { AttributeSelect, SubmitButton, compactFieldClass, compactLabelClass, fieldClass, labelClass } from "@/components/widgets";
+import { AttributeSelect, SubmitButton, compactFieldClass, fieldClass, labelClass } from "@/components/widgets";
 import { JobScheduleFields } from "@/components/job-schedule-fields";
 import { JobStatusEditor } from "@/components/job-status-editor";
 import { JobUrlsEditor } from "@/components/job-urls";
@@ -234,13 +234,15 @@ export default async function JobDetailPage({
             reminderLeadHours={job.reminderLeadHours}
             clearable
           />
-          <div className="mt-2 flex justify-end">
+          <label className="mt-1 flex min-w-0 items-center gap-x-3">
+            <span className="shrink-0 text-xs font-medium leading-none text-slate-100">{t(lang, "followUpNote")}</span>
+            <span className="min-w-0 flex-1">
+              <input className={compactFieldClass} name="followUpNote" defaultValue={job.followUpNote} />
+            </span>
+          </label>
+          <div className="mt-1.5 flex justify-end">
             <SubmitButton label={t(lang, "save")} />
           </div>
-          <label className="mt-2 block min-w-0">
-            <span className={compactLabelClass}>{t(lang, "followUpNote")}</span>
-            <input className={compactFieldClass} name="followUpNote" defaultValue={job.followUpNote} />
-          </label>
         </SettingsSection>
       </form>
 

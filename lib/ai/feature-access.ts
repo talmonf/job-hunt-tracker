@@ -18,6 +18,6 @@ export function fillAccess(input: { sponsored: boolean; hasOwnKey: boolean }): F
   return "blocked";
 }
 
-export function sponsoredProvider(hasKey: (provider: AiProviderId) => boolean): AiProviderId | null {
-  return SPONSORED_PROVIDER_ORDER.find((provider) => hasKey(provider)) ?? null;
+export function sponsoredProvider(hasKey: (provider: AiProviderId) => boolean, granted: readonly string[]): AiProviderId | null {
+  return SPONSORED_PROVIDER_ORDER.find((provider) => granted.includes(provider) && hasKey(provider)) ?? null;
 }

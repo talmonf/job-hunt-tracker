@@ -1,5 +1,6 @@
 import { prisma } from "../prisma";
 import { fillAccess, sponsoredProvider, type FillAccess, type SponsoredFeature } from "./feature-access";
+import { grantedPlatformProviders } from "./platform-access";
 import { platformKey, type AiProviderId } from "./providers";
 
 export async function hasFeatureGrant(userId: string, feature: SponsoredFeature): Promise<boolean> {
@@ -12,7 +13,8 @@ export async function hasFeatureGrant(userId: string, feature: SponsoredFeature)
 
 export async function resolveSponsoredProvider(userId: string, feature: SponsoredFeature): Promise<AiProviderId | null> {
   if (!(await hasFeatureGrant(userId, feature))) return null;
-  return sponsoredProvider((provider) => Boolean(platformKey(provider)));
+  const granted = await grantedPlatformProviders(userId);
+  return sponsoredProvider((provider) => Boolean(platformKey(provider)), granted);
 }
 
 export async function loadJobFillAccess(userId: string): Promise<FillAccess> {

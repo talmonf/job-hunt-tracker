@@ -32,7 +32,12 @@ export async function chargeAndComplete(input: {
   if (input.paySource === "credits" && !(await hasPlatformGrant(input.userId, input.provider))) {
     throw new AiRunError("aiGrant");
   }
-  if (input.paySource === "sponsored" && (!isSponsoredFeature(input.feature) || !(await hasFeatureGrant(input.userId, input.feature)))) {
+  if (
+    input.paySource === "sponsored" &&
+    (!isSponsoredFeature(input.feature) ||
+      !(await hasFeatureGrant(input.userId, input.feature)) ||
+      !(await hasPlatformGrant(input.userId, input.provider)))
+  ) {
     throw new AiRunError("aiGrant");
   }
   const apiKey = input.paySource === "key" ? (saved ? decryptSecret(saved.ciphertext) : null) : platformKey(input.provider);
