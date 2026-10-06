@@ -27,6 +27,9 @@ const timeSelectClass =
 const compactTimeSelectClass =
   "w-[3.25rem] rounded border border-slate-600 bg-slate-950 px-1 py-0.5 text-xs leading-tight text-slate-100 outline-none focus:border-sky-500";
 
+const narrowSelectClass =
+  "w-40 max-w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-start text-sm text-slate-100 outline-none focus:border-sky-500";
+
 export function AttributeSelect({
   lang,
   name,
@@ -41,9 +44,9 @@ export function AttributeSelect({
   value?: string;
 }) {
   return (
-    <label>
+    <label className="w-fit max-w-full">
       <span className={labelClass}>{label}</span>
-      <select className={fieldClass} name={name} defaultValue={value}>
+      <select className={narrowSelectClass} name={name} defaultValue={value}>
         <option value="">—</option>
         {options.map((option) => (
           <option key={option} value={option}>

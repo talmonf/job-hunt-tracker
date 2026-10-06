@@ -1,0 +1,13 @@
+---
+description: Keep forms dense with paired short fields, narrow dropdowns, and inline hints
+alwaysApply: true
+---
+
+# Form density
+
+When laying out forms:
+
+- Pair short fields two per row (`sm:grid-cols-2` or a wrapping flex line). Leave descriptions, URL lists, tag pickers, and textareas full width.
+- Size enum dropdowns to their options (about `w-40`, with `w-fit` on the wrapper). Do not stretch a short select with `w-full`.
+- Put a field label on the same line as a compact date or time control.
+- Put a short hint on that same line, after the control, in italic muted type (`text-[11px] italic text-slate-500`). Do not give the hint its own row.

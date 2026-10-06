@@ -10,7 +10,8 @@ import { EMPLOYMENT_TYPES, ENGAGEMENTS, WORK_ARRANGEMENTS } from "@/lib/events";
 import { deleteCv, deleteJob, updateJob, uploadCv } from "@/lib/actions/jobs";
 import { toChipLink } from "@/lib/entity-links";
 import { PageFrame } from "@/components/chrome";
-import { AttributeSelect, DateField, DateTimeField, SubmitButton, compactFieldClass, compactLabelClass, fieldClass, labelClass } from "@/components/widgets";
+import { AttributeSelect, SubmitButton, compactFieldClass, compactLabelClass, fieldClass, labelClass } from "@/components/widgets";
+import { JobScheduleFields } from "@/components/job-schedule-fields";
 import { JobStatusEditor } from "@/components/job-status-editor";
 import { JobUrlsEditor } from "@/components/job-urls";
 import { EventHistoryTable } from "@/components/event-history";
@@ -26,9 +27,6 @@ import { CompanyNameField } from "@/components/company-picker";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
-
-const reminderFieldClass =
-  "w-10 rounded border border-slate-600 bg-transparent px-0.5 py-0.5 text-center text-xs leading-tight text-slate-100 outline-none [color-scheme:dark] focus:border-sky-500";
 
 export default async function JobDetailPage({
   params,
@@ -228,39 +226,21 @@ export default async function JobDetailPage({
           </div>
         </SettingsSection>
         <SettingsSection title={t(lang, "followUp")} summary={followSummary}>
-          <div className="flex min-w-0 flex-wrap items-end gap-x-3 gap-y-2">
-            <label className="shrink-0">
-              <span className={compactLabelClass}>{t(lang, "interestDate")}</span>
-              <DateField name="interestDate" defaultValue={dateInputValue(job.interestDate, user.timezone)} required compact lang={lang} />
-            </label>
-            <DateTimeField
-              name="followUpAt"
-              defaultValue={job.followUpAt ? dateTimeInputValue(job.followUpAt, user.timezone) : ""}
-              lang={lang}
-              compact
-              clearable
-              dateLabel={t(lang, "followUp")}
-            />
-            <div className="flex items-end gap-2">
-              <span className="pb-1 text-xs font-medium text-slate-100">{t(lang, "reminderLead")}</span>
-              <label className="shrink-0">
-                <span className={compactLabelClass}>{t(lang, "days")}</span>
-                <input className={reminderFieldClass} name="reminderLeadDays" defaultValue={job.reminderLeadDays ?? ""} inputMode="numeric" />
-              </label>
-              <label className="shrink-0">
-                <span className={compactLabelClass}>{t(lang, "hours")}</span>
-                <input className={reminderFieldClass} name="reminderLeadHours" defaultValue={job.reminderLeadHours ?? ""} inputMode="numeric" />
-              </label>
-              <p className="max-w-[16rem] pb-1 text-[11px] italic leading-snug text-slate-500">{t(lang, "reminderBlank")}</p>
-            </div>
-            <div className="ms-auto">
-              <SubmitButton label={t(lang, "save")} />
-            </div>
-            <label className="min-w-0 basis-full">
-              <span className={compactLabelClass}>{t(lang, "followUpNote")}</span>
-              <input className={compactFieldClass} name="followUpNote" defaultValue={job.followUpNote} />
-            </label>
+          <JobScheduleFields
+            lang={lang}
+            interestDate={dateInputValue(job.interestDate, user.timezone)}
+            followUpAt={job.followUpAt ? dateTimeInputValue(job.followUpAt, user.timezone) : ""}
+            reminderLeadDays={job.reminderLeadDays}
+            reminderLeadHours={job.reminderLeadHours}
+            clearable
+          />
+          <div className="mt-2 flex justify-end">
+            <SubmitButton label={t(lang, "save")} />
           </div>
+          <label className="mt-2 block min-w-0">
+            <span className={compactLabelClass}>{t(lang, "followUpNote")}</span>
+            <input className={compactFieldClass} name="followUpNote" defaultValue={job.followUpNote} />
+          </label>
         </SettingsSection>
       </form>
 

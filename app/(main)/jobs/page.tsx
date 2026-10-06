@@ -11,7 +11,8 @@ import { dash, maskText } from "@/lib/mask";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { createJob } from "@/lib/actions/jobs";
 import { EmptyState, FilterBar, Modal, PageFrame } from "@/components/chrome";
-import { AttributeSelect, DateField, DateTimeField, MultiSelect, SubmitButton, compactFieldClass, compactLabelClass, fieldClass, labelClass } from "@/components/widgets";
+import { AttributeSelect, DateField, MultiSelect, SubmitButton, compactFieldClass, compactLabelClass, fieldClass, labelClass } from "@/components/widgets";
+import { JobScheduleFields } from "@/components/job-schedule-fields";
 import { JobStatusEditor } from "@/components/job-status-editor";
 import { JobUrlsEditor } from "@/components/job-urls";
 import { MentionTextarea } from "@/components/mention-textarea";
@@ -216,39 +217,22 @@ export default async function JobsPage({
                 allowUrl={false}
               />
             </FillJobDetails>
-            <CompanyNameField lang={lang} names={companies.map((company) => company.name)} required />
-            <label>
-              <span className={labelClass}>{t(lang, "title")}</span>
-              <input className={fieldClass} name="title" />
-            </label>
-            <label>
-              <span className={labelClass}>{t(lang, "location")}</span>
-              <input className={fieldClass} name="location" />
-            </label>
-            <AttributeSelect lang={lang} name="employmentType" label={t(lang, "employmentType")} options={EMPLOYMENT_TYPES} />
-            <AttributeSelect lang={lang} name="workArrangement" label={t(lang, "workArrangement")} options={WORK_ARRANGEMENTS} />
-            <AttributeSelect lang={lang} name="engagement" label={t(lang, "engagement")} options={ENGAGEMENTS} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <CompanyNameField lang={lang} names={companies.map((company) => company.name)} required />
+              <label>
+                <span className={labelClass}>{t(lang, "title")}</span>
+                <input className={fieldClass} name="title" />
+              </label>
+              <label>
+                <span className={labelClass}>{t(lang, "location")}</span>
+                <input className={fieldClass} name="location" />
+              </label>
+              <AttributeSelect lang={lang} name="employmentType" label={t(lang, "employmentType")} options={EMPLOYMENT_TYPES} />
+              <AttributeSelect lang={lang} name="workArrangement" label={t(lang, "workArrangement")} options={WORK_ARRANGEMENTS} />
+              <AttributeSelect lang={lang} name="engagement" label={t(lang, "engagement")} options={ENGAGEMENTS} />
+            </div>
             <JobUrlsEditor lang={lang} />
-            <div>
-              <span className={labelClass}>{t(lang, "interestDate")}</span>
-              <DateField name="interestDate" defaultValue={interestDefault} required lang={lang} />
-            </div>
-            <div>
-              <span className={labelClass}>{t(lang, "followUp")}</span>
-              <DateTimeField name="followUpAt" defaultValue={followDefault} lang={lang} />
-              <span className="mt-1 block text-xs text-slate-400">{t(lang, "followUpHelp")}</span>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <label>
-                <span className={labelClass}>{t(lang, "days")}</span>
-                <input className={fieldClass} name="reminderLeadDays" inputMode="numeric" />
-              </label>
-              <label>
-                <span className={labelClass}>{t(lang, "hours")}</span>
-                <input className={fieldClass} name="reminderLeadHours" inputMode="numeric" />
-              </label>
-            </div>
-            <p className="text-xs text-slate-400">{t(lang, "reminderBlank")}</p>
+            <JobScheduleFields lang={lang} interestDate={interestDefault} followUpAt={followDefault} />
             <TagPicker lang={lang} hide={hide} tags={catalog} selected={[]} />
             <SubmitButton label={t(lang, "save")} />
           </form>
