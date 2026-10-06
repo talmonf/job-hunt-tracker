@@ -105,47 +105,49 @@ export default async function JobsPage({
           {["created", "updated", "error", "warn"].map((key) =>
             firstParam(search[key]) ? <input key={key} type="hidden" name={key} value={firstParam(search[key])} /> : null,
           )}
-          <div className="flex flex-nowrap items-end gap-x-2">
-            <label className="w-36 shrink-0">
-              <span className={compactLabelClass}>{t(lang, "search")}</span>
-              <input className={compactFieldClass} name="q" defaultValue={q} placeholder={t(lang, "nameOrCompany")} />
-            </label>
-            <div className="w-[9.5rem] shrink-0">
-              <span className={compactLabelClass}>{t(lang, "status")}</span>
-              <MultiSelect
-                compact
-                name="status"
-                selected={requestedStatuses.filter((status) => (JOB_STATUSES as readonly string[]).includes(status))}
-                anyLabel={t(lang, "any")}
-                selectAll={t(lang, "selectAll")}
-                deselectAll={t(lang, "deselectAll")}
-                done={t(lang, "done")}
-                selectedWord={t(lang, "selectedCount")}
-                options={JOB_STATUSES.map((status) => ({ value: status, label: statusLabel(lang, status) }))}
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-nowrap items-end gap-x-2">
+              <label className="w-36 shrink-0">
+                <span className={compactLabelClass}>{t(lang, "search")}</span>
+                <input className={compactFieldClass} name="q" defaultValue={q} placeholder={t(lang, "nameOrCompany")} />
+              </label>
+              <div className="w-[9.5rem] shrink-0">
+                <span className={compactLabelClass}>{t(lang, "status")}</span>
+                <MultiSelect
+                  compact
+                  name="status"
+                  selected={requestedStatuses.filter((status) => (JOB_STATUSES as readonly string[]).includes(status))}
+                  anyLabel={t(lang, "any")}
+                  selectAll={t(lang, "selectAll")}
+                  deselectAll={t(lang, "deselectAll")}
+                  done={t(lang, "done")}
+                  selectedWord={t(lang, "selectedCount")}
+                  options={JOB_STATUSES.map((status) => ({ value: status, label: statusLabel(lang, status) }))}
+                />
+              </div>
+              <DateRange
+                label={t(lang, "interestDate")}
+                fromName="interestFrom"
+                toName="interestTo"
+                fromValue={firstParam(search.interestFrom)}
+                toValue={firstParam(search.interestTo)}
+                lang={lang}
               />
+              <DateRange
+                label={t(lang, "followUp")}
+                fromName="followFrom"
+                toName="followTo"
+                fromValue={firstParam(search.followFrom)}
+                toValue={firstParam(search.followTo)}
+                lang={lang}
+              />
+              <div className="ms-auto shrink-0">
+                <button className="rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950" type="submit">
+                  {t(lang, "apply")}
+                </button>
+              </div>
             </div>
-            <DateRange
-              label={t(lang, "interestDate")}
-              fromName="interestFrom"
-              toName="interestTo"
-              fromValue={firstParam(search.interestFrom)}
-              toValue={firstParam(search.interestTo)}
-              lang={lang}
-            />
-            <DateRange
-              label={t(lang, "followUp")}
-              fromName="followFrom"
-              toName="followTo"
-              fromValue={firstParam(search.followFrom)}
-              toValue={firstParam(search.followTo)}
-              lang={lang}
-            />
             {catalog.length ? <TagFilter lang={lang} hide={hide} tags={catalog} selected={tagIds} match={tagMatch} /> : null}
-            <div className="ms-auto shrink-0">
-              <button className="rounded bg-sky-500 px-2 py-0.5 text-xs font-semibold leading-tight text-slate-950" type="submit">
-                {t(lang, "apply")}
-              </button>
-            </div>
           </div>
       </FilterBar>
       {jobs.length === 0 ? (
@@ -167,6 +169,7 @@ export default async function JobsPage({
                 <SortHead label={t(lang, "followUp")} column="followUpAt" sort={sort} dir={dir} search={search} />
                 <th className="px-3 py-2">{t(lang, "urlCount")}</th>
                 <th className="px-3 py-2">{t(lang, "cvCount")}</th>
+                <th className="px-3 py-2" />
               </tr>
             </thead>
             <tbody>
@@ -196,6 +199,19 @@ export default async function JobsPage({
                   <td className="px-3 py-2">{job.followUpAt ? formatDateTime(job.followUpAt, user.timezone) : "—"}</td>
                   <td className="px-3 py-2">{job._count.urls}</td>
                   <td className="px-3 py-2">{job._count.cvs}</td>
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-2 whitespace-nowrap">
+                      <Link className="text-sky-300" href={`/jobs/${job.id}`}>
+                        {t(lang, "edit")}
+                      </Link>
+                      <Link
+                        className="rounded bg-sky-500 px-2 py-0.5 text-xs font-semibold text-slate-950"
+                        href={`/events?modal=new&presetJob=${encodeURIComponent(job.id)}&presetNow=1&returnTo=${encodeURIComponent(`/jobs${keep}`)}`}
+                      >
+                        {t(lang, "logEvent")}
+                      </Link>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -260,9 +276,9 @@ function TagFilter({
     { value: "all" as const, label: t(lang, "tagMatchAll"), hint: t(lang, "tagMatchAllHint") },
   ];
   return (
-    <div className="min-w-0 flex-1">
-      <span className={compactLabelClass}>{t(lang, "tags")}</span>
-      <div className="flex items-center gap-1">
+    <div className="rounded-md border border-slate-600 px-2 py-1.5">
+      <div className="flex items-center gap-2">
+        <span className="shrink-0 text-[11px] leading-none text-slate-400">{t(lang, "tags")}</span>
         <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto" role="group" aria-label={t(lang, "tags")}>
           {tags.map((tag) => {
             const name = maskText(tag.name, hide);
