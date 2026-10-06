@@ -10,6 +10,7 @@ import { readStored } from "../files";
 import { buildProposal } from "../ai/draft";
 import { extractPdfText } from "../ai/pdf-text";
 import { shekelsToAgorot } from "../ai/money";
+import { resolveSponsoredProvider } from "../ai/feature-grants";
 import { DEFAULT_MODEL, isAiProvider, lastFour } from "../ai/providers";
 import { isOutputLanguage, readProposalForm } from "../ai/proposal";
 import { AiRunError, chargeAndComplete } from "../ai/run";
@@ -160,10 +161,10 @@ export async function startCreditCheckout(formData: FormData) {
 export async function prepareProfileImport(formData: FormData) {
   const user = await requireUser();
   const language = requiredText(formData.get("language"));
-  const provider = requiredText(formData.get("provider"));
-  const paySource = formData.get("paySource") === "credits" ? "credits" : "key";
+  const requestedProvider = requiredText(formData.get("provider"));
+  const requestedPay = formData.get("paySource") === "credits" ? "credits" : "key";
   const ids = formData.getAll("fileId").map((value) => String(value)).filter(Boolean);
-  if (!isOutputLanguage(language) || !isAiProvider(provider) || ids.length === 0) redirect("/profile?error=required");
+  if (!isOutputLanguage(language) || !isAiProvider(requestedProvider) || ids.length === 0) redirect("/profile?error=required");
   const files = await prisma.profileFile.findMany({ where: { userId: user.id, id: { in: ids } } });
   if (files.length !== ids.length) redirect("/profile?error=required");
   const texts: { filename: string; text: string }[] = [];
@@ -183,6 +184,10 @@ export async function prepareProfileImport(formData: FormData) {
     }
     texts.push({ filename: file.filename, text });
   }
+  const feature = texts.length > 1 ? "compare" : "import";
+  const sponsored = await resolveSponsoredProvider(user.id, feature);
+  const paySource = sponsored ? "sponsored" : requestedPay;
+  const provider = sponsored ?? requestedProvider;
   let proposal;
   try {
     proposal = await buildProposal({ userId: user.id, texts, language, paySource, provider });

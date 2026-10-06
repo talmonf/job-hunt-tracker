@@ -2,6 +2,8 @@ import { prisma } from "../prisma";
 import { decryptSecret } from "../crypto";
 import { completeText, estimateTokens, type Completion } from "./call";
 import { creditDebitAgorot, providerCostAgorot, providerCostUsdMicros } from "./money";
+import { hasFeatureGrant } from "./feature-grants";
+import { isSponsoredFeature } from "./feature-access";
 import { hasPlatformGrant } from "./platform-access";
 import { DEFAULT_MODEL, modelPrice, platformKey, type AiProviderId } from "./providers";
 
@@ -13,7 +15,7 @@ export class AiRunError extends Error {
 
 export async function chargeAndComplete(input: {
   userId: string;
-  paySource: "key" | "credits";
+  paySource: "key" | "credits" | "sponsored";
   provider: AiProviderId;
   feature: string;
   system: string;
@@ -28,6 +30,9 @@ export async function chargeAndComplete(input: {
     where: { userId_provider: { userId: input.userId, provider: input.provider } },
   });
   if (input.paySource === "credits" && !(await hasPlatformGrant(input.userId, input.provider))) {
+    throw new AiRunError("aiGrant");
+  }
+  if (input.paySource === "sponsored" && (!isSponsoredFeature(input.feature) || !(await hasFeatureGrant(input.userId, input.feature)))) {
     throw new AiRunError("aiGrant");
   }
   const apiKey = input.paySource === "key" ? (saved ? decryptSecret(saved.ciphertext) : null) : platformKey(input.provider);
@@ -76,7 +81,9 @@ export async function chargeAndComplete(input: {
         }),
       },
     });
-    await prisma.user.update({ where: { id: input.userId }, data: { aiPaySource: input.paySource } });
+    if (input.paySource !== "sponsored") {
+      await prisma.user.update({ where: { id: input.userId }, data: { aiPaySource: input.paySource } });
+    }
     return completion;
   } catch (error) {
     if (held) await releaseCredits(input.userId, estimatedDebit);

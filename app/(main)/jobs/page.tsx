@@ -19,6 +19,7 @@ import { TagChips } from "@/components/tag-chip";
 import { TagPicker } from "@/components/tag-picker";
 import { CompanyNameField } from "@/components/company-picker";
 import { FillJobDetails } from "@/components/fill-job-details";
+import { loadJobFillAccess } from "@/lib/ai/feature-grants";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,10 @@ export default async function JobsPage({
   const interestTo = parseDateOnly(firstParam(search.interestTo) ? `${firstParam(search.interestTo)}T23:59` : "", user.timezone);
   const followFrom = parseDateOnly(firstParam(search.followFrom), user.timezone);
   const followTo = parseDateOnly(firstParam(search.followTo) ? `${firstParam(search.followTo)}T23:59` : "", user.timezone);
-  const catalog = await prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } });
+  const [catalog, jobFillAccess] = await Promise.all([
+    prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
+    loadJobFillAccess(user.id),
+  ]);
   const tagIds = [...new Set(allParams(search.tag).filter((id) => catalog.some((tag) => tag.id === id)))];
   const tagMatch = parseTagMatch(firstParam(search.tagMatch));
   const where: Prisma.JobWhereInput = {
@@ -201,6 +205,17 @@ export default async function JobsPage({
         <Modal title={t(lang, "addJob")} closeHref={closeHref} closeLabel={t(lang, "close")}>
           <form id="job-form" action={createJob} className="grid gap-3">
             <input type="hidden" name="returnTo" value={`/jobs${keep}`} />
+            <FillJobDetails lang={lang} access={jobFillAccess} lead="create">
+              <MentionTextarea
+                lang={lang}
+                name="description"
+                label={t(lang, "description")}
+                rows={4}
+                localContacts={localContacts}
+                googleConnected={googleConnected}
+                allowUrl={false}
+              />
+            </FillJobDetails>
             <CompanyNameField lang={lang} names={companies.map((company) => company.name)} required />
             <label>
               <span className={labelClass}>{t(lang, "title")}</span>
@@ -213,16 +228,6 @@ export default async function JobsPage({
             <AttributeSelect lang={lang} name="employmentType" label={t(lang, "employmentType")} options={EMPLOYMENT_TYPES} />
             <AttributeSelect lang={lang} name="workArrangement" label={t(lang, "workArrangement")} options={WORK_ARRANGEMENTS} />
             <AttributeSelect lang={lang} name="engagement" label={t(lang, "engagement")} options={ENGAGEMENTS} />
-            <MentionTextarea
-              lang={lang}
-              name="description"
-              label={t(lang, "description")}
-              rows={4}
-              localContacts={localContacts}
-              googleConnected={googleConnected}
-              allowUrl={false}
-            />
-            <FillJobDetails lang={lang} />
             <JobUrlsEditor lang={lang} />
             <div>
               <span className={labelClass}>{t(lang, "interestDate")}</span>

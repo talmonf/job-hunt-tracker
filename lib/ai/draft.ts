@@ -27,7 +27,7 @@ export async function buildProposal(input: {
   userId: string;
   texts: { filename: string; text: string }[];
   language: OutputLanguage;
-  paySource: "key" | "credits";
+  paySource: "key" | "credits" | "sponsored";
   provider: AiProviderId;
 }): Promise<Proposal> {
   const parsed = input.texts.map((file) => parseProfileText(file.text));

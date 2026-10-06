@@ -2,6 +2,7 @@ import type { AiPaySource, AiProvider } from "@prisma/client";
 import type { Lang } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
 import { AI_PROVIDERS, DEFAULT_MODEL, isAiProvider, platformKey } from "@/lib/ai/providers";
+import { paySourceLabel } from "@/lib/ai/labels";
 import { platformGrantAllows } from "@/lib/ai/platform-access";
 import { formatIls } from "@/lib/ai/money";
 import {
@@ -158,7 +159,7 @@ export function AiSettings({
                   <td className="px-2 py-1">{row.provider}</td>
                   <td className="px-2 py-1">{row.model}</td>
                   <td className="px-2 py-1">{row.inputTokens} / {row.outputTokens}</td>
-                  <td className="px-2 py-1">{row.paySource === "credits" ? t(lang, "payWithCredits") : t(lang, "payWithKey")}</td>
+                  <td className="px-2 py-1">{paySourceLabel(lang, row.paySource)}</td>
                   <td className="px-2 py-1">{row.paySource === "credits" ? formatIls(row.debitAgorot) : formatIls(row.estimatedAgorot)}</td>
                 </tr>
               ))}

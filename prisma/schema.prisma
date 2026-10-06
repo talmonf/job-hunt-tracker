@@ -158,8 +158,9 @@ model User {
   notifications Notification[]
   entityLinks   EntityLink[]
   tags          Tag[]
-  aiKeys        AiProviderKey[]
+  aiKeys            AiProviderKey[]
   platformKeyGrants PlatformKeyGrant[]
+  aiFeatureGrants   AiFeatureGrant[]
   aiUsage       AiUsage[]
   creditLedger  CreditLedger[]
   profileLabels ProfileLabel[]
@@ -591,6 +592,7 @@ enum AiProvider {
 enum AiPaySource {
   key
   credits
+  sponsored
 }
 
 enum ProfileLabelKind {
@@ -610,6 +612,14 @@ model PlatformKeyGrant {
   provider AiProvider
 
   @@id([userId, provider])
+}
+
+model AiFeatureGrant {
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  feature String
+
+  @@id([userId, feature])
 }
 
 model AiProviderKey {

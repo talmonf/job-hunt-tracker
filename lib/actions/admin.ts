@@ -8,6 +8,7 @@ import { requireAdmin } from "../session";
 import { passwordRule } from "../password";
 import { requiredText } from "../forms";
 import { isBuiltinAdmin } from "../admin";
+import { isSponsoredFeature } from "../ai/feature-access";
 import { isBuiltinPlatformProvider } from "../ai/platform-access";
 
 export async function createUser(formData: FormData) {
@@ -55,6 +56,21 @@ export async function setAudienceTestUser(id: string, added: boolean) {
   await requireAdmin();
   if (!id) return;
   await prisma.user.updateMany({ where: { id }, data: { audienceTestUser: added } });
+  revalidatePath("/admin/users");
+}
+
+export async function setAiFeatureGrant(userId: string, feature: string, allowed: boolean) {
+  await requireAdmin();
+  if (!userId || !isSponsoredFeature(feature)) return;
+  if (allowed) {
+    await prisma.aiFeatureGrant.upsert({
+      where: { userId_feature: { userId, feature } },
+      create: { userId, feature },
+      update: {},
+    });
+  } else {
+    await prisma.aiFeatureGrant.deleteMany({ where: { userId, feature } });
+  }
   revalidatePath("/admin/users");
 }
 

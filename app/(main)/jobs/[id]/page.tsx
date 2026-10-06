@@ -21,6 +21,7 @@ import { TagPicker } from "@/components/tag-picker";
 import { RelatedByTags } from "@/components/related-tags";
 import { SettingsSection } from "@/components/settings-section";
 import { FillJobDetails } from "@/components/fill-job-details";
+import { loadJobFillAccess } from "@/lib/ai/feature-grants";
 import { CompanyNameField } from "@/components/company-picker";
 
 export const dynamic = "force-dynamic";
@@ -40,7 +41,7 @@ export default async function JobDetailPage({
   const hide = await hidePersonalInfo();
   const { id } = await params;
   const search = await searchParams;
-  const [job, notes, contacts, employments, catalog, otherJobs, companies] = await Promise.all([
+  const [job, notes, contacts, employments, catalog, otherJobs, companies, jobFillAccess] = await Promise.all([
     prisma.job.findFirst({
       where: { id, userId: user.id },
       include: {
@@ -71,6 +72,7 @@ export default async function JobDetailPage({
       include: { tags: { include: { tag: true } } },
     }),
     prisma.company.findMany({ where: { userId: user.id }, orderBy: { name: "asc" }, select: { name: true } }),
+    loadJobFillAccess(user.id),
   ]);
   if (!job) notFound();
   const lang = user.uiLanguage;
@@ -174,8 +176,25 @@ export default async function JobDetailPage({
           <TagPicker lang={lang} hide={hide} tags={catalog} selected={jobTagIds} compact />
         </div>
         <SettingsSection title={t(lang, "jobDetails")} summary={detailSummary} defaultOpen>
-          <FillJobDetails lang={lang} />
-          <div className="grid gap-3 md:grid-cols-2">
+          <FillJobDetails lang={lang} access={jobFillAccess} lead="edit">
+            {job.description ? (
+              <div>
+                <p className={labelClass}>{t(lang, "preview")}</p>
+                <MentionText text={job.description} hide={hide} lookup={{ contacts: localContacts, links: people }} />
+              </div>
+            ) : null}
+            <MentionTextarea
+              lang={lang}
+              name="description"
+              label={t(lang, "description")}
+              defaultValue={job.description}
+              rows={5}
+              localContacts={localContacts}
+              googleConnected={googleConnected}
+              allowUrl={false}
+            />
+          </FillJobDetails>
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
             <CompanyNameField lang={lang} names={companies.map((company) => company.name)} defaultValue={job.companyName} required />
             <label>
               <span className={labelClass}>{t(lang, "title")}</span>
@@ -206,24 +225,6 @@ export default async function JobDetailPage({
               options={ENGAGEMENTS}
               value={job.engagement ?? ""}
             />
-            <div className="md:col-span-2">
-              {job.description ? (
-                <div className="mb-3">
-                  <p className={labelClass}>{t(lang, "preview")}</p>
-                  <MentionText text={job.description} hide={hide} lookup={{ contacts: localContacts, links: people }} />
-                </div>
-              ) : null}
-              <MentionTextarea
-                lang={lang}
-                name="description"
-                label={t(lang, "description")}
-                defaultValue={job.description}
-                rows={5}
-                localContacts={localContacts}
-                googleConnected={googleConnected}
-                allowUrl={false}
-              />
-            </div>
           </div>
         </SettingsSection>
         <SettingsSection title={t(lang, "followUp")} summary={followSummary}>

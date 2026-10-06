@@ -7,11 +7,13 @@ import { dash } from "@/lib/mask";
 import { formatDateTime } from "@/lib/dates";
 import { AI_PROVIDERS } from "@/lib/ai/providers";
 import { BUILTIN_PLATFORM_PROVIDERS } from "@/lib/ai/platform-access";
-import { toolLabel } from "@/lib/ai/labels";
+import { featureLabel, toolLabel } from "@/lib/ai/labels";
 import { grantCredits } from "@/lib/actions/ai";
 import { createUser, resetUserPassword, setUserActive } from "@/lib/actions/admin";
 import { AudienceTestUserCheck } from "@/components/audience-test-user";
+import { AiFeatureGrantCheck } from "@/components/ai-feature-grant";
 import { PlatformKeyGrantCheck } from "@/components/platform-key-grant";
+import { SPONSORED_FEATURES } from "@/lib/ai/feature-access";
 import { EmptyState, FilterBar, Modal, PageFrame } from "@/components/chrome";
 import { PasswordFieldLabeled, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
 
@@ -40,6 +42,7 @@ export default async function UsersPage({
     include: {
       aiKeys: { select: { provider: true, model: true }, orderBy: { provider: "asc" } },
       platformKeyGrants: { select: { provider: true } },
+      aiFeatureGrants: { select: { feature: true } },
     },
   });
   const resetId = firstParam(search.id);
@@ -73,6 +76,7 @@ export default async function UsersPage({
                 <th className="px-3 py-2">{t(lang, "lastAccess")}</th>
                 <th className="px-3 py-2">{t(lang, "aiTool")}</th>
                 <th className="px-3 py-2">{t(lang, "builtinKeys")}</th>
+                <th className="px-3 py-2" title={t(lang, "sponsoredFeaturesHint")}>{t(lang, "sponsoredFeatures")}</th>
                 <th className="px-3 py-2">{t(lang, "audienceTestUser")}</th>
                 <th className="px-3 py-2" />
               </tr>
@@ -107,6 +111,21 @@ export default async function UsersPage({
                             label={toolLabel(lang, provider)}
                           />
                           {toolLabel(lang, provider)}
+                        </label>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-3 py-2">
+                    <div className="flex flex-col gap-1">
+                      {SPONSORED_FEATURES.map((feature) => (
+                        <label key={feature} className="flex items-center gap-2 text-xs">
+                          <AiFeatureGrantCheck
+                            userId={user.id}
+                            feature={feature}
+                            checked={user.aiFeatureGrants.some((grant) => grant.feature === feature)}
+                            label={featureLabel(lang, feature)}
+                          />
+                          {featureLabel(lang, feature)}
                         </label>
                       ))}
                     </div>

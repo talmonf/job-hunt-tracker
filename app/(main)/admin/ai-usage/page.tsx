@@ -7,7 +7,7 @@ import { dash } from "@/lib/mask";
 import { formatDateTime, wallClockToUtc } from "@/lib/dates";
 import { AI_PROVIDERS, isAiProvider } from "@/lib/ai/providers";
 import { formatIls, formatUsd } from "@/lib/ai/money";
-import { featureLabel, toolLabel } from "@/lib/ai/labels";
+import { featureLabel, paySourceLabel, toolLabel } from "@/lib/ai/labels";
 import { EmptyState, FilterBar, PageFrame } from "@/components/chrome";
 import { DateField, compactFieldClass, compactLabelClass } from "@/components/widgets";
 
@@ -117,10 +117,11 @@ export default async function AiUsagePage({
           </label>
           <label className="w-36 shrink-0">
             <span className={compactLabelClass}>{t(lang, "paySource")}</span>
-            <select className={compactFieldClass} name="paySource" defaultValue={paySource === "key" || paySource === "credits" ? paySource : ""}>
+            <select className={compactFieldClass} name="paySource" defaultValue={paySource === "key" || paySource === "credits" || paySource === "sponsored" ? paySource : ""}>
               <option value="">{t(lang, "all")}</option>
               <option value="credits">{t(lang, "payWithCredits")}</option>
               <option value="key">{t(lang, "payWithKey")}</option>
+              <option value="sponsored">{t(lang, "payWithSponsored")}</option>
             </select>
           </label>
           <label className="w-36 shrink-0">
@@ -144,6 +145,8 @@ export default async function AiUsagePage({
         {t(lang, "platformSpend")}: {formatUsd(paidBy.get("credits") ?? 0)}
         <span className="mx-2 text-slate-600">·</span>
         {t(lang, "ownKeySpend")}: {formatUsd(paidBy.get("key") ?? 0)}
+        <span className="mx-2 text-slate-600">·</span>
+        {t(lang, "sponsoredSpend")}: {formatUsd(paidBy.get("sponsored") ?? 0)}
       </p>
       <div className="mb-6 grid gap-4 lg:grid-cols-2">
         <Breakdown lang={lang} title={t(lang, "byFeature")} nameHeader={t(lang, "feature")} rows={featureRows} label={(key) => featureLabel(lang, key)} />
@@ -180,7 +183,7 @@ export default async function AiUsagePage({
                   <td className="px-3 py-2">{countText(row.inputTokens)}</td>
                   <td className="px-3 py-2">{countText(row.outputTokens)}</td>
                   <td className="px-3 py-2 whitespace-nowrap">{formatUsd(row.costUsdMicros)}</td>
-                  <td className="px-3 py-2">{row.paySource === "credits" ? t(lang, "payWithCredits") : t(lang, "payWithKey")}</td>
+                  <td className="px-3 py-2">{paySourceLabel(lang, row.paySource)}</td>
                   <td className="px-3 py-2 whitespace-nowrap">{formatIls(row.debitAgorot)}</td>
                 </tr>
               ))}
@@ -277,7 +280,7 @@ function usageWhere(input: {
   if (toInstant) createdAt.lt = toInstant;
   const feature = (FEATURES as readonly string[]).includes(input.feature) ? input.feature : "";
   const provider = isAiProvider(input.provider) ? input.provider : undefined;
-  const paySource = input.paySource === "key" || input.paySource === "credits" ? input.paySource : undefined;
+  const paySource = input.paySource === "key" || input.paySource === "credits" || input.paySource === "sponsored" ? input.paySource : undefined;
   return {
     ...(input.q
       ? {

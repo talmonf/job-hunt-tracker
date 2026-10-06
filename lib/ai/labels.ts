@@ -24,3 +24,9 @@ export function toolLabel(lang: Lang, provider: string): string {
   const key = TOOL_KEYS[provider];
   return key ? t(lang, key) : provider;
 }
+
+export function paySourceLabel(lang: Lang, paySource: string): string {
+  if (paySource === "credits") return t(lang, "payWithCredits");
+  if (paySource === "sponsored") return t(lang, "payWithSponsored");
+  return t(lang, "payWithKey");
+}
