@@ -95,14 +95,14 @@ export function TagPicker({
             </span>
           ))}
           {catalog.length ? (
-            <div className="relative">
+            <div className="relative ms-3">
               <button
                 className="rounded-md border border-slate-600 px-2 py-0.5 text-xs text-slate-200 hover:bg-slate-800"
                 type="button"
                 aria-expanded={open}
                 onClick={() => setOpen((value) => !value)}
               >
-                {t(lang, "tags")}
+                {t(lang, "editTags")}
               </button>
               {open ? (
                 <div className="absolute z-20 mt-1 w-64 rounded-md border border-slate-600 bg-slate-900 p-2 shadow-lg">
@@ -139,7 +139,7 @@ export function TagPicker({
             <p className="text-sm text-slate-400">{t(lang, "noTagsYet")}</p>
           )}
           <Link className="text-xs text-sky-300" href="/settings?section=tags#tags" target="_blank" rel="noopener noreferrer">
-            {t(lang, "manageTags")}
+            {t(lang, "createNewTags")}
           </Link>
           {dirty && !open ? <SubmitButton label={t(lang, "save")} thin /> : null}
         </div>
@@ -152,7 +152,7 @@ export function TagPicker({
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="text-xs text-slate-300">{t(lang, "tags")}</span>
         <Link className="text-xs text-sky-300" href="/settings?section=tags#tags" target="_blank" rel="noopener noreferrer">
-          {t(lang, "manageTags")}
+          {t(lang, "createNewTags")}
         </Link>
       </div>
       {catalog.length === 0 ? <p className="text-sm text-slate-400">{t(lang, "noTagsYet")}</p> : null}

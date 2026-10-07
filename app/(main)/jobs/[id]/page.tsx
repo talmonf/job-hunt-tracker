@@ -118,7 +118,7 @@ export default async function JobDetailPage({
       <Link className="text-sky-300 hover:text-sky-200" href={`/companies/${job.companyId}`}>
         {dash(job.companyName, hide)}
       </Link>
-      {job.title ? ` — ${dash(job.title, hide)}` : ""}
+      {job.title ? ` (${dash(job.title, hide)})` : ""}
     </>
   );
   const jobReturn = `/jobs/${job.id}`;
@@ -156,13 +156,17 @@ export default async function JobDetailPage({
       lang={lang}
       backHref="/jobs"
       title={heading}
+      spreadAside
       titleAside={
-        <div className="flex flex-wrap items-center gap-2">
-          <JobStatusEditor jobId={job.id} status={job.status} lang={lang} fit />
-          <Link className="rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950" href={logHref}>
+        <>
+          <JobStatusEditor jobId={job.id} status={job.status} lang={lang} prominent />
+          <Link
+            className="w-fit rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950 lg:ms-8 lg:justify-self-start"
+            href={logHref}
+          >
             {t(lang, "logEvent")}
           </Link>
-        </div>
+        </>
       }
       description={t(lang, "jobDetailIntro")}
       search={search}
@@ -173,38 +177,42 @@ export default async function JobDetailPage({
           <TagPicker lang={lang} hide={hide} tags={catalog} selected={jobTagIds} compact />
         </div>
         <SettingsSection title={t(lang, "jobDetails")} summary={detailSummary}>
-          <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-            <div className="w-64 max-w-full">
-              <CompanyNameField lang={lang} names={companies.map((company) => company.name)} defaultValue={job.companyName} required />
+          <div className="flex flex-col gap-y-3">
+            <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+              <div className="w-64 max-w-full">
+                <CompanyNameField lang={lang} names={companies.map((company) => company.name)} defaultValue={job.companyName} required />
+              </div>
+              <label className="w-80 max-w-full">
+                <span className={labelClass}>{t(lang, "title")}</span>
+                <input className={fieldClass} name="title" defaultValue={job.title} />
+              </label>
+              <label className="w-96 max-w-full">
+                <span className={labelClass}>{t(lang, "location")}</span>
+                <input className={fieldClass} name="location" defaultValue={job.location} />
+              </label>
             </div>
-            <label className="w-80 max-w-full">
-              <span className={labelClass}>{t(lang, "title")}</span>
-              <input className={fieldClass} name="title" defaultValue={job.title} />
-            </label>
-            <label className="w-96 max-w-full">
-              <span className={labelClass}>{t(lang, "location")}</span>
-              <input className={fieldClass} name="location" defaultValue={job.location} />
-            </label>
-            <AttributeSelect
-              lang={lang}
-              name="employmentType"
-              label={t(lang, "employmentType")}
-              options={EMPLOYMENT_TYPES}
-              value={job.employmentType ?? ""}
-            />
-            <AttributeSelect
-              lang={lang}
-              name="engagement"
-              label={t(lang, "engagement")}
-              options={ENGAGEMENTS}
-              value={job.engagement ?? ""}
-            />
-            <WorkArrangementField
-              lang={lang}
-              options={WORK_ARRANGEMENTS}
-              value={job.workArrangement ?? ""}
-              note={job.hybridNote}
-            />
+            <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+              <AttributeSelect
+                lang={lang}
+                name="employmentType"
+                label={t(lang, "employmentType")}
+                options={EMPLOYMENT_TYPES}
+                value={job.employmentType ?? ""}
+              />
+              <AttributeSelect
+                lang={lang}
+                name="engagement"
+                label={t(lang, "engagement")}
+                options={ENGAGEMENTS}
+                value={job.engagement ?? ""}
+              />
+              <WorkArrangementField
+                lang={lang}
+                options={WORK_ARRANGEMENTS}
+                value={job.workArrangement ?? ""}
+                note={job.hybridNote}
+              />
+            </div>
           </div>
         </SettingsSection>
         <SettingsSection title={t(lang, "description")}>

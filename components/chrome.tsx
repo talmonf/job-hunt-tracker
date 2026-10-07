@@ -9,6 +9,7 @@ export function PageFrame({
   backHref,
   title,
   titleAside,
+  spreadAside = false,
   description,
   search,
   children,
@@ -17,6 +18,7 @@ export function PageFrame({
   backHref?: string;
   title: ReactNode;
   titleAside?: ReactNode;
+  spreadAside?: boolean;
   description?: string;
   search?: Record<string, string | string[] | undefined>;
   children: ReactNode;
@@ -28,8 +30,14 @@ export function PageFrame({
           {t(lang, "back")}
         </Link>
       ) : null}
-      <div className="mt-1 flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold text-white">{title}</h1>
+      <div
+        className={
+          spreadAside
+            ? "mt-1 flex flex-wrap items-center gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-center lg:gap-0"
+            : "mt-1 flex flex-wrap items-center gap-3"
+        }
+      >
+        <h1 className={`text-2xl font-semibold text-white ${spreadAside ? "min-w-0" : ""}`}>{title}</h1>
         {titleAside}
       </div>
       {description ? <p className="mt-1 text-sm text-slate-300">{description}</p> : null}

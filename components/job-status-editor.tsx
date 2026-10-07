@@ -18,11 +18,13 @@ export function JobStatusEditor({
   status,
   lang,
   fit = false,
+  prominent = false,
 }: {
   jobId: string;
   status: string;
   lang: Lang;
   fit?: boolean;
+  prominent?: boolean;
 }) {
   const [value, setValue] = useState(status);
   const [notice, setNotice] = useState<{ from: string; to: string } | null>(null);
@@ -246,7 +248,7 @@ export function JobStatusEditor({
   return (
     <span className={fit ? "inline-flex flex-col items-start gap-1" : "flex w-full flex-col items-start gap-1"}>
       <select
-        className={`${fit ? "w-auto" : "w-full"} min-w-[7.5rem] rounded border border-slate-600 bg-slate-950 px-1.5 py-0.5 text-xs outline-none focus:border-sky-500 disabled:opacity-60 ${statusClass(notice?.to ?? value)}`}
+        className={`${prominent ? "w-auto min-w-[8.5rem] rounded-md px-3 py-1 text-xl" : `${fit ? "w-auto" : "w-full"} min-w-[7.5rem] rounded px-1.5 py-0.5 text-xs`} border border-slate-600 bg-slate-950 outline-none focus:border-sky-500 disabled:opacity-60 ${statusClass(notice?.to ?? value)}`}
         aria-label={t(lang, "status")}
         disabled={saving || Boolean(notice)}
         value={notice?.to ?? value}
