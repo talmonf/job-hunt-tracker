@@ -31,7 +31,7 @@ export function JobUrlsEditor({
   }
 
   return (
-    <div>
+    <div data-job-form-watch={form}>
       {hideLabel ? null : <span className={labelClass}>{t(lang, "urls")}</span>}
       <input type="hidden" name="urlsManaged" value="1" form={form} />
       <ul className="space-y-2">

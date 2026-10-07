@@ -85,6 +85,7 @@ export function FillJobDetails({
         } else if (result.fields.workArrangement) {
           hybridNote.value = "";
         }
+        hybridNote.dispatchEvent(new Event("input", { bubbles: true }));
       }
       setField(form, "engagement", result.fields.engagement);
       if (result.tagIds.length) {

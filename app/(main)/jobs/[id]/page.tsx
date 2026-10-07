@@ -22,6 +22,7 @@ import { SettingsSection } from "@/components/settings-section";
 import { FillJobDetails } from "@/components/fill-job-details";
 import { loadJobFillAccess } from "@/lib/ai/feature-grants";
 import { CompanyNameField } from "@/components/company-picker";
+import { DirtyFormSave } from "@/components/dirty-form-save";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -235,9 +236,6 @@ export default async function JobDetailPage({
               <input className={compactFieldClass} name="followUpNote" defaultValue={job.followUpNote} />
             </span>
           </label>
-          <div className="mt-1.5 flex justify-end">
-            <SubmitButton label={t(lang, "save")} />
-          </div>
         </SettingsSection>
       </form>
 
@@ -313,7 +311,8 @@ export default async function JobDetailPage({
           liveJobId={job.id}
         />
       </SettingsSection>
-      <div>
+      <div className="flex flex-wrap items-center gap-4">
+        <DirtyFormSave formId="job-form" label={t(lang, "save")} revision={job.updatedAt.toISOString()} />
         <form action={deleteJob}>
           <input type="hidden" name="jobId" value={job.id} />
           <button className="text-sm text-rose-300" type="submit">{t(lang, "delete")}</button>

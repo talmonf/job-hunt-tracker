@@ -38,7 +38,7 @@ test("saved meetings keep occurredAt as when they were scheduled", () => {
 
 test("meeting labels say the stage was scheduled", () => {
   assert.equal(eventHappenedLabel("en", "meeting", "hr"), "HR / screening meeting scheduled");
-  assert.equal(eventHappenedLabel("he", "meeting", "hr"), "פגישת אישיותי / HR נקבעה");
+  assert.equal(eventHappenedLabel("he", "meeting", "hr"), "פגישה נקבעה (אישיותי / HR)");
   assert.equal(eventHappenedLabel("en", "application"), "Application sent");
 });
 
@@ -52,7 +52,7 @@ test("status updates include the new status", () => {
   );
   assert.equal(
     eventHappenedLabel("he", "status_change", null, "parked", "contacted"),
-    "עדכון סטטוס (\u2066פניתי → מוקפא\u2069)",
+    "עדכון סטטוס (\u2066פניתי → בצד\u2069)",
   );
 });
 
