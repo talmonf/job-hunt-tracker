@@ -222,35 +222,33 @@ export default async function JobsPage({
         <Modal title={t(lang, "addJob")} closeHref={closeHref} closeLabel={t(lang, "close")}>
           <form id="job-form" action={createJob} className="grid gap-3">
             <input type="hidden" name="returnTo" value={`/jobs${keep}`} />
+            <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+              <div className="w-64 max-w-full">
+                <CompanyNameField lang={lang} names={companies.map((company) => company.name)} required />
+              </div>
+              <label className="w-80 max-w-full">
+                <span className={labelClass}>{t(lang, "title")}</span>
+                <input className={fieldClass} name="title" />
+              </label>
+              <label className="w-96 max-w-full">
+                <span className={labelClass}>{t(lang, "location")}</span>
+                <input className={fieldClass} name="location" />
+              </label>
+              <AttributeSelect lang={lang} name="employmentType" label={t(lang, "employmentType")} options={EMPLOYMENT_TYPES} />
+              <AttributeSelect lang={lang} name="engagement" label={t(lang, "engagement")} options={ENGAGEMENTS} />
+              <WorkArrangementField lang={lang} options={WORK_ARRANGEMENTS} />
+            </div>
             <FillJobDetails lang={lang} access={jobFillAccess} lead="create">
               <MentionTextarea
                 lang={lang}
                 name="description"
                 label={t(lang, "description")}
-                rows={4}
+                rows={8}
                 localContacts={localContacts}
                 googleConnected={googleConnected}
                 allowUrl={false}
               />
             </FillJobDetails>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <CompanyNameField lang={lang} names={companies.map((company) => company.name)} required />
-              <label>
-                <span className={labelClass}>{t(lang, "title")}</span>
-                <input className={fieldClass} name="title" />
-              </label>
-              <label>
-                <span className={labelClass}>{t(lang, "location")}</span>
-                <input className={fieldClass} name="location" />
-              </label>
-              <div className="sm:col-start-1">
-                <AttributeSelect lang={lang} name="employmentType" label={t(lang, "employmentType")} options={EMPLOYMENT_TYPES} />
-              </div>
-              <AttributeSelect lang={lang} name="engagement" label={t(lang, "engagement")} options={ENGAGEMENTS} />
-              <div className="sm:col-span-2">
-                <WorkArrangementField lang={lang} options={WORK_ARRANGEMENTS} />
-              </div>
-            </div>
             <JobUrlsEditor lang={lang} />
             <JobScheduleFields lang={lang} interestDate={interestDefault} followUpAt={followDefault} />
             <TagPicker lang={lang} hide={hide} tags={catalog} selected={[]} />

@@ -126,7 +126,7 @@ export default async function JobDetailPage({
     job.location?.trim() ? { label: t(lang, "location"), value: dash(job.location, hide) } : null,
     job.employmentType ? { label: t(lang, "employmentType"), value: jobAttributeLabel(lang, job.employmentType) } : null,
     job.workArrangement ? { label: t(lang, "workArrangement"), value: workArrangementLabel(lang, job.workArrangement, job.hybridNote) } : null,
-    job.engagement ? { label: t(lang, "engagement"), value: jobAttributeLabel(lang, job.engagement) } : null,
+    job.engagement === "freelance" ? { label: t(lang, "engagement"), value: jobAttributeLabel(lang, job.engagement) } : null,
   ].filter((item): item is { label: string; value: string } => item !== null);
   const detailSummary = detailItems.length ? (
     <span className="flex flex-wrap gap-x-4 gap-y-1">
@@ -172,37 +172,25 @@ export default async function JobDetailPage({
           <TagPicker lang={lang} hide={hide} tags={catalog} selected={jobTagIds} compact />
         </div>
         <SettingsSection title={t(lang, "jobDetails")} summary={detailSummary}>
-          <FillJobDetails key={job.id} lang={lang} access={jobFillAccess} lead="edit" filled={detailsFilled}>
-            <MentionTextarea
-              lang={lang}
-              name="description"
-              label={t(lang, "description")}
-              defaultValue={job.description}
-              rows={5}
-              localContacts={localContacts}
-              googleConnected={googleConnected}
-              allowUrl={false}
-            />
-          </FillJobDetails>
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <CompanyNameField lang={lang} names={companies.map((company) => company.name)} defaultValue={job.companyName} required />
-            <label>
+          <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+            <div className="w-64 max-w-full">
+              <CompanyNameField lang={lang} names={companies.map((company) => company.name)} defaultValue={job.companyName} required />
+            </div>
+            <label className="w-80 max-w-full">
               <span className={labelClass}>{t(lang, "title")}</span>
               <input className={fieldClass} name="title" defaultValue={job.title} />
             </label>
-            <label>
+            <label className="w-96 max-w-full">
               <span className={labelClass}>{t(lang, "location")}</span>
               <input className={fieldClass} name="location" defaultValue={job.location} />
             </label>
-            <div className="md:col-start-1">
-              <AttributeSelect
-                lang={lang}
-                name="employmentType"
-                label={t(lang, "employmentType")}
-                options={EMPLOYMENT_TYPES}
-                value={job.employmentType ?? ""}
-              />
-            </div>
+            <AttributeSelect
+              lang={lang}
+              name="employmentType"
+              label={t(lang, "employmentType")}
+              options={EMPLOYMENT_TYPES}
+              value={job.employmentType ?? ""}
+            />
             <AttributeSelect
               lang={lang}
               name="engagement"
@@ -210,15 +198,27 @@ export default async function JobDetailPage({
               options={ENGAGEMENTS}
               value={job.engagement ?? ""}
             />
-            <div className="md:col-span-2">
-              <WorkArrangementField
-                lang={lang}
-                options={WORK_ARRANGEMENTS}
-                value={job.workArrangement ?? ""}
-                note={job.hybridNote}
-              />
-            </div>
+            <WorkArrangementField
+              lang={lang}
+              options={WORK_ARRANGEMENTS}
+              value={job.workArrangement ?? ""}
+              note={job.hybridNote}
+            />
           </div>
+        </SettingsSection>
+        <SettingsSection title={t(lang, "description")}>
+          <FillJobDetails key={job.id} lang={lang} access={jobFillAccess} lead="edit" filled={detailsFilled}>
+            <MentionTextarea
+              lang={lang}
+              name="description"
+              label={t(lang, "description")}
+              defaultValue={job.description}
+              rows={12}
+              localContacts={localContacts}
+              googleConnected={googleConnected}
+              allowUrl={false}
+            />
+          </FillJobDetails>
         </SettingsSection>
         <SettingsSection title={t(lang, "followUp")} summary={followSummary}>
           <JobScheduleFields

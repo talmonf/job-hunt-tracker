@@ -92,14 +92,13 @@ export function WorkArrangementField({
         </select>
       </label>
       <label className={arrangement === "hybrid" ? "w-fit max-w-full" : "hidden"}>
-        <span className={labelClass}>{t(lang, "hybridNote")}</span>
-        <input
-          className={hybridNoteClass}
-          name="hybridNote"
-          defaultValue={note}
-          maxLength={HYBRID_NOTE_MAX}
-          placeholder={t(lang, "hybridNotePlaceholder")}
-        />
+        <span className={`group/hybrid relative ${labelClass}`}>
+          {t(lang, "hybridNote")}
+          <span className="pointer-events-none absolute start-0 top-full z-20 mt-1 hidden w-64 whitespace-normal rounded-md border border-slate-600 bg-slate-900 p-2 text-xs font-normal text-slate-100 shadow-lg group-hover/hybrid:block">
+            {t(lang, "hybridNoteHint")}
+          </span>
+        </span>
+        <input className={hybridNoteClass} name="hybridNote" defaultValue={note} maxLength={HYBRID_NOTE_MAX} />
       </label>
     </div>
   );
