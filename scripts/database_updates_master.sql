@@ -1,4 +1,5 @@
 -- Numbered migrations (newest first — add new lines at the top after each migration).
+[x] 024_job_process_steps.sql
 [x] 023_hybrid_note.sql
 [x] 022_ai_feature_grants.sql
 [x] 021_work_experience_note.sql

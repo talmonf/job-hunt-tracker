@@ -307,10 +307,30 @@ model Job {
   notes                  Note[]
   entityLinks            EntityLink[]
   tags                   JobTag[]
+  processSteps           JobProcessStep[]
 
   @@unique([userId, importKey])
   @@index([userId, status])
   @@index([companyId])
+}
+
+/// One stage in this application's hiring process, in the order it happens.
+model JobProcessStep {
+  id          String    @id @default(cuid())
+  jobId       String
+  job         Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  position    Int
+  label       String
+  medium      String    @default("")
+  withWhom    String    @default("")
+  notes       String    @default("")
+  scheduledAt DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([jobId, position])
+  @@index([scheduledAt])
 }
 
 model JobUrl {

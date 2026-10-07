@@ -7,6 +7,7 @@ import { assignmentTags, parseTagMatch, tagFilter, TAG_CHIP_CLASS, TAG_SWATCH_CL
 import { parseDateOnly } from "@/lib/forms";
 import { EMPLOYMENT_TYPES, ENGAGEMENTS, JOB_STATUSES, WORK_ARRANGEMENTS, statusesForJobList } from "@/lib/events";
 import { jobAttributeLabel, statusLabel, t, workArrangementLabel, type Lang } from "@/lib/i18n";
+import { formatProcessProgress, processProgress } from "@/lib/process-steps";
 import { dash, maskText } from "@/lib/mask";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { createJob } from "@/lib/actions/jobs";
@@ -35,6 +36,7 @@ export default async function JobsPage({
   const hide = await hidePersonalInfo();
   const search = await searchParams;
   const lang = user.uiLanguage;
+  const now = new Date();
   const q = firstParam(search.q);
   const requestedStatuses = allParams(search.status);
   const statuses = statusesForJobList(requestedStatuses);
@@ -70,7 +72,11 @@ export default async function JobsPage({
     prisma.job.findMany({
       where,
       orderBy: { [sort]: dir },
-      include: { _count: { select: { urls: true, cvs: true } }, tags: { include: { tag: true } } },
+      include: {
+        _count: { select: { urls: true, cvs: true } },
+        tags: { include: { tag: true } },
+        processSteps: { orderBy: { position: "asc" }, select: { position: true, label: true, completedAt: true, scheduledAt: true } },
+      },
     }),
     prisma.contact.findMany({ where: { userId: user.id }, orderBy: { fullName: "asc" } }),
     prisma.company.findMany({ where: { userId: user.id }, orderBy: { name: "asc" }, select: { name: true } }),
@@ -184,6 +190,7 @@ export default async function JobsPage({
                     <Link className="text-sky-300" href={`/jobs/${job.id}`}>
                       {job.title ? dash(job.title, hide) : t(lang, "openJob")}
                     </Link>
+                    <ProcessCaption steps={job.processSteps} lang={lang} hide={hide} timeZone={user.timezone} now={now} />
                   </td>
                   <td className="px-3 py-2">
                     <TagChips tags={assignmentTags(job.tags)} hide={hide} />
@@ -366,4 +373,33 @@ function SortHead({
       </Link>
     </th>
   );
+}
+
+function ProcessCaption({
+  steps,
+  lang,
+  hide,
+  timeZone,
+  now,
+}: {
+  steps: { position: number; label: string; completedAt: Date | null; scheduledAt: Date | null }[];
+  lang: Lang;
+  hide: boolean;
+  timeZone: string;
+  now: Date;
+}) {
+  if (steps.length === 0) return null;
+  const progress = processProgress(steps);
+  const overdue = progress.kind === "next" && progress.scheduledAt !== null && progress.scheduledAt.getTime() < now.getTime();
+  const line = formatProcessProgress(
+    progress,
+    {
+      empty: "",
+      doneOf: t(lang, "processDoneOf"),
+      next: t(lang, "processNext"),
+      when: progress.kind === "next" && progress.scheduledAt ? formatDateTime(progress.scheduledAt, timeZone) : undefined,
+    },
+    (label) => dash(label, hide),
+  );
+  return <p className={`mt-0.5 text-xs ${overdue ? "text-amber-300" : "text-slate-400"}`}>{line}</p>;
 }

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { dateInputValue, dateTimeInputValue, formatDateTime } from "@/lib/dates";
 import { jobAttributeLabel, t, workArrangementLabel } from "@/lib/i18n";
+import { formatProcessProgress, processProgress, stepTiming } from "@/lib/process-steps";
 import { dash } from "@/lib/mask";
 import { assignmentTags, rankByOverlap } from "@/lib/tags";
 import { EMPLOYMENT_TYPES, ENGAGEMENTS, WORK_ARRANGEMENTS } from "@/lib/events";
@@ -20,6 +21,7 @@ import { TagPicker } from "@/components/tag-picker";
 import { RelatedByTags } from "@/components/related-tags";
 import { SettingsSection } from "@/components/settings-section";
 import { FillJobDetails } from "@/components/fill-job-details";
+import { JobProcessSection } from "@/components/job-process";
 import { loadJobFillAccess } from "@/lib/ai/feature-grants";
 import { CompanyNameField } from "@/components/company-picker";
 import { DirtyFormSave } from "@/components/dirty-form-save";
@@ -47,6 +49,7 @@ export default async function JobDetailPage({
         events: { orderBy: { occurredAt: "desc" } },
         entityLinks: { orderBy: { createdAt: "asc" } },
         tags: { include: { tag: true } },
+        processSteps: { orderBy: { position: "asc" } },
       },
     }),
     prisma.note.findMany({
@@ -113,6 +116,18 @@ export default async function JobDetailPage({
     jobTagIds,
     (row) => row.fullName,
   ).map((row) => ({ id: row.item.id, label: row.item.fullName, overlap: row.overlap }));
+  const now = new Date();
+  const progress = processProgress(job.processSteps);
+  const processSummary = formatProcessProgress(
+    progress,
+    {
+      empty: t(lang, "processEmpty"),
+      doneOf: t(lang, "processDoneOf"),
+      next: t(lang, "processNext"),
+      when: progress.kind === "next" && progress.scheduledAt ? formatDateTime(progress.scheduledAt, user.timezone) : undefined,
+    },
+    (label) => dash(label, hide),
+  );
   const heading = (
     <>
       <Link className="text-sky-300 hover:text-sky-200" href={`/companies/${job.companyId}`}>
@@ -171,6 +186,24 @@ export default async function JobDetailPage({
       description={t(lang, "jobDetailIntro")}
       search={search}
     >
+      <JobProcessSection
+        lang={lang}
+        hide={hide}
+        jobId={job.id}
+        summary={processSummary}
+        done={progress.kind === "empty" ? 0 : progress.done}
+        total={progress.kind === "empty" ? 0 : progress.total}
+        steps={job.processSteps.map((step) => ({
+          id: step.id,
+          label: step.label,
+          medium: step.medium,
+          withWhom: step.withWhom,
+          notes: step.notes,
+          scheduledInput: step.scheduledAt ? dateTimeInputValue(step.scheduledAt, user.timezone) : "",
+          whenLabel: step.scheduledAt ? formatDateTime(step.scheduledAt, user.timezone) : "",
+          timing: stepTiming(step, now),
+        }))}
+      />
       <form id="job-form" action={updateJob}>
         <input type="hidden" name="jobId" value={job.id} />
         <div className="mb-3">

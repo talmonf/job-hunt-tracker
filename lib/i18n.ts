@@ -1,4 +1,5 @@
 import { normalizeContactStatus } from "./contact-status";
+import { resolveMediumLabel } from "./process-steps";
 
 export type Lang = "en" | "he";
 
@@ -122,6 +123,21 @@ const dict = {
     usersIntro: "Create accounts, reset passwords, and deactivate users.",
     jobDetailIntro: "Description, files, follow-up, and the events that set status.",
     jobDetails: "Job details",
+    process: "Hiring process",
+    processEmpty: "Add the stages for this application",
+    processAdd: "Add stage",
+    processName: "Name",
+    processMedium: "Medium",
+    processWith: "With",
+    processWhen: "When",
+    processWhenHint: "Appointment or due date",
+    processNotes: "Notes",
+    processCustom: "Custom",
+    processNotScheduled: "Not scheduled",
+    processNext: "Next",
+    processDoneOf: "done",
+    processMoveUp: "Move up",
+    processMoveDown: "Move down",
     fillJobDetails: "Fill form from description",
     fillJobDetailsHint: "Fills company, title, location, employment details, and suggests tags. Check them before you save.",
     fillJobDetailsHintEdit: "That fills the other fields on this screen and proposes tags. Review them before you save.",
@@ -619,6 +635,21 @@ const dict = {
     usersIntro: "יצירת חשבונות, איפוס סיסמה והשבתת משתמשים.",
     jobDetailIntro: "תיאור, קבצים, פולואפ, והאירועים שקובעים את הסטטוס.",
     jobDetails: "פרטי המשרה",
+    process: "תהליך הגיוס",
+    processEmpty: "הוסיפו את השלבים של המועמדות הזו",
+    processAdd: "הוספת שלב",
+    processName: "שם",
+    processMedium: "אמצעי",
+    processWith: "עם מי",
+    processWhen: "מתי",
+    processWhenHint: "מועד הפגישה או תאריך היעד",
+    processNotes: "הערות",
+    processCustom: "אחר",
+    processNotScheduled: "טרם נקבע",
+    processNext: "הבא",
+    processDoneOf: "הושלמו",
+    processMoveUp: "הזזה למעלה",
+    processMoveDown: "הזזה למטה",
     fillJobDetails: "מילוי הטופס מהתיאור",
     fillJobDetailsHint: "ממלא חברה, תפקיד, מיקום ופרטי העסקה, ומציע תגיות. בדקו אותם לפני השמירה.",
     fillJobDetailsHintEdit: "זה ממלא את שאר השדות במסך ומציע תגיות. בדקו אותם לפני השמירה.",
@@ -1062,6 +1093,26 @@ const channelHe: Record<string, string> = {
   in_person: "פגישה פרונטלית",
   other: "אחר",
 };
+
+const processMediumEn: Record<string, string> = {
+  phone: "Phone",
+  video: "Video",
+  in_person: "In person",
+  assignment: "Home assignment",
+  presentation: "Presentation",
+};
+
+const processMediumHe: Record<string, string> = {
+  phone: "טלפון",
+  video: "שיחת וידאו",
+  in_person: "פגישה פרונטלית",
+  assignment: "משימת בית",
+  presentation: "הצגה",
+};
+
+export function processMediumLabel(lang: Lang, medium: string): string {
+  return resolveMediumLabel(medium, (key) => (lang === "he" ? processMediumHe : processMediumEn)[key]);
+}
 
 const stageEn: Record<string, string> = {
   hr: "HR / screening",

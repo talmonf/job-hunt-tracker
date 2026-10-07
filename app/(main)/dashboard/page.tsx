@@ -30,7 +30,7 @@ export default async function DashboardPage({
   const horizon = new Date(now.getTime() + user.digestDaysAhead * 86400000);
   const returnTo = allTime ? "/dashboard?period=all" : "/dashboard";
   const inWeek = { gte: weekStart, lt: weekEnd };
-  const [applications, outreaches, meetings, statuses, followUps, upcomingMeetings, nextSteps] = await Promise.all([
+  const [applications, outreaches, meetings, statuses, followUps, upcomingMeetings, nextSteps, scheduledStages] = await Promise.all([
     prisma.event.count({
       where: { userId: user.id, type: "application", ...(allTime ? {} : { occurredAt: inWeek }) },
     }),
@@ -72,7 +72,35 @@ export default async function DashboardPage({
       orderBy: { nextActionDate: "asc" },
       take: 8,
     }),
+    prisma.jobProcessStep.findMany({
+      where: { completedAt: null, scheduledAt: { lte: horizon }, job: { userId: user.id } },
+      orderBy: { scheduledAt: "asc" },
+      include: { job: { select: { id: true, companyName: true, title: true } } },
+    }),
   ]);
+  const upcomingItems = [
+    ...upcomingMeetings.map((meeting) => {
+      const at = meeting.startsAt ?? meeting.occurredAt;
+      const href = meeting.jobId ? `/jobs/${meeting.jobId}` : meeting.contactId ? `/contacts/${meeting.contactId}` : "";
+      const when = formatScheduledRange(at, meeting.endsAt, user.timezone, lang);
+      return { key: `meeting-${meeting.id}`, at: at.getTime(), overdue: false, href, line: `${when} · ${upcomingMeetingDetails(meeting, lang, hide)}` };
+    }),
+    ...nextSteps.map((contact) => ({
+      key: `contact-${contact.id}`,
+      at: contact.nextActionDate!.getTime(),
+      overdue: false,
+      href: `/contacts/${contact.id}`,
+      line: `${formatScheduledDay(contact.nextActionDate!, user.timezone, lang)} · ${upcomingContactDetails(contact, hide)}`,
+    })),
+    ...scheduledStages.flatMap((step) => {
+      if (!step.scheduledAt) return [];
+      const title = step.job.title.trim() ? dash(step.job.title, hide) : "";
+      const line = [formatDateTime(step.scheduledAt, user.timezone), dash(step.job.companyName, hide), title, dash(step.label, hide)]
+        .filter((part) => part && part !== "—")
+        .join(" · ");
+      return [{ key: `step-${step.id}`, at: step.scheduledAt.getTime(), overdue: step.scheduledAt.getTime() < now.getTime(), href: `/jobs/${step.job.id}#process`, line }];
+    }),
+  ].sort((a, b) => a.at - b.at);
   const applicationGoal = Math.round((goals?.applicationsPerDay ?? 0) * 7);
   const networkingGoal = Math.round(goals?.networkingPerWeek ?? (goals?.networkingPerDay ?? 0) * 7);
   const counts = new Map(statuses.map((row) => [row.status, row._count._all]));
@@ -162,32 +190,20 @@ export default async function DashboardPage({
         </ul>
       )}
       <h2 className="mb-3 mt-8 text-lg">{t(lang, "upcoming")}</h2>
-      {upcomingMeetings.length + nextSteps.length === 0 ? (
+      {upcomingItems.length === 0 ? (
         <p className="text-sm text-slate-400">{t(lang, "noUpcoming")}</p>
       ) : (
         <ul className="space-y-2 text-sm">
-          {upcomingMeetings.map((meeting) => {
-            const href = meeting.jobId ? `/jobs/${meeting.jobId}` : meeting.contactId ? `/contacts/${meeting.contactId}` : "";
-            const when = formatScheduledRange(meeting.startsAt ?? meeting.occurredAt, meeting.endsAt, user.timezone, lang);
-            const details = upcomingMeetingDetails(meeting, lang, hide);
-            const line = `${when} · ${details}`;
-            return (
-              <li key={meeting.id}>
-                {href ? (
-                  <Link className="text-sky-300" href={href}>
-                    {line}
-                  </Link>
-                ) : (
-                  line
-                )}
-              </li>
-            );
-          })}
-          {nextSteps.map((contact) => (
-            <li key={contact.id}>
-              <Link className="text-sky-300" href={`/contacts/${contact.id}`}>
-                {formatScheduledDay(contact.nextActionDate!, user.timezone, lang)} · {upcomingContactDetails(contact, hide)}
-              </Link>
+          {upcomingItems.map((item) => (
+            <li key={item.key} className={item.overdue ? "rounded-md border border-amber-700/70 bg-amber-950/30 px-3 py-2" : undefined}>
+              {item.href ? (
+                <Link className={item.overdue ? "text-amber-200" : "text-sky-300"} href={item.href}>
+                  {item.overdue ? <span className="me-2 text-xs font-semibold uppercase tracking-wide">{t(lang, "overdue")}</span> : null}
+                  {item.line}
+                </Link>
+              ) : (
+                item.line
+              )}
             </li>
           ))}
         </ul>
