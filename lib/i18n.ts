@@ -86,6 +86,8 @@ const dict = {
     location: "Location",
     employmentType: "Employment type",
     workArrangement: "Work arrangement",
+    hybridNote: "Hybrid details",
+    hybridNotePlaceholder: "3 days in office",
     engagement: "Engagement",
     description: "Description",
     urls: "Links",
@@ -579,6 +581,8 @@ const dict = {
     location: "מיקום",
     employmentType: "היקף משרה",
     workArrangement: "אופן עבודה",
+    hybridNote: "פירוט היברידי",
+    hybridNotePlaceholder: "3 ימים במשרד",
     engagement: "סוג העסקה",
     description: "תיאור",
     urls: "קישורים",
@@ -1128,6 +1132,13 @@ const jobAttributeHe: Record<string, string> = {
 
 export function jobAttributeLabel(lang: Lang, value: string): string {
   return (lang === "he" ? jobAttributeHe : jobAttributeEn)[value] ?? value;
+}
+
+export function workArrangementLabel(lang: Lang, arrangement: string, note: string): string {
+  const label = jobAttributeLabel(lang, arrangement);
+  const detail = note.trim();
+  if (arrangement === "hybrid" && detail) return `${label} (${detail})`;
+  return label;
 }
 
 const companySizeEn: Record<string, string> = {

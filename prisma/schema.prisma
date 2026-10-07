@@ -288,6 +288,7 @@ model Job {
   location               String    @default("")
   employmentType         EmploymentType?
   workArrangement        WorkArrangement?
+  hybridNote             String    @default("")
   engagement             Engagement?
   description            String    @default("")
   interestDate           DateTime

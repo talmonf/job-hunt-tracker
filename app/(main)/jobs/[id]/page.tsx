@@ -3,20 +3,18 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { dateInputValue, dateTimeInputValue, formatDateTime } from "@/lib/dates";
-import { jobAttributeLabel, t } from "@/lib/i18n";
+import { jobAttributeLabel, t, workArrangementLabel } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
 import { assignmentTags, rankByOverlap } from "@/lib/tags";
 import { EMPLOYMENT_TYPES, ENGAGEMENTS, WORK_ARRANGEMENTS } from "@/lib/events";
 import { deleteCv, deleteJob, updateJob, uploadCv } from "@/lib/actions/jobs";
-import { toChipLink } from "@/lib/entity-links";
 import { PageFrame } from "@/components/chrome";
-import { AttributeSelect, SubmitButton, compactFieldClass, fieldClass, labelClass } from "@/components/widgets";
+import { AttributeSelect, SubmitButton, WorkArrangementField, compactFieldClass, fieldClass, labelClass } from "@/components/widgets";
 import { JobScheduleFields } from "@/components/job-schedule-fields";
 import { JobStatusEditor } from "@/components/job-status-editor";
 import { JobUrlsEditor } from "@/components/job-urls";
 import { EventHistoryTable } from "@/components/event-history";
 import { JobPeopleSection } from "@/components/job-people";
-import { MentionText } from "@/components/mention-text";
 import { MentionTextarea } from "@/components/mention-textarea";
 import { TagPicker } from "@/components/tag-picker";
 import { RelatedByTags } from "@/components/related-tags";
@@ -82,8 +80,8 @@ export default async function JobDetailPage({
     googleResourceName: contact.googleResourceName,
     linkedinUrl: contact.linkedinUrl,
   }));
-  const people = job.entityLinks.map(toChipLink);
   const googleConnected = Boolean(user.contactsRefreshToken);
+  const detailsFilled = Boolean(job.location.trim() && job.employmentType && job.workArrangement && job.engagement);
   const jobTags = assignmentTags(job.tags);
   const jobTagIds = jobTags.map((tag) => tag.id);
   const relatedJobs = rankByOverlap(
@@ -127,7 +125,7 @@ export default async function JobDetailPage({
   const detailItems = [
     job.location?.trim() ? { label: t(lang, "location"), value: dash(job.location, hide) } : null,
     job.employmentType ? { label: t(lang, "employmentType"), value: jobAttributeLabel(lang, job.employmentType) } : null,
-    job.workArrangement ? { label: t(lang, "workArrangement"), value: jobAttributeLabel(lang, job.workArrangement) } : null,
+    job.workArrangement ? { label: t(lang, "workArrangement"), value: workArrangementLabel(lang, job.workArrangement, job.hybridNote) } : null,
     job.engagement ? { label: t(lang, "engagement"), value: jobAttributeLabel(lang, job.engagement) } : null,
   ].filter((item): item is { label: string; value: string } => item !== null);
   const detailSummary = detailItems.length ? (
@@ -173,14 +171,8 @@ export default async function JobDetailPage({
         <div className="mb-3">
           <TagPicker lang={lang} hide={hide} tags={catalog} selected={jobTagIds} compact />
         </div>
-        <SettingsSection title={t(lang, "jobDetails")} summary={detailSummary} defaultOpen>
-          <FillJobDetails lang={lang} access={jobFillAccess} lead="edit">
-            {job.description ? (
-              <div>
-                <p className={labelClass}>{t(lang, "preview")}</p>
-                <MentionText text={job.description} hide={hide} lookup={{ contacts: localContacts, links: people }} />
-              </div>
-            ) : null}
+        <SettingsSection title={t(lang, "jobDetails")} summary={detailSummary}>
+          <FillJobDetails key={job.id} lang={lang} access={jobFillAccess} lead="edit" filled={detailsFilled}>
             <MentionTextarea
               lang={lang}
               name="description"
@@ -209,12 +201,11 @@ export default async function JobDetailPage({
               options={EMPLOYMENT_TYPES}
               value={job.employmentType ?? ""}
             />
-            <AttributeSelect
+            <WorkArrangementField
               lang={lang}
-              name="workArrangement"
-              label={t(lang, "workArrangement")}
               options={WORK_ARRANGEMENTS}
               value={job.workArrangement ?? ""}
+              note={job.hybridNote}
             />
             <AttributeSelect
               lang={lang}

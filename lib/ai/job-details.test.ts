@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { workArrangementLabel } from "../i18n";
 import { normalizeJobDetails } from "./job-details";
 
 const catalog = [
@@ -27,6 +28,7 @@ describe("job details from a description", () => {
       location: "Haifa",
       employmentType: "full_time",
       workArrangement: "hybrid",
+      hybridNote: "",
       engagement: "employee",
     });
   });
@@ -42,6 +44,7 @@ describe("job details from a description", () => {
       location: "",
       employmentType: "full_time",
       workArrangement: "",
+      hybridNote: "",
       engagement: "employee",
     });
   });
@@ -53,6 +56,7 @@ describe("job details from a description", () => {
     );
     assert.equal(result.fields.employmentType, "part_time");
     assert.equal(result.fields.workArrangement, "remote");
+    assert.equal(result.fields.hybridNote, "");
     assert.equal(result.fields.engagement, "freelance");
   });
 
@@ -64,6 +68,7 @@ describe("job details from a description", () => {
       location: "",
       employmentType: "full_time",
       workArrangement: "",
+      hybridNote: "",
       engagement: "employee",
     });
     assert.deepEqual(result.tagIds, []);
@@ -83,5 +88,26 @@ describe("job details from a description", () => {
     assert.equal(result.proposedTags.length, 20);
     assert.equal(result.proposedTags[0], "Tag 1");
     assert.equal(result.proposedTags[19], "Tag 20");
+  });
+
+  it("keeps a hybrid schedule phrase and drops it otherwise", () => {
+    const hybrid = normalizeJobDetails({ workArrangement: "hybrid", hybridNote: "  3 days in office  " }, []);
+    assert.equal(hybrid.fields.workArrangement, "hybrid");
+    assert.equal(hybrid.fields.hybridNote, "3 days in office");
+
+    const remote = normalizeJobDetails({ workArrangement: "remote", hybridNote: "3 days in office" }, []);
+    assert.equal(remote.fields.hybridNote, "");
+
+    const capped = normalizeJobDetails({ workArrangement: "hybrid", hybridNote: "x".repeat(250) }, []);
+    assert.equal(capped.fields.hybridNote.length, 200);
+  });
+});
+
+describe("work arrangement label", () => {
+  it("puts a hybrid note in brackets", () => {
+    assert.equal(workArrangementLabel("en", "hybrid", "3 days in office"), "Hybrid (3 days in office)");
+    assert.equal(workArrangementLabel("he", "hybrid", "3 ימים במשרד"), "היברידי (3 ימים במשרד)");
+    assert.equal(workArrangementLabel("en", "hybrid", "  "), "Hybrid");
+    assert.equal(workArrangementLabel("en", "remote", "3 days in office"), "Remote");
   });
 });

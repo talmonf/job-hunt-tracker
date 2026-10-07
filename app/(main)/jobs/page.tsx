@@ -6,12 +6,12 @@ import { allParams, firstParam, preserveQuery } from "@/lib/http";
 import { assignmentTags, parseTagMatch, tagFilter, TAG_CHIP_CLASS, TAG_SWATCH_CLASS, type TagMatchMode, type TagRef } from "@/lib/tags";
 import { parseDateOnly } from "@/lib/forms";
 import { EMPLOYMENT_TYPES, ENGAGEMENTS, JOB_STATUSES, WORK_ARRANGEMENTS, statusesForJobList } from "@/lib/events";
-import { jobAttributeLabel, statusLabel, t, type Lang } from "@/lib/i18n";
+import { jobAttributeLabel, statusLabel, t, workArrangementLabel, type Lang } from "@/lib/i18n";
 import { dash, maskText } from "@/lib/mask";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { createJob } from "@/lib/actions/jobs";
 import { EmptyState, FilterBar, Modal, PageFrame } from "@/components/chrome";
-import { AttributeSelect, DateField, MultiSelect, SubmitButton, compactFieldClass, compactLabelClass, fieldClass, labelClass } from "@/components/widgets";
+import { AttributeSelect, DateField, MultiSelect, SubmitButton, WorkArrangementField, compactFieldClass, compactLabelClass, fieldClass, labelClass } from "@/components/widgets";
 import { JobScheduleFields } from "@/components/job-schedule-fields";
 import { JobStatusEditor } from "@/components/job-status-editor";
 import { JobUrlsEditor } from "@/components/job-urls";
@@ -190,7 +190,7 @@ export default async function JobsPage({
                   </td>
                   <td className="px-3 py-2">{dash(job.location, hide)}</td>
                   <td className="px-3 py-2">{job.employmentType ? jobAttributeLabel(lang, job.employmentType) : "—"}</td>
-                  <td className="px-3 py-2">{job.workArrangement ? jobAttributeLabel(lang, job.workArrangement) : "—"}</td>
+                  <td className="px-3 py-2">{job.workArrangement ? workArrangementLabel(lang, job.workArrangement, job.hybridNote) : "—"}</td>
                   <td className="px-3 py-2">{job.engagement ? jobAttributeLabel(lang, job.engagement) : "—"}</td>
                   <td className="px-3 py-2">
                     <JobStatusEditor jobId={job.id} status={job.status} lang={lang} />
@@ -244,7 +244,7 @@ export default async function JobsPage({
                 <input className={fieldClass} name="location" />
               </label>
               <AttributeSelect lang={lang} name="employmentType" label={t(lang, "employmentType")} options={EMPLOYMENT_TYPES} />
-              <AttributeSelect lang={lang} name="workArrangement" label={t(lang, "workArrangement")} options={WORK_ARRANGEMENTS} />
+              <WorkArrangementField lang={lang} options={WORK_ARRANGEMENTS} />
               <AttributeSelect lang={lang} name="engagement" label={t(lang, "engagement")} options={ENGAGEMENTS} />
             </div>
             <JobUrlsEditor lang={lang} />

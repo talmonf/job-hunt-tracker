@@ -19,6 +19,7 @@ function setField(form: HTMLFormElement, name: string, value: string) {
   const field = form.elements.namedItem(name);
   if (field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement) {
     field.value = value;
+    field.dispatchEvent(new Event("change", { bubbles: true }));
   }
 }
 
@@ -34,14 +35,17 @@ export function FillJobDetails({
   lang,
   access,
   lead,
+  filled = false,
   children,
 }: {
   lang: Lang;
   access: FillAccess;
   lead: "create" | "edit";
+  filled?: boolean;
   children: ReactNode;
 }) {
   const [pending, setPending] = useState(false);
+  const [done, setDone] = useState(filled);
   const [adding, setAdding] = useState<string | null>(null);
   const [error, setError] = useState<MessageKey | null>(null);
   const [proposed, setProposed] = useState<string[]>([]);
@@ -74,11 +78,20 @@ export function FillJobDetails({
       setField(form, "location", result.fields.location);
       setField(form, "employmentType", result.fields.employmentType);
       setField(form, "workArrangement", result.fields.workArrangement);
+      const hybridNote = form.elements.namedItem("hybridNote");
+      if (hybridNote instanceof HTMLInputElement) {
+        if (result.fields.workArrangement === "hybrid") {
+          if (result.fields.hybridNote) hybridNote.value = result.fields.hybridNote;
+        } else if (result.fields.workArrangement) {
+          hybridNote.value = "";
+        }
+      }
       setField(form, "engagement", result.fields.engagement);
       if (result.tagIds.length) {
         const detail: JobTagsAddDetail = { ids: result.tagIds };
         window.dispatchEvent(new CustomEvent(JOB_TAGS_ADD_EVENT, { detail }));
       }
+      setDone(true);
       setProposed(result.proposedTags);
     } catch {
       setError("errorAiProvider");
@@ -106,41 +119,52 @@ export function FillJobDetails({
     }
   }
 
+  const showPrompt = !done;
   return (
     <div className="grid gap-3">
-      <p className="text-sm font-medium text-slate-100">{t(lang, lead === "create" ? "fillJobDetailsLead" : "fillJobDetailsLeadEdit")}</p>
-      {access === "blocked" ? (
-        <p className="rounded-md border border-amber-700/80 bg-amber-950/40 px-3 py-2 text-sm text-amber-100">{t(lang, "fillJobDetailsNeedsKey")}</p>
+      {showPrompt ? (
+        <>
+          <p className="text-sm font-medium text-slate-100">{t(lang, lead === "create" ? "fillJobDetailsLead" : "fillJobDetailsLeadEdit")}</p>
+          {access === "blocked" ? (
+            <p className="rounded-md border border-amber-700/80 bg-amber-950/40 px-3 py-2 text-sm text-amber-100">{t(lang, "fillJobDetailsNeedsKey")}</p>
+          ) : null}
+          {access === "ownKey" ? <p className="text-sm text-slate-400">{t(lang, "fillJobDetailsUsesKey")}</p> : null}
+        </>
       ) : null}
-      {access === "ownKey" ? <p className="text-sm text-slate-400">{t(lang, "fillJobDetailsUsesKey")}</p> : null}
       {children}
-      <div>
-        <button className={`${primaryButton} inline-flex items-center gap-2`} type="button" onClick={fill} disabled={pending} aria-busy={pending}>
-          {pending ? (
-            <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
-          ) : (
-            <AiIcon />
-          )}
-          {t(lang, "fillJobDetails")}
-        </button>
-        <p className="mt-1 text-xs text-slate-400">{t(lang, lead === "create" ? "fillJobDetailsHint" : "fillJobDetailsHintEdit")}</p>
-        {error ? <p className="mt-2 rounded-md border border-rose-700 px-3 py-2 text-sm text-rose-200">{t(lang, error)}</p> : null}
-        {proposed.length ? (
-          <div className="mt-2">
-            <p className="mb-1 text-xs text-slate-300">{t(lang, "proposedTags")}</p>
-            <ul className="flex flex-wrap gap-2">
-              {proposed.map((name) => (
-                <li key={name} className="inline-flex items-center gap-2 rounded-full border border-slate-600 px-2 py-0.5 text-xs text-slate-100">
-                  <span>{name}</span>
-                  <button className="text-sky-300 disabled:opacity-60" type="button" onClick={() => add(name)} disabled={adding === name}>
-                    {t(lang, "add")}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-      </div>
+      {showPrompt || error || proposed.length ? (
+        <div>
+          {showPrompt ? (
+            <>
+              <button className={`${primaryButton} inline-flex items-center gap-2`} type="button" onClick={fill} disabled={pending} aria-busy={pending}>
+                {pending ? (
+                  <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />
+                ) : (
+                  <AiIcon />
+                )}
+                {t(lang, "fillJobDetails")}
+              </button>
+              <p className="mt-1 text-xs text-slate-400">{t(lang, lead === "create" ? "fillJobDetailsHint" : "fillJobDetailsHintEdit")}</p>
+            </>
+          ) : null}
+          {error ? <p className="mt-2 rounded-md border border-rose-700 px-3 py-2 text-sm text-rose-200">{t(lang, error)}</p> : null}
+          {proposed.length ? (
+            <div className={showPrompt ? "mt-2" : undefined}>
+              <p className="mb-1 text-xs text-slate-300">{t(lang, "proposedTags")}</p>
+              <ul className="flex flex-wrap gap-2">
+                {proposed.map((name) => (
+                  <li key={name} className="inline-flex items-center gap-2 rounded-full border border-slate-600 px-2 py-0.5 text-xs text-slate-100">
+                    <span>{name}</span>
+                    <button className="text-sky-300 disabled:opacity-60" type="button" onClick={() => add(name)} disabled={adding === name}>
+                      {t(lang, "add")}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

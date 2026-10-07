@@ -26,6 +26,8 @@ export const EMPLOYMENT_TYPES = ["full_time", "part_time"] as const satisfies re
 
 export const WORK_ARRANGEMENTS = ["on_site", "remote", "hybrid"] as const satisfies readonly WorkArrangement[];
 
+export const HYBRID_NOTE_MAX = 200;
+
 export const ENGAGEMENTS = ["employee", "freelance"] as const satisfies readonly Engagement[];
 
 export const EVENT_TYPES = ["interest", "outreach", "application", "meeting", "status_change"] as const satisfies readonly EventType[];

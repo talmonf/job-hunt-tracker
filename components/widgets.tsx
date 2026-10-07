@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
+import { HYBRID_NOTE_MAX } from "@/lib/events";
 import type { Lang } from "@/lib/i18n";
 import { jobAttributeLabel, t } from "@/lib/i18n";
 
@@ -55,6 +56,50 @@ export function AttributeSelect({
         ))}
       </select>
     </label>
+  );
+}
+
+export function WorkArrangementField({
+  lang,
+  options,
+  value = "",
+  note = "",
+}: {
+  lang: Lang;
+  options: readonly string[];
+  value?: string;
+  note?: string;
+}) {
+  const [arrangement, setArrangement] = useState(value);
+  return (
+    <>
+      <label className="w-fit max-w-full">
+        <span className={labelClass}>{t(lang, "workArrangement")}</span>
+        <select
+          className={narrowSelectClass}
+          name="workArrangement"
+          value={arrangement}
+          onChange={(event) => setArrangement(event.target.value)}
+        >
+          <option value="">—</option>
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {jobAttributeLabel(lang, option)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className={arrangement === "hybrid" ? undefined : "hidden"}>
+        <span className={labelClass}>{t(lang, "hybridNote")}</span>
+        <input
+          className={fieldClass}
+          name="hybridNote"
+          defaultValue={note}
+          maxLength={HYBRID_NOTE_MAX}
+          placeholder={t(lang, "hybridNotePlaceholder")}
+        />
+      </label>
+    </>
   );
 }
 

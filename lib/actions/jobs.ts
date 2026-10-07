@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "../prisma";
 import { requireUser } from "../session";
 import { optionalInt, parseDateOnly, parseDateTime, requiredText } from "../forms";
-import { EMPLOYMENT_TYPES, ENGAGEMENTS, WORK_ARRANGEMENTS } from "../events";
+import { EMPLOYMENT_TYPES, ENGAGEMENTS, HYBRID_NOTE_MAX, WORK_ARRANGEMENTS } from "../events";
 import { recomputeJobStatus } from "../job-status";
 import { removeStored, saveUpload } from "../files";
 import { deleteCalendarEvent } from "../calendar";
@@ -199,10 +199,12 @@ export async function deleteEvent(formData: FormData) {
 }
 
 function readJobAttributes(formData: FormData) {
+  const workArrangement = optionalEnum(formData.get("workArrangement"), WORK_ARRANGEMENTS);
   return {
     location: requiredText(formData.get("location")),
     employmentType: optionalEnum(formData.get("employmentType"), EMPLOYMENT_TYPES),
-    workArrangement: optionalEnum(formData.get("workArrangement"), WORK_ARRANGEMENTS),
+    workArrangement,
+    hybridNote: workArrangement === "hybrid" ? requiredText(formData.get("hybridNote")).slice(0, HYBRID_NOTE_MAX) : "",
     engagement: optionalEnum(formData.get("engagement"), ENGAGEMENTS),
   };
 }
