@@ -3,11 +3,10 @@ import test from "node:test";
 import { defaultResultingStatus, eventLoggedAt, eventScheduledStart, statusesForJobList } from "./events";
 import { eventHappenedLabel, meetingKindLabel } from "./i18n";
 
-test("parked jobs stay out of the default list", () => {
-  const defaults = statusesForJobList([]);
-  assert.equal(defaults.includes("parked"), false);
-  assert.equal(defaults.includes("not_applicable"), true);
+test("the default job list is the active statuses", () => {
+  assert.deepEqual(statusesForJobList([]), ["interest", "contacted", "applied", "interviewing", "offer"]);
   assert.deepEqual(statusesForJobList(["parked"]), ["parked"]);
+  assert.deepEqual(statusesForJobList(["rejected", "on_hold"]), ["rejected", "on_hold"]);
   assert.deepEqual(statusesForJobList(["nope", "applied"]), ["applied"]);
 });
 

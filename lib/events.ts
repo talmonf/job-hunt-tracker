@@ -14,12 +14,19 @@ export const JOB_STATUSES = [
   "parked",
 ] as const satisfies readonly JobStatus[];
 
-const HIDDEN_FROM_DEFAULT_JOB_LIST = ["parked"] as const satisfies readonly JobStatus[];
+/** Roles still being pursued. Closed and paused statuses stay out of the default list. */
+export const ACTIVE_JOB_STATUSES = [
+  "interest",
+  "contacted",
+  "applied",
+  "interviewing",
+  "offer",
+] as const satisfies readonly JobStatus[];
 
 export function statusesForJobList(selected: readonly string[]): JobStatus[] {
   const picked = selected.filter((status): status is JobStatus => (JOB_STATUSES as readonly string[]).includes(status));
   if (picked.length > 0) return picked;
-  return JOB_STATUSES.filter((status) => !(HIDDEN_FROM_DEFAULT_JOB_LIST as readonly string[]).includes(status));
+  return [...ACTIVE_JOB_STATUSES];
 }
 
 export const EMPLOYMENT_TYPES = ["full_time", "part_time"] as const satisfies readonly EmploymentType[];

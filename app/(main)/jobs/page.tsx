@@ -5,7 +5,7 @@ import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { allParams, firstParam, preserveQuery } from "@/lib/http";
 import { assignmentTags, parseTagMatch, tagFilter, TAG_CHIP_CLASS, TAG_SWATCH_CLASS, type TagMatchMode, type TagRef } from "@/lib/tags";
 import { parseDateOnly } from "@/lib/forms";
-import { EMPLOYMENT_TYPES, ENGAGEMENTS, JOB_STATUSES, WORK_ARRANGEMENTS, statusesForJobList } from "@/lib/events";
+import { ACTIVE_JOB_STATUSES, EMPLOYMENT_TYPES, ENGAGEMENTS, JOB_STATUSES, WORK_ARRANGEMENTS, statusesForJobList } from "@/lib/events";
 import { jobAttributeLabel, statusLabel, t, workArrangementLabel, type Lang } from "@/lib/i18n";
 import { formatProcessProgress, processProgress } from "@/lib/process-steps";
 import { dash, maskText } from "@/lib/mask";
@@ -38,7 +38,7 @@ export default async function JobsPage({
   const lang = user.uiLanguage;
   const now = new Date();
   const q = firstParam(search.q);
-  const requestedStatuses = allParams(search.status);
+  const requestedStatuses = allParams(search.status).filter((status) => (JOB_STATUSES as readonly string[]).includes(status));
   const statuses = statusesForJobList(requestedStatuses);
   const sort = SORTS.includes(firstParam(search.sort) as (typeof SORTS)[number]) ? (firstParam(search.sort) as (typeof SORTS)[number]) : "followUpAt";
   const dir = firstParam(search.dir) === "desc" ? "desc" : "asc";
@@ -122,7 +122,7 @@ export default async function JobsPage({
                 <MultiSelect
                   compact
                   name="status"
-                  selected={requestedStatuses.filter((status) => (JOB_STATUSES as readonly string[]).includes(status))}
+                  selected={requestedStatuses.length > 0 ? requestedStatuses : [...ACTIVE_JOB_STATUSES]}
                   anyLabel={t(lang, "any")}
                   selectAll={t(lang, "selectAll")}
                   deselectAll={t(lang, "deselectAll")}
