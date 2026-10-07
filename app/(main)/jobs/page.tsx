@@ -243,9 +243,13 @@ export default async function JobsPage({
                 <span className={labelClass}>{t(lang, "location")}</span>
                 <input className={fieldClass} name="location" />
               </label>
-              <AttributeSelect lang={lang} name="employmentType" label={t(lang, "employmentType")} options={EMPLOYMENT_TYPES} />
-              <WorkArrangementField lang={lang} options={WORK_ARRANGEMENTS} />
+              <div className="sm:col-start-1">
+                <AttributeSelect lang={lang} name="employmentType" label={t(lang, "employmentType")} options={EMPLOYMENT_TYPES} />
+              </div>
               <AttributeSelect lang={lang} name="engagement" label={t(lang, "engagement")} options={ENGAGEMENTS} />
+              <div className="sm:col-span-2">
+                <WorkArrangementField lang={lang} options={WORK_ARRANGEMENTS} />
+              </div>
             </div>
             <JobUrlsEditor lang={lang} />
             <JobScheduleFields lang={lang} interestDate={interestDefault} followUpAt={followDefault} />

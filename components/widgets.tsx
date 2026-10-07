@@ -30,6 +30,8 @@ const compactTimeSelectClass =
 
 const narrowSelectClass =
   "w-40 max-w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-start text-sm text-slate-100 outline-none focus:border-sky-500";
+const hybridNoteClass =
+  "w-64 max-w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-start text-sm text-slate-100 outline-none focus:border-sky-500";
 
 export function AttributeSelect({
   lang,
@@ -72,7 +74,7 @@ export function WorkArrangementField({
 }) {
   const [arrangement, setArrangement] = useState(value);
   return (
-    <>
+    <div className="flex flex-wrap items-end gap-3">
       <label className="w-fit max-w-full">
         <span className={labelClass}>{t(lang, "workArrangement")}</span>
         <select
@@ -89,17 +91,17 @@ export function WorkArrangementField({
           ))}
         </select>
       </label>
-      <label className={arrangement === "hybrid" ? undefined : "hidden"}>
+      <label className={arrangement === "hybrid" ? "w-fit max-w-full" : "hidden"}>
         <span className={labelClass}>{t(lang, "hybridNote")}</span>
         <input
-          className={fieldClass}
+          className={hybridNoteClass}
           name="hybridNote"
           defaultValue={note}
           maxLength={HYBRID_NOTE_MAX}
           placeholder={t(lang, "hybridNotePlaceholder")}
         />
       </label>
-    </>
+    </div>
   );
 }
 

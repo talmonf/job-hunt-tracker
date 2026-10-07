@@ -194,19 +194,15 @@ export default async function JobDetailPage({
               <span className={labelClass}>{t(lang, "location")}</span>
               <input className={fieldClass} name="location" defaultValue={job.location} />
             </label>
-            <AttributeSelect
-              lang={lang}
-              name="employmentType"
-              label={t(lang, "employmentType")}
-              options={EMPLOYMENT_TYPES}
-              value={job.employmentType ?? ""}
-            />
-            <WorkArrangementField
-              lang={lang}
-              options={WORK_ARRANGEMENTS}
-              value={job.workArrangement ?? ""}
-              note={job.hybridNote}
-            />
+            <div className="md:col-start-1">
+              <AttributeSelect
+                lang={lang}
+                name="employmentType"
+                label={t(lang, "employmentType")}
+                options={EMPLOYMENT_TYPES}
+                value={job.employmentType ?? ""}
+              />
+            </div>
             <AttributeSelect
               lang={lang}
               name="engagement"
@@ -214,6 +210,14 @@ export default async function JobDetailPage({
               options={ENGAGEMENTS}
               value={job.engagement ?? ""}
             />
+            <div className="md:col-span-2">
+              <WorkArrangementField
+                lang={lang}
+                options={WORK_ARRANGEMENTS}
+                value={job.workArrangement ?? ""}
+                note={job.hybridNote}
+              />
+            </div>
           </div>
         </SettingsSection>
         <SettingsSection title={t(lang, "followUp")} summary={followSummary}>
