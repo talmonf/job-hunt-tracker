@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { companyNameKey } from "./company-name";
+import { ACTIVE_JOB_STATUSES } from "./events";
 import { canonicalPartialDate } from "./partial-date";
 import { prisma } from "./prisma";
 
@@ -100,4 +101,12 @@ function endedFields(bound: { text: string; unknown: boolean }) {
 
 function isUnique(error: unknown) {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+}
+
+const activeJobStatuses = new Set<string>(ACTIVE_JOB_STATUSES);
+
+/** One role always shows. Several roles show only the ones still being pursued. */
+export function jobsForCompanyStatus<T extends { status: string }>(jobs: readonly T[]): T[] {
+  if (jobs.length <= 1) return [...jobs];
+  return jobs.filter((job) => activeJobStatuses.has(job.status));
 }

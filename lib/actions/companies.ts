@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "../prisma";
 import { requireUser } from "../session";
@@ -59,6 +60,19 @@ export async function updateCompany(formData: FormData) {
     await prisma.job.updateMany({ where: { companyId: company.id }, data: { companyName: name } });
   }
   redirect(`/companies/${company.id}?updated=1`);
+}
+
+export async function setCompanyFollowing(formData: FormData) {
+  const user = await requireUser();
+  const id = requiredText(formData.get("companyId"));
+  const company = await prisma.company.findFirst({ where: { id, userId: user.id } });
+  if (!company) return;
+  await prisma.company.update({
+    where: { id: company.id },
+    data: { following: formData.get("following") === "1" },
+  });
+  revalidatePath("/companies");
+  revalidatePath(`/companies/${company.id}`);
 }
 
 export async function deleteCompany(formData: FormData) {

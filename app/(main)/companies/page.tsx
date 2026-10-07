@@ -2,11 +2,13 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { firstParam, preserveQuery } from "@/lib/http";
-import { companySizeLabel, t } from "@/lib/i18n";
+import { companySizeLabel, statusLabel, t } from "@/lib/i18n";
+import { jobsForCompanyStatus } from "@/lib/companies";
 import { dash } from "@/lib/mask";
 import { assignmentTags } from "@/lib/tags";
 import { createCompany } from "@/lib/actions/companies";
 import { EmptyState, FilterBar, Modal, PageFrame } from "@/components/chrome";
+import { CompanyFollowingToggle } from "@/components/company-following";
 import { CompanyForm } from "@/components/company-form";
 import { TagChips } from "@/components/tag-chip";
 import { compactFieldClass, compactLabelClass } from "@/components/widgets";
@@ -31,7 +33,11 @@ export default async function CompaniesPage({
         ...(following === "1" ? { following: true } : following === "0" ? { following: false } : {}),
       },
       orderBy: { name: "asc" },
-      include: { _count: { select: { jobs: true, contacts: true } }, tags: { include: { tag: true } } },
+      include: {
+        jobs: { select: { id: true, title: true, status: true }, orderBy: { title: "asc" } },
+        _count: { select: { jobs: true, contacts: true } },
+        tags: { include: { tag: true } },
+      },
     }),
     prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
   ]);
@@ -69,6 +75,8 @@ export default async function CompaniesPage({
             <thead className="bg-slate-800/80 text-xs uppercase tracking-wide text-slate-300">
               <tr>
                 <th className="px-3 py-2">{t(lang, "company")}</th>
+                <th className="px-3 py-2">{t(lang, "following")}</th>
+                <th className="px-3 py-2">{t(lang, "status")}</th>
                 <th className="px-3 py-2">{t(lang, "tags")}</th>
                 <th className="px-3 py-2">{t(lang, "dateFounded")}</th>
                 <th className="px-3 py-2">{t(lang, "employeeCount")}</th>
@@ -78,21 +86,43 @@ export default async function CompaniesPage({
               </tr>
             </thead>
             <tbody>
-              {companies.map((company) => (
-                <tr key={company.id} className="border-t border-slate-800">
-                  <td className="px-3 py-2">
-                    <Link className="text-sky-300" href={`/companies/${company.id}`}>
-                      {dash(company.name, hide)}
-                    </Link>
-                  </td>
-                  <td className="px-3 py-2"><TagChips tags={assignmentTags(company.tags)} hide={hide} /></td>
-                  <td className="px-3 py-2">{company.foundedOn || "—"}</td>
-                  <td className="px-3 py-2">{company.employeeCount ? companySizeLabel(lang, company.employeeCount) : "—"}</td>
-                  <td className="px-3 py-2">{dash(company.offices, hide)}</td>
-                  <td className="px-3 py-2">{company._count.jobs}</td>
-                  <td className="px-3 py-2">{company._count.contacts}</td>
-                </tr>
-              ))}
+              {companies.map((company) => {
+                const roles = jobsForCompanyStatus(company.jobs);
+                return (
+                  <tr key={company.id} className="border-t border-slate-800">
+                    <td className="px-3 py-2">
+                      <Link className="text-sky-300" href={`/companies/${company.id}`}>
+                        {dash(company.name, hide)}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2">
+                      <CompanyFollowingToggle companyId={company.id} following={company.following} lang={lang} />
+                    </td>
+                    <td className="px-3 py-2">
+                      {roles.length === 0 ? (
+                        "—"
+                      ) : (
+                        <div className="flex flex-col gap-1">
+                          {roles.map((job) => (
+                            <span key={job.id}>
+                              <Link className="text-sky-300" href={`/jobs/${job.id}`}>
+                                {dash(job.title, hide)}
+                              </Link>
+                              <span className="text-slate-400"> · {statusLabel(lang, job.status)}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-3 py-2"><TagChips tags={assignmentTags(company.tags)} hide={hide} /></td>
+                    <td className="px-3 py-2">{company.foundedOn || "—"}</td>
+                    <td className="px-3 py-2">{company.employeeCount ? companySizeLabel(lang, company.employeeCount) : "—"}</td>
+                    <td className="px-3 py-2">{dash(company.offices, hide)}</td>
+                    <td className="px-3 py-2">{company._count.jobs}</td>
+                    <td className="px-3 py-2">{company._count.contacts}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
