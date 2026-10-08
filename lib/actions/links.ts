@@ -5,6 +5,7 @@ import type { EntityLinkKind } from "@prisma/client";
 import { prisma } from "../prisma";
 import { requireUser } from "../session";
 import { requiredText } from "../forms";
+import { ensureCompany } from "../companies";
 import { displayPersonName, joinPersonName } from "../person-name";
 import { normalizeConnection, normalizeWorksThere } from "../job-person";
 import {
@@ -104,7 +105,23 @@ export async function linkContactGoogle(formData: FormData) {
   const resourceName = requiredText(formData.get("googleResourceName"));
   if (!contact || !isGoogleResourceName(resourceName)) redirect("/contacts?error=required");
   const title = requiredText(formData.get("title"));
-  const workplace = requiredText(formData.get("workplace"));
+  const incomingWorkplace = requiredText(formData.get("workplace"));
+  let workplace = contact.workplace || incomingWorkplace;
+  if (!contact.workplace && incomingWorkplace) {
+    const company = await ensureCompany(prisma, user.id, incomingWorkplace);
+    if (company) {
+      workplace = company.name;
+      const linked = await prisma.contactCompany.findUnique({
+        where: { contactId_companyId: { contactId: contact.id, companyId: company.id } },
+      });
+      if (!linked) {
+        await prisma.contactCompany.create({ data: { contactId: contact.id, companyId: company.id } });
+        if (!company.following) {
+          await prisma.company.update({ where: { id: company.id }, data: { following: true } });
+        }
+      }
+    }
+  }
   const name = {
     firstName: contact.firstName || requiredText(formData.get("firstName")),
     lastName: contact.lastName || requiredText(formData.get("lastName")),
@@ -116,7 +133,7 @@ export async function linkContactGoogle(formData: FormData) {
     data: {
       googleResourceName: resourceName,
       role: contact.role || title,
-      workplace: contact.workplace || workplace,
+      workplace,
       ...name,
       fullName: displayPersonName(name) || contact.fullName,
       mobile: contact.mobile || requiredText(formData.get("mobile")),

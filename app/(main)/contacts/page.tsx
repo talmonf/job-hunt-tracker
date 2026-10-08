@@ -9,6 +9,7 @@ import { notePreview } from "@/lib/notes";
 import { dash, maskText } from "@/lib/mask";
 import { tenureLabel } from "@/lib/tenure";
 import { assignmentTags } from "@/lib/tags";
+import { publishContactCompanies } from "@/lib/companies";
 import { createContact } from "@/lib/actions/network";
 import { EmptyState, FilterBar, Modal, PageFrame } from "@/components/chrome";
 import { MultiSelect, compactFieldClass, compactLabelClass } from "@/components/widgets";
@@ -28,6 +29,7 @@ export default async function ContactsPage({
   const hide = await hidePersonalInfo();
   const search = await searchParams;
   const lang = user.uiLanguage;
+  await publishContactCompanies(user.id);
   const q = firstParam(search.q);
   const willing = firstParam(search.willing);
   const sort = ["fullName", "workplace", "status", "nextActionDate"].includes(firstParam(search.sort)) ? firstParam(search.sort) : "fullName";

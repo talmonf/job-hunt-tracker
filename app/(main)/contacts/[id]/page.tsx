@@ -6,6 +6,7 @@ import { dateInputValue, formatDate } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
 import { assignmentTags, rankByOverlap } from "@/lib/tags";
+import { publishContactCompanies } from "@/lib/companies";
 import { deleteContact, updateContact } from "@/lib/actions/network";
 import { toChipLink } from "@/lib/entity-links";
 import { PageFrame } from "@/components/chrome";
@@ -29,6 +30,7 @@ export default async function ContactDetailPage({
   const hide = await hidePersonalInfo();
   const { id } = await params;
   const search = await searchParams;
+  await publishContactCompanies(user.id);
   const [contact, notes, contacts, jobs, employments, catalog, companies] = await Promise.all([
     prisma.contact.findFirst({
       where: { id, userId: user.id },

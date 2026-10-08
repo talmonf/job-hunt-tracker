@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { firstParam, preserveQuery } from "@/lib/http";
 import { companySizeLabel, statusLabel, t } from "@/lib/i18n";
-import { jobsForCompanyStatus } from "@/lib/companies";
+import { jobsForCompanyStatus, publishContactCompanies } from "@/lib/companies";
 import { dash } from "@/lib/mask";
 import { assignmentTags } from "@/lib/tags";
 import { createCompany } from "@/lib/actions/companies";
@@ -24,6 +24,7 @@ export default async function CompaniesPage({
   const hide = await hidePersonalInfo();
   const search = await searchParams;
   const lang = user.uiLanguage;
+  await publishContactCompanies(user.id);
   const requested = firstParam(search.following);
   const following = requested === "all" || requested === "0" ? requested : "1";
   const [companies, catalog] = await Promise.all([

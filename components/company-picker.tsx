@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { Lang } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
+import { sameCompanyName } from "@/lib/company-name";
 import { dash } from "@/lib/mask";
 import { fieldClass, labelClass } from "./widgets";
 
@@ -18,7 +19,7 @@ export type CompanyLinkSelection = {
   endedUnknown?: boolean;
 };
 
-type Chip = {
+export type CompanyChip = {
   name: string;
   from: string;
   fromUnknown: boolean;
@@ -61,37 +62,28 @@ export function CompanyNamesField({
   lang,
   hide,
   companies,
-  selected,
+  chips,
+  onChipsChange,
 }: {
   lang: Lang;
   hide: boolean;
   companies: CompanyOption[];
-  selected: CompanyLinkSelection[];
+  chips: CompanyChip[];
+  onChipsChange: (chips: CompanyChip[]) => void;
 }) {
-  const [chips, setChips] = useState<Chip[]>(
-    selected.map((company) => ({
-      name: company.name,
-      from: company.startedOn ?? "",
-      fromUnknown: Boolean(company.startedUnknown),
-      to: company.endedOn ?? "",
-      toUnknown: Boolean(company.endedUnknown),
-    })),
-  );
   const [draft, setDraft] = useState("");
 
   function add(raw: string) {
     const name = raw.trim();
     if (!name) return;
-    setChips((current) =>
-      current.some((item) => item.name.toLowerCase() === name.toLowerCase())
-        ? current
-        : [...current, { name, from: "", fromUnknown: false, to: "", toUnknown: false }],
-    );
+    if (!chips.some((item) => sameCompanyName(item.name, name))) {
+      onChipsChange([...chips, { name, from: "", fromUnknown: false, to: "", toUnknown: false }]);
+    }
     setDraft("");
   }
 
-  function update(name: string, patch: Partial<Chip>) {
-    setChips((current) => current.map((item) => (item.name === name ? { ...item, ...patch } : item)));
+  function update(name: string, patch: Partial<CompanyChip>) {
+    onChipsChange(chips.map((item) => (item.name === name ? { ...item, ...patch } : item)));
   }
 
   return (
@@ -101,7 +93,7 @@ export function CompanyNamesField({
       {chips.length ? (
         <ul className="mt-2 space-y-2">
           {chips.map((chip) => {
-            const known = companies.find((company) => company.name.toLowerCase() === chip.name.toLowerCase());
+            const known = companies.find((company) => sameCompanyName(company.name, chip.name));
             return (
               <li key={chip.name} className="rounded-md border border-slate-600 p-2">
                 <div className="flex items-center gap-2 text-sm">
@@ -116,7 +108,7 @@ export function CompanyNamesField({
                     className="text-slate-400"
                     type="button"
                     aria-label={t(lang, "delete")}
-                    onClick={() => setChips((current) => current.filter((item) => item.name !== chip.name))}
+                    onClick={() => onChipsChange(chips.filter((item) => item.name !== chip.name))}
                   >
                     ×
                   </button>

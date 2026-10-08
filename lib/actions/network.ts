@@ -11,7 +11,8 @@ import { isGoogleResourceName, isHttpUrl } from "../entity-links";
 import { displayPersonName } from "../person-name";
 import type { NoteType } from "@prisma/client";
 import { copyCompanyTags, replaceRecordTags } from "../tag-assign";
-import { readContactCompanyLinks, replaceContactCompanies } from "../companies";
+import { defaultWorkplaceName, withWorkplaceCompany } from "../company-name";
+import { readContactCompanyLinks, replaceContactCompanies, type SavedContactCompany } from "../companies";
 
 export async function createNote(formData: FormData) {
   const user = await requireUser();
@@ -151,21 +152,23 @@ export async function createContact(formData: FormData) {
   const user = await requireUser();
   const name = contactName(formData);
   if (!name.fullName) redirect("/contacts?error=required");
-  const links = formData.get("companiesManaged") === "1" ? readContactCompanyLinks(formData) : [];
-  if (links === "invalid") redirect("/contacts?error=date");
+  const companies = companiesFromForm(formData);
+  if (companies === "invalid") redirect("/contacts?error=date");
   const contact = await prisma.contact.create({
     data: {
       userId: user.id,
-      ...contactData(formData, user.timezone),
+      ...contactData(formData, user.timezone, companies?.workplace ?? requiredText(formData.get("workplace"))),
       status: statusFromForm(formData) ?? "",
       ...name,
       googleResourceName: googleResourceFromForm(formData) ?? null,
     },
   });
   await replaceRecordTags("contact", contact.id, user.id, formData);
-  if (links.length) {
-    const companyIds = await replaceContactCompanies(prisma, user.id, contact.id, links);
-    await copyCompanyTags("contact", contact.id, companyIds);
+  if (companies) {
+    const saved = await replaceContactCompanies(prisma, user.id, contact.id, companies.links);
+    await alignWorkplace(contact.id, companies.workplace, saved);
+    if (saved.length) await copyCompanyTags("contact", contact.id, saved.map((row) => row.companyId));
+    revalidatePath("/companies");
   }
   const linkId = requiredText(formData.get("entityLinkId"));
   if (linkId) {
@@ -197,21 +200,25 @@ export async function updateContact(formData: FormData) {
   const name = contactName(formData);
   const existing = await prisma.contact.findFirst({ where: { id, userId: user.id } });
   if (!existing || !name.fullName) redirect("/contacts?error=required");
-  const links = formData.get("companiesManaged") === "1" ? readContactCompanyLinks(formData) : null;
-  if (links === "invalid") redirect(`/contacts/${id}?error=date`);
+  const companies = companiesFromForm(formData);
+  if (companies === "invalid") redirect(`/contacts/${id}?error=date`);
   const googleResourceName = googleResourceFromForm(formData);
   const status = statusFromForm(formData);
   await prisma.contact.update({
     where: { id },
     data: {
-      ...contactData(formData, user.timezone),
+      ...contactData(formData, user.timezone, companies?.workplace ?? requiredText(formData.get("workplace"))),
       ...name,
       ...(status !== undefined ? { status } : {}),
       ...(googleResourceName !== undefined ? { googleResourceName } : {}),
     },
   });
   await replaceRecordTags("contact", id, user.id, formData);
-  if (links) await replaceContactCompanies(prisma, user.id, id, links);
+  if (companies) {
+    const saved = await replaceContactCompanies(prisma, user.id, id, companies.links);
+    await alignWorkplace(id, companies.workplace, saved);
+    revalidatePath("/companies");
+  }
   redirect(`/contacts/${id}?updated=1`);
 }
 
@@ -271,10 +278,33 @@ function googleResourceFromForm(formData: FormData): string | null | undefined {
   return value;
 }
 
-function contactData(formData: FormData, timeZone: string) {
+function companiesFromForm(formData: FormData) {
+  if (formData.get("companiesManaged") !== "1") return null;
+  const links = readContactCompanyLinks(formData);
+  if (links === "invalid") return "invalid" as const;
+  const listed = withWorkplaceCompany(links, requiredText(formData.get("workplace")));
+  return {
+    links: listed,
+    workplace: defaultWorkplaceName(
+      requiredText(formData.get("workplace")),
+      listed.map((link) => ({ name: link.name, current: !link.endedOn && !link.endedUnknown })),
+    ),
+  };
+}
+
+async function alignWorkplace(contactId: string, workplace: string, saved: SavedContactCompany[]) {
+  const canonical = defaultWorkplaceName(
+    workplace,
+    saved.map((row) => ({ name: row.name, current: !row.endedOn && !row.endedUnknown })),
+  );
+  if (canonical === workplace) return;
+  await prisma.contact.update({ where: { id: contactId }, data: { workplace: canonical } });
+}
+
+function contactData(formData: FormData, timeZone: string, workplace: string) {
   return {
     role: requiredText(formData.get("role")),
-    workplace: requiredText(formData.get("workplace")),
+    workplace,
     howWeMet: requiredText(formData.get("howWeMet")),
     lastChannel: requiredText(formData.get("lastChannel")),
     summary: String(formData.get("summary") ?? ""),

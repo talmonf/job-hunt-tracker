@@ -6,6 +6,8 @@ import { contactStatusLabel, t } from "@/lib/i18n";
 import type { Lang } from "@/lib/i18n";
 import type { ChipLink } from "@/lib/entity-links";
 import type { TagRef } from "@/lib/tags";
+import { defaultWorkplaceName, sameCompanyName, withWorkplaceCompany } from "@/lib/company-name";
+import { dash } from "@/lib/mask";
 import { assignNameByScript, displayPersonName, emptyBilingualName, type BilingualName } from "@/lib/person-name";
 import { DateField, SubmitButton, compactFieldClass, compactLabelClass, fieldClass, labelClass, quietButton } from "./widgets";
 import { MentionTextarea } from "./mention-textarea";
@@ -15,7 +17,7 @@ import { ContactChip } from "./contact-chip";
 import { ContactGoogleLink } from "./contact-google-link";
 import { SettingsSection } from "./settings-section";
 import { PersonPicker, type LocalPerson, type PickedPerson } from "./person-picker";
-import { CompanyNamesField, type CompanyLinkSelection, type CompanyOption } from "./company-picker";
+import { CompanyNamesField, type CompanyChip, type CompanyLinkSelection, type CompanyOption } from "./company-picker";
 
 export function ContactFields({
   lang,
@@ -84,7 +86,12 @@ export function ContactFields({
   const [lastNameHe, setLastNameHe] = useState(initialNames.lastNameHe);
   const [nameError, setNameError] = useState(false);
   const [role, setRole] = useState(contact?.role ?? "");
-  const [workplace, setWorkplace] = useState(contact?.workplace ?? "");
+  const [companiesOnContact, setCompaniesOnContact] = useState<CompanyChip[]>(() =>
+    initialCompanyChips(selectedCompanies, contact?.workplace ?? ""),
+  );
+  const [workplace, setWorkplace] = useState(() =>
+    defaultWorkplaceName(contact?.workplace ?? "", companyChoices(initialCompanyChips(selectedCompanies, contact?.workplace ?? ""))),
+  );
   const [mobile, setMobile] = useState(contact?.mobile ?? "");
   const [email, setEmail] = useState(contact?.email ?? "");
   const [address, setAddress] = useState(contact?.address ?? "");
@@ -102,13 +109,28 @@ export function ContactFields({
     setLastNameHe(person.lastNameHe ?? "");
     setNameError(false);
     setRole(person.title);
-    setWorkplace(person.workplace ?? "");
+    const nextWorkplace = (person.workplace ?? "").trim();
+    if (nextWorkplace) {
+      const existing = companiesOnContact.find((chip) => sameCompanyName(chip.name, nextWorkplace));
+      if (!existing) {
+        setCompaniesOnContact([
+          ...companiesOnContact,
+          { name: nextWorkplace, from: "", fromUnknown: false, to: "", toUnknown: false },
+        ]);
+      }
+      setWorkplace(existing?.name ?? nextWorkplace);
+    }
     setMobile(person.mobile ?? "");
     setEmail(person.email ?? "");
     setAddress(person.address ?? "");
     setLinkedinUrl(person.linkedinUrl ?? "");
     setGoogleResourceName(person.googleResourceName);
     setGoogleOpen(false);
+  }
+
+  function changeCompanies(next: CompanyChip[]) {
+    setCompaniesOnContact(next);
+    setWorkplace((current) => defaultWorkplaceName(current, companyChoices(next)));
   }
 
   const linkedName = displayPersonName({ firstName, lastName, firstNameHe, lastNameHe });
@@ -176,11 +198,44 @@ export function ContactFields({
         <span className={labelClass}>{t(lang, "role")}</span>
         <input className={fieldClass} name="role" value={role} onChange={(event) => setRole(event.target.value)} />
       </label>
-      <label>
+      <label className="w-fit max-w-full">
         <span className={labelClass}>{t(lang, "workplace")}</span>
-        <input className={fieldClass} name="workplace" value={workplace} onChange={(event) => setWorkplace(event.target.value)} />
+        <span className="flex flex-wrap items-center gap-2">
+          {companiesOnContact.length ? (
+            <select
+              className="w-fit max-w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-start text-sm text-slate-100 outline-none focus:border-sky-500"
+              name="workplace"
+              value={workplace}
+              onChange={(event) => setWorkplace(event.target.value)}
+            >
+              {companiesOnContact.map((chip) => (
+                <option key={chip.name} value={chip.name}>
+                  {dash(chip.name, hide)}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <>
+              <select
+                className="w-fit max-w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-start text-sm text-slate-100 outline-none"
+                disabled
+                value=""
+              >
+                <option value="">{t(lang, "none")}</option>
+              </select>
+              <input type="hidden" name="workplace" value="" />
+            </>
+          )}
+          <span className="text-[11px] italic text-slate-500">{t(lang, "workplaceHint")}</span>
+        </span>
       </label>
-      <CompanyNamesField lang={lang} hide={hide} companies={companies} selected={selectedCompanies} />
+      <CompanyNamesField
+        lang={lang}
+        hide={hide}
+        companies={companies}
+        chips={companiesOnContact}
+        onChipsChange={changeCompanies}
+      />
       <label>
         <span className={labelClass}>{t(lang, "mobile")}</span>
         <input className={fieldClass} dir="ltr" name="mobile" value={mobile} onChange={(event) => setMobile(event.target.value)} />
@@ -408,6 +463,29 @@ export function ContactFields({
       <SubmitButton label={t(lang, "save")} thin />
     </form>
   );
+}
+
+function companyChoices(chips: CompanyChip[]) {
+  return chips.map((chip) => ({ name: chip.name, current: !chip.to && !chip.toUnknown }));
+}
+
+function initialCompanyChips(selected: CompanyLinkSelection[], workplace: string): CompanyChip[] {
+  return withWorkplaceCompany(
+    selected.map((company) => ({
+      name: company.name,
+      startedOn: company.startedOn ?? "",
+      startedUnknown: Boolean(company.startedUnknown),
+      endedOn: company.endedOn ?? "",
+      endedUnknown: Boolean(company.endedUnknown),
+    })),
+    workplace,
+  ).map((link) => ({
+    name: link.name,
+    from: link.startedOn,
+    fromUnknown: link.startedUnknown,
+    to: link.endedOn,
+    toUnknown: link.endedUnknown,
+  }));
 }
 
 function initialPersonName(contact?: { fullName: string } & Partial<BilingualName>): BilingualName {

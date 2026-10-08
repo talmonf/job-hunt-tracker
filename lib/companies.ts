@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { companyNameKey } from "./company-name";
+import { companyNameKey, defaultWorkplaceName, sameCompanyName } from "./company-name";
 import { ACTIVE_JOB_STATUSES } from "./events";
 import { canonicalPartialDate } from "./partial-date";
 import { prisma } from "./prisma";
@@ -58,15 +58,19 @@ export function readFoundedOn(value: FormDataEntryValue | null): string | "inval
   return canonicalPartialDate(text) ?? "invalid";
 }
 
+export type SavedContactCompany = ContactCompanyLink & { companyId: string; name: string };
+
 export async function replaceContactCompanies(db: CompanyDb, userId: string, contactId: string, links: ContactCompanyLink[]) {
   const seen = new Set<string>();
-  const rows: Array<ContactCompanyLink & { companyId: string }> = [];
+  const rows: SavedContactCompany[] = [];
   for (const link of links) {
     const company = await ensureCompany(db, userId, link.name);
     if (!company || seen.has(company.id)) continue;
     seen.add(company.id);
-    rows.push({ ...link, companyId: company.id });
+    rows.push({ ...link, companyId: company.id, name: company.name });
   }
+  const previous = await db.contactCompany.findMany({ where: { contactId }, select: { companyId: true } });
+  const previousIds = new Set(previous.map((row) => row.companyId));
   await db.contactCompany.deleteMany({ where: { contactId } });
   if (!rows.length) return [];
   await db.contactCompany.createMany({
@@ -79,7 +83,61 @@ export async function replaceContactCompanies(db: CompanyDb, userId: string, con
       endedUnknown: row.endedUnknown,
     })),
   });
-  return rows.map((row) => row.companyId);
+  const added = rows.filter((row) => !previousIds.has(row.companyId)).map((row) => row.companyId);
+  if (added.length) {
+    await db.company.updateMany({ where: { id: { in: added }, userId }, data: { following: true } });
+  }
+  return rows;
+}
+
+/** Workplace names become companies, and each contact's workplace is one of their companies. */
+export async function publishContactCompanies(userId: string) {
+  const contacts = await prisma.contact.findMany({
+    where: { userId },
+    select: {
+      id: true,
+      workplace: true,
+      companies: {
+        select: {
+          endedOn: true,
+          endedUnknown: true,
+          company: { select: { id: true, name: true, following: true } },
+        },
+      },
+    },
+  });
+  for (const contact of contacts) {
+    const linked = contact.companies.map((row) => ({
+      name: row.company.name,
+      endedOn: row.endedOn,
+      endedUnknown: row.endedUnknown,
+    }));
+    const workplace = contact.workplace.trim();
+    if (workplace && !linked.some((company) => sameCompanyName(company.name, workplace))) {
+      const company = await ensureCompany(prisma, userId, workplace);
+      if (company) {
+        await prisma.contactCompany.upsert({
+          where: { contactId_companyId: { contactId: contact.id, companyId: company.id } },
+          create: { contactId: contact.id, companyId: company.id },
+          update: {},
+        });
+        if (!company.following) {
+          await prisma.company.update({ where: { id: company.id }, data: { following: true } });
+        }
+        linked.unshift({ name: company.name, endedOn: "", endedUnknown: false });
+      }
+    }
+    const next = defaultWorkplaceName(
+      workplace,
+      linked.map((company) => ({
+        name: company.name,
+        current: !company.endedOn && !company.endedUnknown,
+      })),
+    );
+    if (next !== contact.workplace) {
+      await prisma.contact.update({ where: { id: contact.id }, data: { workplace: next } });
+    }
+  }
 }
 
 function readBound(raw: string, unknown: boolean): { text: string; unknown: boolean } | "invalid" {
