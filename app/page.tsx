@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { googleConfigured } from "@/lib/mail";
 import { splashFeatures, t } from "@/lib/i18n";
 import { firstParam } from "@/lib/http";
@@ -30,6 +31,11 @@ export default async function HomePage({
             ))}
           </ul>
         </article>
+        <p className="mt-6 text-center">
+          <Link className="text-sm text-sky-300 hover:text-sky-200" href="/privacy">
+            {t(lang, "privacy")}
+          </Link>
+        </p>
       </div>
     </div>
   );
