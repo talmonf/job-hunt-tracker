@@ -22,6 +22,7 @@ import {
 } from "@/lib/actions/profile";
 import { normalizeProposal } from "@/lib/ai/proposal";
 import { Modal, PageFrame } from "@/components/chrome";
+import { CollapseRow } from "@/components/collapse-row";
 import { CvLibrary } from "@/components/cv-library";
 import { ProfileReview } from "@/components/profile-review";
 import { DateField, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
@@ -134,11 +135,22 @@ export default async function ProfilePage({
         <SubmitButton label={t(lang, "save")} thin />
       </form>
 
+      <ProfileTags lang={lang} hide={hide} catalog={catalog} profileTags={assignmentTags(profile?.tags ?? [])} jobs={jobs} notes={notes} contacts={contacts} />
+
       <Section title={t(lang, "employment")} addHref={`/profile${preserveQuery(search, { modal: "employment" }, ["modal", "id"])}`} addLabel={t(lang, "add")}>
         {employments.map((row) => (
-          <article id={`employment-${row.id}`} key={row.id} className="scroll-mt-20 rounded-md border border-slate-700 p-3 text-sm">
-            <div className="font-medium">{dash(row.title, hide)} · {dash(row.company, hide)}</div>
-            <div className="text-slate-400">{row.startDate ? formatMonthYear(row.startDate, user.timezone) : "—"} – {row.isCurrent ? t(lang, "currentRole") : row.endDate ? formatMonthYear(row.endDate, user.timezone) : "—"}</div>
+          <CollapseRow
+            key={row.id}
+            id={`employment-${row.id}`}
+            className="scroll-mt-20"
+            summary={datedSummary(
+              [dash(row.title, hide), dash(row.company, hide)],
+              row.startDate,
+              row.isCurrent ? null : row.endDate,
+              user.timezone,
+              row.isCurrent ? t(lang, "currentRole") : undefined,
+            )}
+          >
             <BulletList
               hide={hide}
               lines={
@@ -147,13 +159,9 @@ export default async function ProfilePage({
                   : (lang === "he" && row.descriptionHe ? row.descriptionHe : row.descriptionEn || row.descriptionHe).split("\n").filter(Boolean)
               }
             />
-            {row.tags.length ? (
-              <div className="mt-2">
-                <TagChips tags={assignmentTags(row.tags)} hide={hide} />
-              </div>
-            ) : null}
+            {row.tags.length ? <TagChips tags={assignmentTags(row.tags)} hide={hide} /> : null}
             {row.notes.length ? (
-              <ul className="mt-2 space-y-1">
+              <ul className="space-y-1">
                 {row.notes.map((note) => (
                   <li key={note.id}>
                     <a className="text-sky-300" href={`/notes/${note.id}`}>
@@ -163,44 +171,45 @@ export default async function ProfilePage({
                 ))}
               </ul>
             ) : null}
-            <div className="mt-2">
-              <a className="text-sky-300" href={`/notes?modal=new&subject=${encodeURIComponent(`employment:${row.id}`)}`}>
-                {t(lang, "addNote")}
-              </a>
-            </div>
+            <a className="text-sky-300" href={`/notes?modal=new&subject=${encodeURIComponent(`employment:${row.id}`)}`}>
+              {t(lang, "addNote")}
+            </a>
             <RowActions editHref={`/profile${preserveQuery(search, { modal: "employment", id: row.id }, ["modal", "id"])}`} deleteAction={deleteEmployment} id={row.id} langEdit={t(lang, "edit")} langDelete={t(lang, "delete")} />
-          </article>
+          </CollapseRow>
         ))}
       </Section>
       <Section title={t(lang, "studies")} addHref={`/profile${preserveQuery(search, { modal: "education" }, ["modal", "id"])}`} addLabel={t(lang, "add")}>
         {educations.map((row) => (
-          <article key={row.id} className="rounded-md border border-slate-700 p-3 text-sm">
-            <div className="font-medium">{dash(row.school, hide)}</div>
-            <div>{dash([row.degree, row.field].filter(Boolean).join(" · "), hide)}</div>
-            <div className="text-slate-400">{row.startDate ? formatMonthYear(row.startDate, user.timezone) : "—"} – {row.endDate ? formatMonthYear(row.endDate, user.timezone) : "—"}</div>
+          <CollapseRow
+            key={row.id}
+            summary={datedSummary(
+              [dash(row.school, hide), dash([row.degree, row.field].filter(Boolean).join(" · "), hide)],
+              row.startDate,
+              row.endDate,
+              user.timezone,
+            )}
+          >
             <RowActions editHref={`/profile${preserveQuery(search, { modal: "education", id: row.id }, ["modal", "id"])}`} deleteAction={deleteEducation} id={row.id} langEdit={t(lang, "edit")} langDelete={t(lang, "delete")} />
-          </article>
+          </CollapseRow>
         ))}
       </Section>
       <Section title={t(lang, "volunteer")} addHref={`/profile${preserveQuery(search, { modal: "volunteer" }, ["modal", "id"])}`} addLabel={t(lang, "add")}>
         {volunteers.map((row) => (
-          <article key={row.id} className="rounded-md border border-slate-700 p-3 text-sm">
-            <div className="font-medium">{dash(row.organization, hide)} · {dash(row.role, hide)}</div>
+          <CollapseRow
+            key={row.id}
+            summary={datedSummary([dash(row.organization, hide), dash(row.role, hide)], row.startDate, row.endDate, user.timezone)}
+          >
             <RowActions editHref={`/profile${preserveQuery(search, { modal: "volunteer", id: row.id }, ["modal", "id"])}`} deleteAction={deleteVolunteer} id={row.id} langEdit={t(lang, "edit")} langDelete={t(lang, "delete")} />
-          </article>
+          </CollapseRow>
         ))}
       </Section>
       <Section title={t(lang, "certificates")} addHref={`/profile${preserveQuery(search, { modal: "certificate" }, ["modal", "id"])}`} addLabel={t(lang, "add")}>
         {certificates.map((row) => (
-          <article key={row.id} className="rounded-md border border-slate-700 p-3 text-sm">
-            <div className="font-medium">{dash(row.name, hide)}</div>
-            <div>{dash(row.issuer, hide)} {row.issuedOn ? `· ${formatMonthYear(row.issuedOn, user.timezone)}` : ""}</div>
+          <CollapseRow key={row.id} summary={datedSummary([dash(row.name, hide), dash(row.issuer, hide)], row.issuedOn, null, user.timezone)}>
             <RowActions editHref={`/profile${preserveQuery(search, { modal: "certificate", id: row.id }, ["modal", "id"])}`} deleteAction={deleteCertificate} id={row.id} langEdit={t(lang, "edit")} langDelete={t(lang, "delete")} />
-          </article>
+          </CollapseRow>
         ))}
       </Section>
-
-      <ProfileTags lang={lang} hide={hide} catalog={catalog} profileTags={assignmentTags(profile?.tags ?? [])} jobs={jobs} notes={notes} contacts={contacts} />
 
       <section id="source" className="mt-8 scroll-mt-20">
         <h2 className="mb-2 text-lg">
@@ -255,10 +264,16 @@ export default async function ProfilePage({
   );
 }
 
+function datedSummary(parts: string[], start: Date | null, end: Date | null, timeZone: string, currentLabel?: string) {
+  const endLabel = currentLabel ?? (end ? formatMonthYear(end, timeZone) : "");
+  const dates = [start ? formatMonthYear(start, timeZone) : "", endLabel].filter(Boolean).join(" – ");
+  return [...parts, dates].map((part) => part.trim()).filter((part) => part && part !== "—").join(" · ") || "—";
+}
+
 function BulletList({ lines, hide }: { lines: string[]; hide: boolean }) {
   if (!lines.length) return null;
   return (
-    <ul className="mt-2 list-disc ps-5 text-slate-300">
+    <ul className="list-disc ps-5 text-slate-300">
       {lines.map((line, index) => (
         <li key={index}>{dash(line, hide)}</li>
       ))}
@@ -280,7 +295,7 @@ function Section({ title, addHref, addLabel, children }: { title: string; addHre
 
 function RowActions({ editHref, deleteAction, id, langEdit, langDelete }: { editHref: string; deleteAction: (formData: FormData) => void; id: string; langEdit: string; langDelete: string }) {
   return (
-    <div className="mt-2 flex gap-3">
+    <div className="flex gap-3">
       <a className="text-sky-300" href={editHref}>{langEdit}</a>
       <form action={deleteAction}>
         <input type="hidden" name="id" value={id} />
@@ -408,7 +423,7 @@ function ProfileTags({
     (row) => row.fullName,
   ).map((row) => ({ id: row.item.id, label: row.item.fullName, overlap: row.overlap }));
   return (
-    <section className="mt-8">
+    <section id="tags" className="mt-8 scroll-mt-20">
       <h2 className="mb-1 text-lg">{t(lang, "tags")}</h2>
       <p className="mb-3 text-sm text-slate-400">{t(lang, "profileTagsHint")}</p>
       <form action={saveProfileTags}>

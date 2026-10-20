@@ -240,7 +240,7 @@ export async function acceptProfileImport(formData: FormData) {
     },
     { maxWait: 10_000, timeout: 30_000 },
   );
-  redirect("/profile?created=1");
+  redirect("/profile?created=1#tags");
 }
 
 async function createMany<T>(rows: readonly T[], write: (data: T[]) => Promise<unknown>) {

@@ -106,6 +106,18 @@ export async function replaceContactCompanies(db: CompanyDb, userId: string, con
   return rows;
 }
 
+/**
+ * Insert the pair when it is missing.
+ * An upsert with an empty update is a separate read and insert, so two loads of the
+ * companies page can both miss the row and one then fails the primary key.
+ */
+export async function ensureContactCompany(db: CompanyDb, contactId: string, companyId: string) {
+  await db.contactCompany.createMany({
+    data: [{ contactId, companyId }],
+    skipDuplicates: true,
+  });
+}
+
 /** Workplace names become companies, and each contact's workplace is one of their companies. */
 export async function publishContactCompanies(userId: string) {
   const contacts = await prisma.contact.findMany({
@@ -123,6 +135,7 @@ export async function publishContactCompanies(userId: string) {
     },
   });
   for (const contact of contacts) {
+    const linkedIds = new Set(contact.companies.map((row) => row.company.id));
     const linked = contact.companies.map((row) => ({
       name: row.company.name,
       endedOn: row.endedOn,
@@ -132,15 +145,13 @@ export async function publishContactCompanies(userId: string) {
     if (workplace && !linked.some((company) => sameCompanyName(company.name, workplace))) {
       const company = await ensureCompany(prisma, userId, workplace);
       if (company) {
-        await prisma.contactCompany.upsert({
-          where: { contactId_companyId: { contactId: contact.id, companyId: company.id } },
-          create: { contactId: contact.id, companyId: company.id },
-          update: {},
-        });
+        if (!linkedIds.has(company.id)) {
+          await ensureContactCompany(prisma, contact.id, company.id);
+          linked.unshift({ name: company.name, endedOn: "", endedUnknown: false });
+        }
         if (!company.following) {
           await prisma.company.update({ where: { id: company.id }, data: { following: true } });
         }
-        linked.unshift({ name: company.name, endedOn: "", endedUnknown: false });
       }
     }
     const next = defaultWorkplaceName(

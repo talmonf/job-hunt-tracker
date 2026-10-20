@@ -6,7 +6,7 @@ import { recomputeJobStatus } from "./job-status";
 import { normalizeContactStatus } from "./contact-status";
 import { contactStatusLabel } from "./i18n";
 import { assignNameByScript } from "./person-name";
-import { ensureCompany } from "./companies";
+import { ensureCompany, ensureContactCompany } from "./companies";
 import { copyCompanyTags } from "./tag-assign";
 import {
   applicationOutcome,
@@ -360,11 +360,7 @@ async function importContacts(userId: string, sheet: ExcelJS.Worksheet, timeZone
     });
     const company = await ensureCompany(prisma, userId, workplace);
     if (company) {
-      await prisma.contactCompany.upsert({
-        where: { contactId_companyId: { contactId: contact.id, companyId: company.id } },
-        create: { contactId: contact.id, companyId: company.id },
-        update: {},
-      });
+      await ensureContactCompany(prisma, contact.id, company.id);
       if (!existed) await copyCompanyTags("contact", contact.id, [company.id]);
     }
     count += 1;

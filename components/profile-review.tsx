@@ -1,9 +1,9 @@
-import type { ReactNode } from "react";
 import type { Proposal } from "@/lib/ai/proposal";
 import type { Lang } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
 import { employmentNoteLabel } from "@/lib/notes";
 import { acceptProfileImport, discardProfileImport } from "@/lib/actions/ai";
+import { CollapseRow } from "@/components/collapse-row";
 import { DelayedHoverInput } from "@/components/delayed-hover-input";
 import { SkillNamesEditor } from "@/components/skill-names-editor";
 import { SubmitButton, fieldClass, labelClass } from "@/components/widgets";
@@ -132,20 +132,6 @@ function MonthField({ label, name, defaultValue }: { label: string; name: string
       <span className={labelClass}>{label}</span>
       <input className={monthFieldClass} name={name} defaultValue={defaultValue} placeholder="MM/YYYY" />
     </label>
-  );
-}
-
-function CollapseRow({ summary, children }: { summary: string; children: ReactNode }) {
-  return (
-    <details className="group rounded-md border border-slate-700">
-      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 hover:bg-slate-800/40 [&::-webkit-details-marker]:hidden">
-        <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4 shrink-0 fill-current text-slate-400 transition-transform ltr:group-open:rotate-90 rtl:rotate-180 rtl:group-open:rotate-90">
-          <path d="M7.2 4.5a1 1 0 0 1 1.4 0l5 5.2a1 1 0 0 1 0 1.4l-5 5.2a1 1 0 0 1-1.4-1.4L11.4 10 7.2 5.9a1 1 0 0 1 0-1.4Z" />
-        </svg>
-        <span className="min-w-0 truncate text-sm text-slate-200">{summary || "—"}</span>
-      </summary>
-      <fieldset className="grid gap-2 border-t border-slate-700 p-3">{children}</fieldset>
-    </details>
   );
 }
 
