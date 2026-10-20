@@ -205,4 +205,18 @@ prise tools.
     );
     assert.equal(proposal.aboutHe, "בונה מוצרים דיגיטליים.");
   });
+
+  it("joins a wrapped skill name instead of starting a new skill", () => {
+    const proposal = parseProfileText(`Top Skills
+Cursor AI
+AI Pair Programming / AI-Assisted
+Programming
+Product Design
+`);
+    assert.deepEqual(proposal.labels.map((label) => label.name), [
+      "Cursor AI",
+      "AI Pair Programming / AI-Assisted Programming",
+      "Product Design",
+    ]);
+  });
 });

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { Proposal } from "@/lib/ai/proposal";
 import type { Lang } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
@@ -22,9 +23,8 @@ export function ProfileReview({
 }) {
   const taken = new Set(existingNoteTitles.map((title) => title.trim()).filter(Boolean));
   const employments = [...proposal.employments, { key: "extra-emp", title: "", company: "", startDate: "", endDate: "", isCurrent: false, bullets: [], createNote: false }];
-  const educations = [...proposal.educations, { key: "extra-edu", school: "", degree: "", field: "", startDate: "", endDate: "" }];
-  const volunteers = [...proposal.volunteers, { key: "extra-vol", organization: "", role: "", startDate: "", endDate: "", textEn: "", textHe: "" }];
-  const certificates = [...proposal.certificates, { key: "extra-cert", name: "", issuer: "", issuedOn: "", url: "" }];
+  const educations = proposal.educations;
+  const certificates = proposal.certificates;
   const labels = [...proposal.labels, { key: "extra-label", kind: "skill" as const, name: "" }];
   const flavors = [...proposal.flavors, { key: "extra-flavor", name: "", employmentKeys: [] as string[], bulletKeys: [] as string[], labelKeys: [] as string[] }];
   return (
@@ -39,7 +39,7 @@ export function ProfileReview({
       <input type="hidden" name="usedModel" value={proposal.usedModel ? "1" : "0"} />
       <input type="hidden" name="empCount" value={employments.length} />
       <input type="hidden" name="eduCount" value={educations.length} />
-      <input type="hidden" name="volCount" value={volunteers.length} />
+      <input type="hidden" name="volCount" value="0" />
       <input type="hidden" name="certCount" value={certificates.length} />
       <input type="hidden" name="labelCount" value={labels.length} />
       <input type="hidden" name="flavorCount" value={flavors.length} />
@@ -67,39 +67,31 @@ export function ProfileReview({
       ) : null}
       <h3 className="text-base">{t(lang, "employment")}</h3>
       {employments.map((row, index) => (
-        <details key={row.key} className="group rounded-md border border-slate-700">
-          <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 hover:bg-slate-800/40 [&::-webkit-details-marker]:hidden">
-            <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4 shrink-0 fill-current text-slate-400 transition-transform ltr:group-open:rotate-90 rtl:rotate-180 rtl:group-open:rotate-90">
-              <path d="M7.2 4.5a1 1 0 0 1 1.4 0l5 5.2a1 1 0 0 1 0 1.4l-5 5.2a1 1 0 0 1-1.4-1.4L11.4 10 7.2 5.9a1 1 0 0 1 0-1.4Z" />
-            </svg>
-            <span className="min-w-0 truncate text-sm text-slate-200">{employmentSummary(row, lang)}</span>
-          </summary>
-          <fieldset className="grid gap-2 border-t border-slate-700 p-3">
-            <input type="hidden" name={`emp_${index}_key`} value={row.key} />
-            <input type="hidden" name={`emp_${index}_bulletCount`} value={row.bullets.length + 1} />
-            <div className="grid grid-cols-2 gap-2">
-              <label><span className={labelClass}>{t(lang, "title")}</span><input className={fieldClass} name={`emp_${index}_title`} defaultValue={row.title} /></label>
-              <label><span className={labelClass}>{t(lang, "company")}</span><input className={fieldClass} name={`emp_${index}_company`} defaultValue={row.company} /></label>
-            </div>
-            <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
-              <MonthField label={t(lang, "start")} name={`emp_${index}_start`} defaultValue={row.startDate} />
-              <MonthField label={t(lang, "end")} name={`emp_${index}_end`} defaultValue={row.endDate} />
-              <label className="flex items-center gap-2 pb-2 text-sm"><input type="checkbox" name={`emp_${index}_current`} value="1" defaultChecked={row.isCurrent} /> {t(lang, "currentRole")}</label>
-            </div>
-            {row.bullets.map((bullet, bulletIndex) => (
-              <BulletFields key={bullet.key} lang={lang} prefix={`emp_${index}_b_${bulletIndex}`} bulletKey={bullet.key} textEn={bullet.textEn} textHe={bullet.textHe} />
-            ))}
-            <BulletFields lang={lang} prefix={`emp_${index}_b_${row.bullets.length}`} bulletKey={`${row.key}b-extra`} textEn="" textHe="" />
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name={`emp_${index}_note`} value="1" defaultChecked={row.createNote && !taken.has(employmentNoteLabel(row))} />
-              {t(lang, "createExperienceNote")}
-            </label>
-          </fieldset>
-        </details>
+        <CollapseRow key={row.key} summary={employmentSummary(row, lang)}>
+          <input type="hidden" name={`emp_${index}_key`} value={row.key} />
+          <input type="hidden" name={`emp_${index}_bulletCount`} value={row.bullets.length + 1} />
+          <div className="grid grid-cols-2 gap-2">
+            <label><span className={labelClass}>{t(lang, "title")}</span><input className={fieldClass} name={`emp_${index}_title`} defaultValue={row.title} /></label>
+            <label><span className={labelClass}>{t(lang, "company")}</span><input className={fieldClass} name={`emp_${index}_company`} defaultValue={row.company} /></label>
+          </div>
+          <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
+            <MonthField label={t(lang, "start")} name={`emp_${index}_start`} defaultValue={row.startDate} />
+            <MonthField label={t(lang, "end")} name={`emp_${index}_end`} defaultValue={row.endDate} />
+            <label className="flex items-center gap-2 pb-2 text-sm"><input type="checkbox" name={`emp_${index}_current`} value="1" defaultChecked={row.isCurrent} /> {t(lang, "currentRole")}</label>
+          </div>
+          {row.bullets.map((bullet, bulletIndex) => (
+            <BulletFields key={bullet.key} lang={lang} prefix={`emp_${index}_b_${bulletIndex}`} bulletKey={bullet.key} textEn={bullet.textEn} textHe={bullet.textHe} />
+          ))}
+          <BulletFields lang={lang} prefix={`emp_${index}_b_${row.bullets.length}`} bulletKey={`${row.key}b-extra`} textEn="" textHe="" />
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" name={`emp_${index}_note`} value="1" defaultChecked={row.createNote && !taken.has(employmentNoteLabel(row))} />
+            {t(lang, "createExperienceNote")}
+          </label>
+        </CollapseRow>
       ))}
-      <h3 className="text-base">{t(lang, "studies")}</h3>
+      {educations.length ? <h3 className="text-base">{t(lang, "studies")}</h3> : null}
       {educations.map((row, index) => (
-        <fieldset key={row.key} className="grid gap-2 rounded-md border border-slate-700 p-3">
+        <CollapseRow key={row.key} summary={studySummary(row)}>
           <input type="hidden" name={`edu_${index}_key`} value={row.key} />
           <label><span className={labelClass}>{t(lang, "school")}</span><input className={fieldClass} name={`edu_${index}_school`} defaultValue={row.school} /></label>
           <label><span className={labelClass}>{t(lang, "degree")}</span><input className={fieldClass} name={`edu_${index}_degree`} defaultValue={row.degree} /></label>
@@ -108,31 +100,17 @@ export function ProfileReview({
             <MonthField label={t(lang, "start")} name={`edu_${index}_start`} defaultValue={row.startDate} />
             <MonthField label={t(lang, "end")} name={`edu_${index}_end`} defaultValue={row.endDate} />
           </div>
-        </fieldset>
+        </CollapseRow>
       ))}
-      <h3 className="text-base">{t(lang, "volunteer")}</h3>
-      {volunteers.map((row, index) => (
-        <fieldset key={row.key} className="grid gap-2 rounded-md border border-slate-700 p-3">
-          <input type="hidden" name={`vol_${index}_key`} value={row.key} />
-          <label><span className={labelClass}>{t(lang, "organization")}</span><input className={fieldClass} name={`vol_${index}_organization`} defaultValue={row.organization} /></label>
-          <label><span className={labelClass}>{t(lang, "role")}</span><input className={fieldClass} name={`vol_${index}_role`} defaultValue={row.role} /></label>
-          <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
-            <MonthField label={t(lang, "start")} name={`vol_${index}_start`} defaultValue={row.startDate} />
-            <MonthField label={t(lang, "end")} name={`vol_${index}_end`} defaultValue={row.endDate} />
-          </div>
-          <label><span className={labelClass}>{t(lang, "bodyEn")}</span><textarea className={fieldClass} name={`vol_${index}_en`} rows={2} defaultValue={row.textEn} /></label>
-          <label><span className={labelClass}>{t(lang, "bodyHe")}</span><textarea className={fieldClass} name={`vol_${index}_he`} rows={2} defaultValue={row.textHe} /></label>
-        </fieldset>
-      ))}
-      <h3 className="text-base">{t(lang, "certificates")}</h3>
+      {certificates.length ? <h3 className="text-base">{t(lang, "certificates")}</h3> : null}
       {certificates.map((row, index) => (
-        <fieldset key={row.key} className="grid gap-2 rounded-md border border-slate-700 p-3">
+        <CollapseRow key={row.key} summary={certificateSummary(row)}>
           <input type="hidden" name={`cert_${index}_key`} value={row.key} />
           <label><span className={labelClass}>{t(lang, "certificates")}</span><input className={fieldClass} name={`cert_${index}_name`} defaultValue={row.name} /></label>
           <label><span className={labelClass}>{t(lang, "issuer")}</span><input className={fieldClass} name={`cert_${index}_issuer`} defaultValue={row.issuer} /></label>
           <MonthField label={t(lang, "issuedOn")} name={`cert_${index}_issued`} defaultValue={row.issuedOn} />
           <label><span className={labelClass}>{t(lang, "urls")}</span><input className={fieldClass} name={`cert_${index}_url`} defaultValue={row.url} /></label>
-        </fieldset>
+        </CollapseRow>
       ))}
       <h3 className="text-base">{t(lang, "labels")}</h3>
       {labels.map((row, index) => (
@@ -200,6 +178,29 @@ function MonthField({ label, name, defaultValue }: { label: string; name: string
       <input className={monthFieldClass} name={name} defaultValue={defaultValue} placeholder="MM/YYYY" />
     </label>
   );
+}
+
+function CollapseRow({ summary, children }: { summary: string; children: ReactNode }) {
+  return (
+    <details className="group rounded-md border border-slate-700">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 hover:bg-slate-800/40 [&::-webkit-details-marker]:hidden">
+        <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4 shrink-0 fill-current text-slate-400 transition-transform ltr:group-open:rotate-90 rtl:rotate-180 rtl:group-open:rotate-90">
+          <path d="M7.2 4.5a1 1 0 0 1 1.4 0l5 5.2a1 1 0 0 1 0 1.4l-5 5.2a1 1 0 0 1-1.4-1.4L11.4 10 7.2 5.9a1 1 0 0 1 0-1.4Z" />
+        </svg>
+        <span className="min-w-0 truncate text-sm text-slate-200">{summary || "—"}</span>
+      </summary>
+      <fieldset className="grid gap-2 border-t border-slate-700 p-3">{children}</fieldset>
+    </details>
+  );
+}
+
+function studySummary(row: { school: string; degree: string; field: string; startDate: string; endDate: string }) {
+  const dates = [row.startDate, row.endDate].filter(Boolean).join(" – ");
+  return [row.school, row.degree, row.field, dates].filter(Boolean).join(" · ");
+}
+
+function certificateSummary(row: { name: string; issuer: string; issuedOn: string }) {
+  return [row.name, row.issuer, row.issuedOn].filter(Boolean).join(" · ");
 }
 
 function employmentSummary(

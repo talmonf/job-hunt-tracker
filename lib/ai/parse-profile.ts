@@ -362,7 +362,7 @@ function isWrappedNameRemainder(previous: string, next: string): boolean {
 }
 
 function skills(lines: string[]) {
-  const names = lines
+  const names = joinWrappedNames(lines)
     .flatMap((line) => line.split(/[•·|,]/))
     .map((part) => part.trim())
     .filter((part) => part.length > 1 && part.length < 60);
