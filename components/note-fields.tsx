@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Note } from "@prisma/client";
-import { noteTypesFor, subjectKind, subjectValue } from "@/lib/notes";
+import { noteTypesFor, subjectKind, subjectValue, type NoteSubjectKind } from "@/lib/notes";
 import { noteTypeLabel, t, type Lang } from "@/lib/i18n";
 import type { TagRef } from "@/lib/tags";
 import { SubmitButton, fieldClass, labelClass } from "./widgets";
@@ -40,56 +40,73 @@ export function NoteFields({
   hide: boolean;
 }) {
   const initialSubject = note ? subjectValue(note) : presetSubject;
-  const initialTypes = noteTypesFor(subjectKind(initialSubject));
+  const initialKind = subjectKind(initialSubject);
+  const initialTypes = noteTypesFor(initialKind);
+  const [kind, setKind] = useState<NoteSubjectKind>(initialKind);
   const [subject, setSubject] = useState(initialSubject);
   const [type, setType] = useState(
     note && (initialTypes as readonly string[]).includes(note.type) ? note.type : initialTypes[0],
   );
-  const types = noteTypesFor(subjectKind(subject));
+  const types = noteTypesFor(kind);
+  const entityKind = kind === "general" ? null : kind;
+  const entityOptions =
+    entityKind === "job" ? jobs : entityKind === "contact" ? contacts : entityKind === "company" ? companies : employments;
+  const entityValue = entityKind ? subjectId(subject, entityKind) : "";
+  const entityLabel =
+    entityKind === "job"
+      ? t(lang, "job")
+      : entityKind === "contact"
+        ? t(lang, "contact")
+        : entityKind === "company"
+          ? t(lang, "company")
+          : t(lang, "profileRole");
 
-  function onSubject(next: string) {
-    setSubject(next);
-    const nextTypes = noteTypesFor(subjectKind(next));
-    if (!(nextTypes as readonly string[]).includes(type)) setType(nextTypes[0]);
+  function onKind(next: NoteSubjectKind) {
+    setKind(next);
+    const nextTypes = noteTypesFor(next);
+    setType((current) => ((nextTypes as readonly string[]).includes(current) ? current : nextTypes[0]));
+    if (next === "general" || subjectKind(subject) !== next) setSubject("");
+  }
+
+  function onEntity(id: string) {
+    if (!entityKind) return;
+    setSubject(id ? `${entityKind}:${id}` : "");
   }
 
   return (
     <form action={action} className="grid gap-3">
       {note ? <input type="hidden" name="noteId" value={note.id} /> : null}
       <input type="hidden" name="subject" value={subject} />
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <SearchSelect
-          label={t(lang, "job")}
-          options={jobs}
-          value={subjectId(subject, "job")}
-          emptyLabel={t(lang, "none")}
-          searchLabel={t(lang, "search")}
-          onChange={(id) => onSubject(id ? `job:${id}` : "")}
-        />
-        <SearchSelect
-          label={t(lang, "contact")}
-          options={contacts}
-          value={subjectId(subject, "contact")}
-          emptyLabel={t(lang, "none")}
-          searchLabel={t(lang, "search")}
-          onChange={(id) => onSubject(id ? `contact:${id}` : "")}
-        />
-        <SearchSelect
-          label={t(lang, "company")}
-          options={companies}
-          value={subjectId(subject, "company")}
-          emptyLabel={t(lang, "none")}
-          searchLabel={t(lang, "search")}
-          onChange={(id) => onSubject(id ? `company:${id}` : "")}
-        />
-        <SearchSelect
-          label={t(lang, "profileRole")}
-          options={employments}
-          value={subjectId(subject, "employment")}
-          emptyLabel={t(lang, "none")}
-          searchLabel={t(lang, "search")}
-          onChange={(id) => onSubject(id ? `employment:${id}` : "")}
-        />
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="w-fit max-w-full">
+          <span className={labelClass}>{t(lang, "noteAbout")}</span>
+          <select
+            className="w-48 max-w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-start text-sm text-slate-100 outline-none focus:border-sky-500"
+            value={kind}
+            onChange={(event) => onKind(event.target.value as NoteSubjectKind)}
+          >
+            <option value="general">{t(lang, "generalNote")}</option>
+            <option value="job">{t(lang, "job")}</option>
+            <option value="contact">{t(lang, "contact")}</option>
+            <option value="company">{t(lang, "company")}</option>
+            <option value="employment">{t(lang, "profileRole")}</option>
+          </select>
+        </label>
+        {entityKind ? (
+          <div className="w-full min-w-[12rem] max-w-sm">
+            <SearchSelect
+              label={entityLabel}
+              bare
+              options={entityOptions}
+              value={entityValue}
+              emptyLabel={t(lang, "none")}
+              searchLabel={t(lang, "search")}
+              onChange={onEntity}
+            />
+          </div>
+        ) : (
+          <p className="pb-1.5 text-[11px] italic text-slate-500">{t(lang, "noteAboutGeneral")}</p>
+        )}
       </div>
       <label>
         <span className={labelClass}>{t(lang, "title")}</span>
@@ -133,7 +150,7 @@ export function NoteFields({
         googleConnected={googleConnected}
       />
       <TagPicker lang={lang} hide={hide} tags={tags} selected={selectedTagIds} />
-      <SubmitButton label={t(lang, "save")} />
+      <SubmitButton label={t(lang, "save")} disabled={kind !== "general" && !entityValue} />
     </form>
   );
 }
@@ -145,6 +162,7 @@ function subjectId(subject: string, kind: "job" | "contact" | "company" | "emplo
 
 function SearchSelect({
   label,
+  bare = false,
   options,
   value,
   emptyLabel,
@@ -152,6 +170,7 @@ function SearchSelect({
   onChange,
 }: {
   label: string;
+  bare?: boolean;
   options: { id: string; label: string }[];
   value: string;
   emptyLabel: string;
@@ -185,10 +204,11 @@ function SearchSelect({
 
   return (
     <div className={`relative min-w-0 ${open ? "z-20" : ""}`} ref={root}>
-      <span className={labelClass}>{label}</span>
+      {bare ? null : <span className={labelClass}>{label}</span>}
       <button
         className={`${fieldClass} truncate text-start`}
         type="button"
+        aria-label={bare ? `${label}: ${selected?.label || emptyLabel}` : undefined}
         aria-expanded={open}
         aria-haspopup="listbox"
         onClick={() => {

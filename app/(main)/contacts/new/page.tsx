@@ -18,6 +18,7 @@ export default async function NewContactPage({
   const hide = await hidePersonalInfo();
   const search = await searchParams;
   const linkId = typeof search.link === "string" ? search.link : "";
+  const requestedCompany = typeof search.company === "string" ? search.company : "";
   const lang = user.uiLanguage;
   const [link, contacts, catalog, companies] = await Promise.all([
     linkId
@@ -42,6 +43,7 @@ export default async function NewContactPage({
   ]);
   const names = link ? assignFieldsByScript(link.firstName, link.lastName) : emptyBilingualName();
   const fullName = displayPersonName(names);
+  const presetCompany = companies.find((company) => company.id === requestedCompany) ?? null;
   const title = fullName ? dash(fullName, hide) : t(lang, "addContact");
   return (
     <PageFrame lang={lang} backHref="/contacts" title={title} description={t(lang, "contactDetailIntro")} search={search}>
@@ -58,7 +60,7 @@ export default async function NewContactPage({
           firstNameHe: names.firstNameHe,
           lastNameHe: names.lastNameHe,
           role: "",
-          workplace: "",
+          workplace: presetCompany?.name ?? "",
           howWeMet: "",
           lastChannel: "",
           status: "",
@@ -76,6 +78,7 @@ export default async function NewContactPage({
         googleConnected={Boolean(user.contactsRefreshToken)}
         tags={catalog}
         companies={companies}
+        selectedCompanies={presetCompany ? [{ name: presetCompany.name }] : []}
         hide={hide}
       />
     </PageFrame>

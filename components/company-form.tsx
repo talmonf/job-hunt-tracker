@@ -5,6 +5,9 @@ import type { TagRef } from "@/lib/tags";
 import { SubmitButton, fieldClass, labelClass } from "./widgets";
 import { TagPicker } from "./tag-picker";
 
+const narrowSelectClass =
+  "w-40 max-w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-start text-sm text-slate-100 outline-none focus:border-sky-500";
+
 export function CompanyForm({
   action,
   lang,
@@ -37,25 +40,27 @@ export function CompanyForm({
       <div className="md:col-span-2">
         <TagPicker lang={lang} hide={hide} tags={tags} selected={selectedTagIds} compact={Boolean(company)} />
       </div>
-      <label className="md:col-span-2">
-        <span className={labelClass}>{t(lang, "company")}</span>
-        <input className={fieldClass} name="name" defaultValue={company?.name ?? ""} required />
-      </label>
-      <label>
-        <span className={labelClass}>{t(lang, "dateFounded")}</span>
-        <input className={fieldClass} name="foundedOn" defaultValue={company?.foundedOn ?? ""} dir="ltr" placeholder={t(lang, "partialDateHint")} />
-      </label>
-      <label>
-        <span className={labelClass}>{t(lang, "employeeCount")}</span>
-        <select className={fieldClass} name="employeeCount" defaultValue={company?.employeeCount ?? ""}>
-          <option value="">—</option>
-          {COMPANY_SIZES.map((size) => (
-            <option key={size} value={size}>
-              {companySizeLabel(lang, size)}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="flex flex-wrap items-end gap-3 md:col-span-2">
+        <label className="min-w-[12rem] max-w-sm flex-1">
+          <span className={labelClass}>{t(lang, "company")}</span>
+          <input className={fieldClass} name="name" defaultValue={company?.name ?? ""} required />
+        </label>
+        <label className="w-36 max-w-full">
+          <span className={labelClass}>{t(lang, "dateFounded")}</span>
+          <input className={fieldClass} name="foundedOn" defaultValue={company?.foundedOn ?? ""} dir="ltr" placeholder={t(lang, "partialDateHint")} />
+        </label>
+        <label className="w-fit max-w-full">
+          <span className={labelClass}>{t(lang, "employeeCount")}</span>
+          <select className={narrowSelectClass} name="employeeCount" defaultValue={company?.employeeCount ?? ""}>
+            <option value="">—</option>
+            {COMPANY_SIZES.map((size) => (
+              <option key={size} value={size}>
+                {companySizeLabel(lang, size)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       <label className="md:col-span-2">
         <span className={labelClass}>{t(lang, "offices")}</span>
         <input className={fieldClass} name="offices" defaultValue={company?.offices ?? ""} />
@@ -82,7 +87,9 @@ export function CompanyForm({
           {t(lang, "following")}
         </label>
       ) : null}
-      <SubmitButton label={t(lang, "save")} />
+      <div className="md:col-span-2">
+        <SubmitButton label={t(lang, "save")} thin />
+      </div>
     </form>
   );
 }

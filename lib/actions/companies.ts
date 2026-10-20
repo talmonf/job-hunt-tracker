@@ -6,7 +6,7 @@ import { prisma } from "../prisma";
 import { requireUser } from "../session";
 import { requiredText } from "../forms";
 import { companyNameKey } from "../company-name";
-import { readFoundedOn } from "../companies";
+import { ensureContactCompany, readFoundedOn } from "../companies";
 import { isCompanySize, type CompanySize } from "../company-size";
 import { replaceRecordTags } from "../tag-assign";
 
@@ -73,6 +73,21 @@ export async function setCompanyFollowing(formData: FormData) {
   });
   revalidatePath("/companies");
   revalidatePath(`/companies/${company.id}`);
+}
+
+export async function linkContactToCompany(formData: FormData) {
+  const user = await requireUser();
+  const companyId = requiredText(formData.get("companyId"));
+  const contactId = requiredText(formData.get("contactId"));
+  const company = await prisma.company.findFirst({ where: { id: companyId, userId: user.id } });
+  if (!company) redirect("/companies?error=required");
+  const contact = await prisma.contact.findFirst({ where: { id: contactId, userId: user.id } });
+  if (!contact) redirect(`/companies/${company.id}?tab=contacts&error=required`);
+  await ensureContactCompany(prisma, contact.id, company.id);
+  revalidatePath("/companies");
+  revalidatePath(`/companies/${company.id}`);
+  revalidatePath(`/contacts/${contact.id}`);
+  redirect(`/companies/${company.id}?tab=contacts&updated=1`);
 }
 
 export async function deleteCompany(formData: FormData) {
