@@ -5,8 +5,9 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import { requireAdmin, requireUser } from "../session";
 import { encryptSecret } from "../crypto";
-import { parseCareerDate, requiredText } from "../forms";
+import { requiredText } from "../forms";
 import { readStored } from "../files";
+import { planProfileImport } from "../ai/accept-profile";
 import { buildProposal } from "../ai/draft";
 import { extractPdfText } from "../ai/pdf-text";
 import { shekelsToAgorot } from "../ai/money";
@@ -14,8 +15,7 @@ import { resolveSponsoredProvider } from "../ai/feature-grants";
 import { DEFAULT_MODEL, isAiProvider, lastFour } from "../ai/providers";
 import { isOutputLanguage, readProposalForm } from "../ai/proposal";
 import { AiRunError, chargeAndComplete } from "../ai/run";
-import { ensureCompany } from "../companies";
-import { employmentNoteLabel, experienceNoteBodies } from "../notes";
+import { ensureCompanies } from "../companies";
 
 export async function saveProviderKey(formData: FormData) {
   const user = await requireUser();
@@ -207,139 +207,46 @@ export async function acceptProfileImport(formData: FormData) {
   const draft = await prisma.profileImport.findFirst({ where: { id, userId: user.id, status: "pending" } });
   if (!draft) redirect("/profile?error=required");
   const proposal = readProposalForm(formData);
-  await prisma.$transaction(async (tx) => {
-    await tx.flavor.deleteMany({ where: { userId: user.id } });
-    await tx.employment.deleteMany({ where: { userId: user.id } });
-    await tx.education.deleteMany({ where: { userId: user.id } });
-    await tx.volunteerRole.deleteMany({ where: { userId: user.id } });
-    await tx.certificate.deleteMany({ where: { userId: user.id } });
-    await tx.profileLabel.deleteMany({ where: { userId: user.id } });
-    await tx.profile.upsert({
-      where: { userId: user.id },
-      create: { userId: user.id, headline: proposal.headline, aboutEn: proposal.aboutEn, aboutHe: proposal.aboutHe },
-      update: { headline: proposal.headline, aboutEn: proposal.aboutEn, aboutHe: proposal.aboutHe },
-    });
-    const employmentIds = new Map<string, string>();
-    const bulletIds = new Map<string, string>();
-    for (const row of proposal.employments) {
-      const created = await tx.employment.create({
-        data: {
-          userId: user.id,
-          title: row.title || row.company,
-          company: row.company || row.title,
-          startDate: parseCareerDate(row.startDate, user.timezone),
-          endDate: row.isCurrent ? null : parseCareerDate(row.endDate, user.timezone),
-          isCurrent: row.isCurrent,
-          descriptionEn: row.bullets.map((bullet) => bullet.textEn).filter(Boolean).join("\n"),
-          descriptionHe: row.bullets.map((bullet) => bullet.textHe).filter(Boolean).join("\n"),
-          bullets: {
-            create: row.bullets.map((bullet, position) => ({
-              userId: user.id,
-              position,
-              textEn: bullet.textEn,
-              textHe: bullet.textHe,
-            })),
-          },
-        },
-        include: { bullets: { orderBy: { position: "asc" } } },
+  const plan = planProfileImport(user.id, proposal, user.timezone);
+  // A LinkedIn export is one row per job, school, certificate, and skill. Writing those one query at a
+  // time outlives Prisma's 5s interactive transaction, and the next note insert fails with P2028.
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.flavor.deleteMany({ where: { userId: user.id } });
+      await tx.employment.deleteMany({ where: { userId: user.id } });
+      await tx.education.deleteMany({ where: { userId: user.id } });
+      await tx.volunteerRole.deleteMany({ where: { userId: user.id } });
+      await tx.certificate.deleteMany({ where: { userId: user.id } });
+      await tx.profileLabel.deleteMany({ where: { userId: user.id } });
+      await tx.profile.upsert({
+        where: { userId: user.id },
+        create: { userId: user.id, headline: proposal.headline, aboutEn: proposal.aboutEn, aboutHe: proposal.aboutHe },
+        update: { headline: proposal.headline, aboutEn: proposal.aboutEn, aboutHe: proposal.aboutHe },
       });
-      employmentIds.set(row.key, created.id);
-      if (row.createNote) {
-        const title = employmentNoteLabel(row);
-        if (title) {
-          const bodies = experienceNoteBodies(row.bullets);
-          await tx.note.create({
-            data: {
-              userId: user.id,
-              title,
-              type: "work_experience",
-              employmentId: created.id,
-              bodyEn: bodies.bodyEn,
-              bodyHe: bodies.bodyHe,
-            },
-          });
-        }
-      }
-      await ensureCompany(tx, user.id, row.company);
-      row.bullets.forEach((bullet, position) => {
-        const saved = created.bullets[position];
-        if (saved) bulletIds.set(bullet.key, saved.id);
+      await createMany(plan.employments, (data) => tx.employment.createMany({ data }));
+      await createMany(plan.bullets, (data) => tx.employmentBullet.createMany({ data }));
+      await createMany(plan.notes, (data) => tx.note.createMany({ data }));
+      await ensureCompanies(tx, user.id, plan.companies);
+      await createMany(plan.educations, (data) => tx.education.createMany({ data }));
+      await createMany(plan.volunteers, (data) => tx.volunteerRole.createMany({ data }));
+      await createMany(plan.certificates, (data) => tx.certificate.createMany({ data }));
+      await createMany(plan.labels, (data) => tx.profileLabel.createMany({ data }));
+      await createMany(plan.flavors, (data) => tx.flavor.createMany({ data }));
+      await createMany(plan.flavorEmployments, (data) => tx.flavorEmployment.createMany({ data }));
+      await createMany(plan.flavorBullets, (data) => tx.flavorBullet.createMany({ data }));
+      await createMany(plan.flavorLabels, (data) => tx.flavorLabel.createMany({ data }));
+      await tx.profileImport.update({
+        where: { id: draft.id },
+        data: { status: "accepted", payload: proposal as unknown as Prisma.InputJsonValue },
       });
-    }
-    for (const row of proposal.educations) {
-      await tx.education.create({
-        data: {
-          userId: user.id,
-          school: row.school,
-          degree: row.degree,
-          field: row.field,
-          startDate: parseCareerDate(row.startDate, user.timezone),
-          endDate: parseCareerDate(row.endDate, user.timezone),
-        },
-      });
-    }
-    for (const row of proposal.volunteers) {
-      await tx.volunteerRole.create({
-        data: {
-          userId: user.id,
-          organization: row.organization,
-          role: row.role,
-          startDate: parseCareerDate(row.startDate, user.timezone),
-          endDate: parseCareerDate(row.endDate, user.timezone),
-          descriptionEn: row.textEn,
-          descriptionHe: row.textHe,
-        },
-      });
-    }
-    for (const row of proposal.certificates) {
-      await tx.certificate.create({
-        data: {
-          userId: user.id,
-          name: row.name,
-          issuer: row.issuer,
-          issuedOn: parseCareerDate(row.issuedOn, user.timezone),
-          url: row.url,
-        },
-      });
-    }
-    const labelIds = new Map<string, string>();
-    for (const row of proposal.labels) {
-      const created = await tx.profileLabel.upsert({
-        where: { userId_kind_name: { userId: user.id, kind: row.kind, name: row.name } },
-        create: { userId: user.id, kind: row.kind, name: row.name },
-        update: {},
-      });
-      labelIds.set(row.key, created.id);
-    }
-    for (const flavor of proposal.flavors) {
-      await tx.flavor.create({
-        data: {
-          userId: user.id,
-          name: flavor.name,
-          employments: {
-            create: flavor.employmentKeys
-              .map((key) => employmentIds.get(key))
-              .filter((value): value is string => Boolean(value))
-              .map((employmentId) => ({ employmentId })),
-          },
-          bullets: {
-            create: flavor.bulletKeys
-              .map((key) => bulletIds.get(key))
-              .filter((value): value is string => Boolean(value))
-              .map((bulletId) => ({ bulletId })),
-          },
-          labels: {
-            create: flavor.labelKeys
-              .map((key) => labelIds.get(key))
-              .filter((value): value is string => Boolean(value))
-              .map((labelId) => ({ labelId })),
-          },
-        },
-      });
-    }
-    await tx.profileImport.update({ where: { id: draft.id }, data: { status: "accepted", payload: proposal as unknown as Prisma.InputJsonValue } });
-  });
+    },
+    { maxWait: 10_000, timeout: 30_000 },
+  );
   redirect("/profile?created=1");
+}
+
+async function createMany<T>(rows: readonly T[], write: (data: T[]) => Promise<unknown>) {
+  if (rows.length) await write([...rows]);
 }
 
 export async function discardProfileImport(formData: FormData) {

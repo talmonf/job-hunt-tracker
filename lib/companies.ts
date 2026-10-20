@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { companyNameKey, defaultWorkplaceName, sameCompanyName } from "./company-name";
+import { companyNameKey, defaultWorkplaceName, distinctCompanyNames, sameCompanyName } from "./company-name";
 import { ACTIVE_JOB_STATUSES } from "./events";
 import { canonicalPartialDate } from "./partial-date";
 import { prisma } from "./prisma";
@@ -22,6 +22,22 @@ export async function ensureCompany(db: CompanyDb, userId: string, name: string)
     if (!isUnique(error)) throw error;
     return db.company.findUnique({ where: { userId_nameKey: { userId, nameKey } } });
   }
+}
+
+/** Create any of these companies that the user does not already have. Existing rows are left as they are. */
+export async function ensureCompanies(db: CompanyDb, userId: string, names: readonly string[]) {
+  const wanted = new Map(distinctCompanyNames(names).map((name) => [companyNameKey(name), name]));
+  if (!wanted.size) return;
+  const existing = await db.company.findMany({
+    where: { userId, nameKey: { in: [...wanted.keys()] } },
+    select: { nameKey: true },
+  });
+  for (const row of existing) wanted.delete(row.nameKey);
+  if (!wanted.size) return;
+  await db.company.createMany({
+    data: [...wanted.entries()].map(([nameKey, name]) => ({ userId, name, nameKey, following: true })),
+    skipDuplicates: true,
+  });
 }
 
 export type ContactCompanyLink = {

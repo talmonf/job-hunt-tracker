@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { companyNameKey, defaultWorkplaceName, withWorkplaceCompany } from "./company-name";
+import { companyNameKey, defaultWorkplaceName, distinctCompanyNames, withWorkplaceCompany } from "./company-name";
 import { jobsForCompanyStatus } from "./companies";
 
 test("company name key trims and ignores case", () => {
   assert.equal(companyNameKey("  Northwind "), "northwind");
   assert.equal(companyNameKey("NORTHWIND"), companyNameKey("northwind"));
   assert.equal(companyNameKey("   "), "");
+  assert.deepEqual(distinctCompanyNames([" Acme ", "acme", "", "  ", "Beta"]), ["Acme", "Beta"]);
 });
 
 test("workplace is one of the contact companies, and a missing name is added", () => {

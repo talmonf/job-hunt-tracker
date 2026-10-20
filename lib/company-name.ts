@@ -2,6 +2,20 @@ export function companyNameKey(name: string): string {
   return name.trim().toLowerCase();
 }
 
+/** First spelling wins. Blank names and case-only repeats are dropped. */
+export function distinctCompanyNames(names: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const name of names) {
+    const trimmed = name.trim();
+    const key = companyNameKey(trimmed);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    result.push(trimmed);
+  }
+  return result;
+}
+
 export function sameCompanyName(a: string, b: string): boolean {
   const key = companyNameKey(a);
   return key !== "" && key === companyNameKey(b);
