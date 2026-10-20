@@ -7,7 +7,7 @@ import { requireAdmin, requireUser } from "../session";
 import { encryptSecret } from "../crypto";
 import { requiredText } from "../forms";
 import { readStored } from "../files";
-import { planProfileImport } from "../ai/accept-profile";
+import { planProfileImport, resolveSkillTags } from "../ai/accept-profile";
 import { buildProposal } from "../ai/draft";
 import { extractPdfText } from "../ai/pdf-text";
 import { shekelsToAgorot } from "../ai/money";
@@ -212,13 +212,11 @@ export async function acceptProfileImport(formData: FormData) {
   // time outlives Prisma's 5s interactive transaction, and the next note insert fails with P2028.
   await prisma.$transaction(
     async (tx) => {
-      await tx.flavor.deleteMany({ where: { userId: user.id } });
       await tx.employment.deleteMany({ where: { userId: user.id } });
       await tx.education.deleteMany({ where: { userId: user.id } });
       await tx.volunteerRole.deleteMany({ where: { userId: user.id } });
       await tx.certificate.deleteMany({ where: { userId: user.id } });
-      await tx.profileLabel.deleteMany({ where: { userId: user.id } });
-      await tx.profile.upsert({
+      const profile = await tx.profile.upsert({
         where: { userId: user.id },
         create: { userId: user.id, headline: proposal.headline, aboutEn: proposal.aboutEn, aboutHe: proposal.aboutHe },
         update: { headline: proposal.headline, aboutEn: proposal.aboutEn, aboutHe: proposal.aboutHe },
@@ -230,11 +228,11 @@ export async function acceptProfileImport(formData: FormData) {
       await createMany(plan.educations, (data) => tx.education.createMany({ data }));
       await createMany(plan.volunteers, (data) => tx.volunteerRole.createMany({ data }));
       await createMany(plan.certificates, (data) => tx.certificate.createMany({ data }));
-      await createMany(plan.labels, (data) => tx.profileLabel.createMany({ data }));
-      await createMany(plan.flavors, (data) => tx.flavor.createMany({ data }));
-      await createMany(plan.flavorEmployments, (data) => tx.flavorEmployment.createMany({ data }));
-      await createMany(plan.flavorBullets, (data) => tx.flavorBullet.createMany({ data }));
-      await createMany(plan.flavorLabels, (data) => tx.flavorLabel.createMany({ data }));
+      const existingTags = await tx.tag.findMany({ where: { userId: user.id }, select: { id: true, name: true, color: true } });
+      const skills = resolveSkillTags(plan.skillNames, existingTags);
+      await createMany(skills.create, (data) => tx.tag.createMany({ data: data.map((tag) => ({ ...tag, userId: user.id })) }));
+      await tx.profileTag.deleteMany({ where: { profileId: profile.id } });
+      await createMany(skills.tagIds, (data) => tx.profileTag.createMany({ data: data.map((tagId) => ({ profileId: profile.id, tagId })) }));
       await tx.profileImport.update({
         where: { id: draft.id },
         data: { status: "accepted", payload: proposal as unknown as Prisma.InputJsonValue },

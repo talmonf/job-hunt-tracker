@@ -38,7 +38,7 @@ describe("profile pdf text", () => {
     assert.equal(proposal.educations[0].endDate, "1842");
     assert.equal(proposal.employments[0].bullets.length, 2);
     assert.equal(proposal.educations[0].school, "University of Nowhere");
-    assert.deepEqual(proposal.labels.map((label) => label.name), ["Analysis", "Poetry"]);
+    assert.deepEqual(proposal.skills, ["Analysis", "Poetry"]);
     assert.equal(needsModel(proposal, "en", 1), false);
   });
 
@@ -213,7 +213,7 @@ AI Pair Programming / AI-Assisted
 Programming
 Product Design
 `);
-    assert.deepEqual(proposal.labels.map((label) => label.name), [
+    assert.deepEqual(proposal.skills, [
       "Cursor AI",
       "AI Pair Programming / AI-Assisted Programming",
       "Product Design",

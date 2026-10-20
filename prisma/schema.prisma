@@ -163,8 +163,6 @@ model User {
   aiFeatureGrants   AiFeatureGrant[]
   aiUsage       AiUsage[]
   creditLedger  CreditLedger[]
-  profileLabels ProfileLabel[]
-  flavors       Flavor[]
   profileImports ProfileImport[]
 }
 
@@ -181,12 +179,13 @@ model UserGoals {
 }
 
 model Profile {
-  id       String @id @default(cuid())
-  userId   String @unique
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  headline String @default("")
-  aboutEn  String @default("")
-  aboutHe  String @default("")
+  id       String       @id @default(cuid())
+  userId   String       @unique
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  headline String       @default("")
+  aboutEn  String       @default("")
+  aboutHe  String       @default("")
+  tags     ProfileTag[]
 }
 
 model Employment {
@@ -202,7 +201,6 @@ model Employment {
   descriptionHe String    @default("")
   tags          EmploymentTag[]
   bullets       EmploymentBullet[]
-  flavors       FlavorEmployment[]
   notes         Note[]
 }
 
@@ -548,6 +546,7 @@ model Tag {
   notes       NoteTag[]
   employments EmploymentTag[]
   companies   CompanyTag[]
+  profiles    ProfileTag[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -614,11 +613,6 @@ enum AiPaySource {
   key
   credits
   sponsored
-}
-
-enum ProfileLabelKind {
-  skill
-  theme
 }
 
 enum ImportStatus {
@@ -704,16 +698,14 @@ model CreditLedger {
   @@index([userId, createdAt])
 }
 
-model ProfileLabel {
-  id      String           @id @default(cuid())
-  userId  String
-  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  kind    ProfileLabelKind
-  name    String
-  flavors FlavorLabel[]
+model ProfileTag {
+  profileId String
+  tagId     String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, kind, name])
-  @@index([userId])
+  @@id([profileId, tagId])
+  @@index([tagId])
 }
 
 model EmploymentBullet {
@@ -724,51 +716,8 @@ model EmploymentBullet {
   position     Int
   textEn       String   @default("")
   textHe       String   @default("")
-  flavors      FlavorBullet[]
 
   @@index([employmentId, position])
-}
-
-model Flavor {
-  id          String             @id @default(cuid())
-  userId      String
-  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name        String
-  employments FlavorEmployment[]
-  bullets     FlavorBullet[]
-  labels      FlavorLabel[]
-
-  @@index([userId])
-}
-
-model FlavorEmployment {
-  flavorId     String
-  employmentId String
-  flavor       Flavor     @relation(fields: [flavorId], references: [id], onDelete: Cascade)
-  employment   Employment @relation(fields: [employmentId], references: [id], onDelete: Cascade)
-
-  @@id([flavorId, employmentId])
-  @@index([employmentId])
-}
-
-model FlavorBullet {
-  flavorId String
-  bulletId String
-  flavor   Flavor           @relation(fields: [flavorId], references: [id], onDelete: Cascade)
-  bullet   EmploymentBullet @relation(fields: [bulletId], references: [id], onDelete: Cascade)
-
-  @@id([flavorId, bulletId])
-  @@index([bulletId])
-}
-
-model FlavorLabel {
-  flavorId String
-  labelId  String
-  flavor   Flavor       @relation(fields: [flavorId], references: [id], onDelete: Cascade)
-  label    ProfileLabel @relation(fields: [labelId], references: [id], onDelete: Cascade)
-
-  @@id([flavorId, labelId])
-  @@index([labelId])
 }
 
 model ProfileImport {

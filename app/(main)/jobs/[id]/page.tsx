@@ -40,7 +40,7 @@ export default async function JobDetailPage({
   const hide = await hidePersonalInfo();
   const { id } = await params;
   const search = await searchParams;
-  const [job, notes, contacts, employments, catalog, otherJobs, companies, jobFillAccess] = await Promise.all([
+  const [job, notes, contacts, employments, catalog, otherJobs, companies, jobFillAccess, profile] = await Promise.all([
     prisma.job.findFirst({
       where: { id, userId: user.id },
       include: {
@@ -73,6 +73,10 @@ export default async function JobDetailPage({
     }),
     prisma.company.findMany({ where: { userId: user.id }, orderBy: { name: "asc" }, select: { name: true } }),
     loadJobFillAccess(user.id),
+    prisma.profile.findUnique({
+      where: { userId: user.id },
+      include: { tags: { include: { tag: true } } },
+    }),
   ]);
   if (!job) notFound();
   const lang = user.uiLanguage;
@@ -116,6 +120,7 @@ export default async function JobDetailPage({
     jobTagIds,
     (row) => row.fullName,
   ).map((row) => ({ id: row.item.id, label: row.item.fullName, overlap: row.overlap }));
+  const profileOverlap = assignmentTags(profile?.tags ?? []).filter((tag) => jobTagIds.includes(tag.id));
   const now = new Date();
   const progress = processProgress(job.processSteps);
   const processSummary = formatProcessProgress(
@@ -290,6 +295,7 @@ export default async function JobDetailPage({
         employments={relatedEmployments}
         notes={relatedNotes}
         contacts={relatedContacts}
+        profile={profileOverlap.length ? { label: profile?.headline.trim() || t(lang, "profile"), overlap: profileOverlap } : null}
       />
 
       <JobPeopleSection

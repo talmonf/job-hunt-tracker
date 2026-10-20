@@ -101,7 +101,7 @@ export function parseProfileText(raw: string): Proposal {
   const identity = peelIdentity(sections.get("certs") ?? []);
   if (!proposal.headline && identity.headline) proposal.headline = identity.headline;
   proposal.certificates = certificates(identity.lines);
-  proposal.labels = skills(sections.get("skills") ?? []);
+  proposal.skills = skills(sections.get("skills") ?? []);
   return proposal;
 }
 
@@ -366,11 +366,7 @@ function skills(lines: string[]) {
     .flatMap((line) => line.split(/[•·|,]/))
     .map((part) => part.trim())
     .filter((part) => part.length > 1 && part.length < 60);
-  return [...new Set(names)].map((name, index) => ({
-    key: `l${index + 1}`,
-    kind: "skill" as const,
-    name,
-  }));
+  return [...new Set(names)];
 }
 
 function languageLines(lines: string[], language: "en" | "he"): string {

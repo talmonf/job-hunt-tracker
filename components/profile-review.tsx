@@ -5,6 +5,7 @@ import { t } from "@/lib/i18n";
 import { employmentNoteLabel } from "@/lib/notes";
 import { acceptProfileImport, discardProfileImport } from "@/lib/actions/ai";
 import { DelayedHoverInput } from "@/components/delayed-hover-input";
+import { SkillNamesEditor } from "@/components/skill-names-editor";
 import { SubmitButton, fieldClass, labelClass } from "@/components/widgets";
 
 const monthFieldClass =
@@ -25,8 +26,6 @@ export function ProfileReview({
   const employments = [...proposal.employments, { key: "extra-emp", title: "", company: "", startDate: "", endDate: "", isCurrent: false, bullets: [], createNote: false }];
   const educations = proposal.educations;
   const certificates = proposal.certificates;
-  const labels = [...proposal.labels, { key: "extra-label", kind: "skill" as const, name: "" }];
-  const flavors = [...proposal.flavors, { key: "extra-flavor", name: "", employmentKeys: [] as string[], bulletKeys: [] as string[], labelKeys: [] as string[] }];
   return (
     <div id="import-review" className="mt-8 scroll-mt-20">
     <form action={acceptProfileImport} className="grid gap-4 rounded-md border border-sky-800 p-3">
@@ -41,8 +40,6 @@ export function ProfileReview({
       <input type="hidden" name="eduCount" value={educations.length} />
       <input type="hidden" name="volCount" value="0" />
       <input type="hidden" name="certCount" value={certificates.length} />
-      <input type="hidden" name="labelCount" value={labels.length} />
-      <input type="hidden" name="flavorCount" value={flavors.length} />
       <label>
         <span className={labelClass}>{t(lang, "headline")}</span>
         <input className={fieldClass} name="headline" defaultValue={proposal.headline} />
@@ -112,51 +109,9 @@ export function ProfileReview({
           <label><span className={labelClass}>{t(lang, "urls")}</span><input className={fieldClass} name={`cert_${index}_url`} defaultValue={row.url} /></label>
         </CollapseRow>
       ))}
-      <h3 className="text-base">{t(lang, "labels")}</h3>
-      {labels.map((row, index) => (
-        <div key={row.key} className="grid gap-2 md:grid-cols-2">
-          <input type="hidden" name={`label_${index}_key`} value={row.key} />
-          <label>
-            <span className={labelClass}>{t(lang, "labelKind")}</span>
-            <select className={fieldClass} name={`label_${index}_kind`} defaultValue={row.kind}>
-              <option value="skill">{t(lang, "skill")}</option>
-              <option value="theme">{t(lang, "theme")}</option>
-            </select>
-          </label>
-          <label>
-            <span className={labelClass}>{t(lang, "tagName")}</span>
-            <input className={fieldClass} name={`label_${index}_name`} defaultValue={row.name} />
-          </label>
-        </div>
-      ))}
-      <h3 className="text-base">{t(lang, "flavors")}</h3>
-      <p className="text-sm text-slate-400">{t(lang, "flavorHint")}</p>
-      {flavors.map((flavor, index) => (
-        <fieldset key={flavor.key} className="grid gap-2 rounded-md border border-slate-700 p-3">
-          <input type="hidden" name={`flavor_${index}_key`} value={flavor.key} />
-          <label><span className={labelClass}>{t(lang, "flavor")}</span><input className={fieldClass} name={`flavor_${index}_name`} defaultValue={flavor.name} /></label>
-          <div className="grid gap-1 text-sm">
-            {proposal.employments.map((row) => (
-              <label key={row.key} className="flex items-center gap-2">
-                <input type="checkbox" name={`flavor_${index}_emp`} value={row.key} defaultChecked={flavor.employmentKeys.includes(row.key)} />
-                {row.title || row.company}
-              </label>
-            ))}
-            {proposal.employments.flatMap((row) => row.bullets).map((bullet) => (
-              <label key={bullet.key} className="flex items-center gap-2">
-                <input type="checkbox" name={`flavor_${index}_bullet`} value={bullet.key} defaultChecked={flavor.bulletKeys.includes(bullet.key)} />
-                {bullet.textEn || bullet.textHe}
-              </label>
-            ))}
-            {proposal.labels.filter((row) => row.kind === "skill").map((row) => (
-              <label key={row.key} className="flex items-center gap-2">
-                <input type="checkbox" name={`flavor_${index}_label`} value={row.key} defaultChecked={flavor.labelKeys.includes(row.key)} />
-                {row.name}
-              </label>
-            ))}
-          </div>
-        </fieldset>
-      ))}
+      <h3 className="text-base">{t(lang, "tags")}</h3>
+      <p className="text-sm text-slate-400">{t(lang, "skillTagsHint")}</p>
+      <SkillNamesEditor lang={lang} names={proposal.skills} />
       <div className="flex flex-wrap gap-3">
         <SubmitButton label={t(lang, "acceptImport")} />
       </div>

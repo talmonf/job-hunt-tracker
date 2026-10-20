@@ -4,7 +4,7 @@ import { firstParam, preserveQuery } from "@/lib/http";
 import { dateInputValue, formatDate, formatMonthYear } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
-import { assignmentTags, type TagRef } from "@/lib/tags";
+import { assignmentTags, rankByOverlap, type TagRef } from "@/lib/tags";
 import { discardProfileImport } from "@/lib/actions/ai";
 import {
   deleteCertificate,
@@ -16,6 +16,7 @@ import {
   saveCertificate,
   saveEducation,
   saveEmployment,
+  saveProfileTags,
   saveVolunteer,
   uploadProfileFile,
 } from "@/lib/actions/profile";
@@ -24,6 +25,7 @@ import { Modal, PageFrame } from "@/components/chrome";
 import { CvLibrary } from "@/components/cv-library";
 import { ProfileReview } from "@/components/profile-review";
 import { DateField, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
+import { RelatedByTags } from "@/components/related-tags";
 import { TagChips } from "@/components/tag-chip";
 import { TagPicker } from "@/components/tag-picker";
 
@@ -39,8 +41,8 @@ export default async function ProfilePage({
   const hide = await hidePersonalInfo();
   const search = await searchParams;
   const lang = user.uiLanguage;
-  const [profile, employments, educations, volunteers, certificates, files, catalog, labels, flavors, draftRow, experienceNotes] = await Promise.all([
-    prisma.profile.findUnique({ where: { userId: user.id } }),
+  const [profile, employments, educations, volunteers, certificates, files, catalog, draftRow, notes, jobs, contacts] = await Promise.all([
+    prisma.profile.findUnique({ where: { userId: user.id }, include: { tags: { include: { tag: true } } } }),
     prisma.employment.findMany({
       where: { userId: user.id },
       orderBy: { startDate: "desc" },
@@ -51,14 +53,19 @@ export default async function ProfilePage({
     prisma.certificate.findMany({ where: { userId: user.id }, orderBy: { issuedOn: "desc" } }),
     prisma.profileFile.findMany({ where: { userId: user.id }, orderBy: { uploadedAt: "desc" } }),
     prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
-    prisma.profileLabel.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
-    prisma.flavor.findMany({
-      where: { userId: user.id },
-      orderBy: { name: "asc" },
-      include: { employments: true, bullets: true, labels: { include: { label: true } } },
-    }),
     prisma.profileImport.findFirst({ where: { userId: user.id, status: "pending" }, orderBy: { createdAt: "desc" } }),
-    prisma.note.findMany({ where: { userId: user.id, type: "work_experience" }, select: { title: true } }),
+    prisma.note.findMany({
+      where: { userId: user.id },
+      select: { id: true, title: true, type: true, tags: { include: { tag: true } } },
+    }),
+    prisma.job.findMany({
+      where: { userId: user.id },
+      select: { id: true, title: true, companyName: true, tags: { include: { tag: true } } },
+    }),
+    prisma.contact.findMany({
+      where: { userId: user.id },
+      select: { id: true, fullName: true, tags: { include: { tag: true } } },
+    }),
   ]);
   const modal = firstParam(search.modal);
   const editId = firstParam(search.id);
@@ -193,33 +200,7 @@ export default async function ProfilePage({
         ))}
       </Section>
 
-      {labels.length ? (
-        <section className="mt-8">
-          <h2 className="mb-2 text-lg">{t(lang, "labels")}</h2>
-          <ul className="flex flex-wrap gap-2 text-sm">
-            {labels.map((label) => (
-              <li key={label.id} className="rounded-full border border-slate-600 px-2 py-1">
-                {label.kind === "theme" ? t(lang, "theme") : t(lang, "skill")}: {dash(label.name, hide)}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-      {flavors.length ? (
-        <section className="mt-8">
-          <h2 className="mb-2 text-lg">{t(lang, "flavors")}</h2>
-          <div className="grid gap-2">
-            {flavors.map((flavor) => (
-              <article key={flavor.id} className="rounded-md border border-slate-700 p-3 text-sm">
-                <div className="font-medium">{dash(flavor.name, hide)}</div>
-                <p className="text-slate-400">
-                  {flavor.employments.length} {t(lang, "employment")} · {flavor.bullets.length} {t(lang, "bullets")} · {flavor.labels.map((row) => row.label.name).join(", ")}
-                </p>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      <ProfileTags lang={lang} hide={hide} catalog={catalog} profileTags={assignmentTags(profile?.tags ?? [])} jobs={jobs} notes={notes} contacts={contacts} />
 
       <section id="source" className="mt-8 scroll-mt-20">
         <h2 className="mb-2 text-lg">
@@ -246,7 +227,7 @@ export default async function ProfilePage({
           proposal={normalizeProposal(draftRow.payload, false)}
           draftId={draftRow.id}
           lang={lang}
-          existingNoteTitles={experienceNotes.map((note) => note.title)}
+          existingNoteTitles={notes.filter((note) => note.type === "work_experience").map((note) => note.title)}
         />
       ) : null}
 
@@ -383,6 +364,67 @@ function VolunteerForm({ row, timeZone, lang }: { row?: { id: string; organizati
       <textarea className={fieldClass} name="descriptionHe" rows={3} defaultValue={row?.descriptionHe ?? ""} />
       <SubmitButton label={t(lang, "save")} />
     </form>
+  );
+}
+
+function ProfileTags({
+  lang,
+  hide,
+  catalog,
+  profileTags,
+  jobs,
+  notes,
+  contacts,
+}: {
+  lang: "en" | "he";
+  hide: boolean;
+  catalog: TagRef[];
+  profileTags: TagRef[];
+  jobs: { id: string; title: string; companyName: string; tags: { tag: TagRef }[] }[];
+  notes: { id: string; title: string; tags: { tag: TagRef }[] }[];
+  contacts: { id: string; fullName: string; tags: { tag: TagRef }[] }[];
+}) {
+  const ids = profileTags.map((tag) => tag.id);
+  const relatedJobs = rankByOverlap(
+    jobs,
+    (row) => assignmentTags(row.tags),
+    ids,
+    (row) => `${row.companyName} ${row.title}`,
+  ).map((row) => ({
+    id: row.item.id,
+    label: row.item.title ? `${row.item.companyName} — ${row.item.title}` : row.item.companyName,
+    overlap: row.overlap,
+  }));
+  const relatedNotes = rankByOverlap(
+    notes,
+    (row) => assignmentTags(row.tags),
+    ids,
+    (row) => row.title,
+  ).map((row) => ({ id: row.item.id, label: row.item.title, overlap: row.overlap }));
+  const relatedContacts = rankByOverlap(
+    contacts,
+    (row) => assignmentTags(row.tags),
+    ids,
+    (row) => row.fullName,
+  ).map((row) => ({ id: row.item.id, label: row.item.fullName, overlap: row.overlap }));
+  return (
+    <section className="mt-8">
+      <h2 className="mb-1 text-lg">{t(lang, "tags")}</h2>
+      <p className="mb-3 text-sm text-slate-400">{t(lang, "profileTagsHint")}</p>
+      <form action={saveProfileTags}>
+        <TagPicker lang={lang} hide={hide} tags={catalog} selected={ids} compact />
+      </form>
+      <RelatedByTags
+        lang={lang}
+        hide={hide}
+        hasTags={ids.length > 0}
+        emptyText={t(lang, "profileTagsEmpty")}
+        jobs={relatedJobs}
+        notes={relatedNotes}
+        contacts={relatedContacts}
+        employments={[]}
+      />
+    </section>
   );
 }
 

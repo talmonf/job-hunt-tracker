@@ -39,6 +39,19 @@ export async function replaceRecordTags(
   }
 }
 
+export async function replaceProfileTags(profileId: string, userId: string, formData: FormData) {
+  if (formData.get("tagsManaged") !== "1") return;
+  const requested = [...new Set(formData.getAll("tagId").map((value) => requiredText(value)).filter(Boolean))];
+  const owned = requested.length
+    ? await prisma.tag.findMany({ where: { userId, id: { in: requested } }, select: { id: true } })
+    : [];
+  const ids = owned.map((tag) => tag.id);
+  await prisma.profileTag.deleteMany({ where: { profileId, ...(ids.length ? { tagId: { notIn: ids } } : {}) } });
+  if (ids.length) {
+    await prisma.profileTag.createMany({ data: ids.map((tagId) => ({ profileId, tagId })), skipDuplicates: true });
+  }
+}
+
 export async function copyCompanyTags(kind: "job" | "contact" | "note", recordId: string, companyIds: string[]) {
   const ids = [...new Set(companyIds.filter(Boolean))];
   if (!ids.length) return;

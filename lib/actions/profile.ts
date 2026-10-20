@@ -6,7 +6,7 @@ import { prisma } from "../prisma";
 import { requireUser } from "../session";
 import { parseDateOnly, requiredText } from "../forms";
 import { removeStored, saveUpload } from "../files";
-import { replaceRecordTags } from "../tag-assign";
+import { replaceProfileTags, replaceRecordTags } from "../tag-assign";
 import { extractPdfText } from "../ai/pdf-text";
 import { parseProfileText } from "../ai/parse-profile";
 
@@ -22,6 +22,17 @@ export async function saveAbout(formData: FormData) {
     create: { userId: user.id, ...data },
     update: data,
   });
+  redirect("/profile?updated=1");
+}
+
+export async function saveProfileTags(formData: FormData) {
+  const user = await requireUser();
+  const profile = await prisma.profile.upsert({
+    where: { userId: user.id },
+    create: { userId: user.id },
+    update: {},
+  });
+  await replaceProfileTags(profile.id, user.id, formData);
   redirect("/profile?updated=1");
 }
 

@@ -1,9 +1,10 @@
 import { randomUUID } from "crypto";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, TagColor } from "@prisma/client";
 import { distinctCompanyNames } from "../company-name";
 import { parseCareerDate } from "../forms";
 import { employmentNoteLabel, experienceNoteBodies } from "../notes";
-import type { Proposal } from "./proposal";
+import { firstFreeTagColor } from "../tags";
+import { uniqueSkillNames, type Proposal } from "./proposal";
 
 export type ProfileImportPlan = {
   employments: Prisma.EmploymentCreateManyInput[];
@@ -13,11 +14,12 @@ export type ProfileImportPlan = {
   educations: Prisma.EducationCreateManyInput[];
   volunteers: Prisma.VolunteerRoleCreateManyInput[];
   certificates: Prisma.CertificateCreateManyInput[];
-  labels: Prisma.ProfileLabelCreateManyInput[];
-  flavors: Prisma.FlavorCreateManyInput[];
-  flavorEmployments: Prisma.FlavorEmploymentCreateManyInput[];
-  flavorBullets: Prisma.FlavorBulletCreateManyInput[];
-  flavorLabels: Prisma.FlavorLabelCreateManyInput[];
+  skillNames: string[];
+};
+
+export type SkillTagPlan = {
+  create: { id: string; name: string; color: TagColor }[];
+  tagIds: string[];
 };
 
 /** Rows for one profile import. Ids are assigned up front so every insert can be a single createMany. */
@@ -30,12 +32,9 @@ export function planProfileImport(
   const employments: Prisma.EmploymentCreateManyInput[] = [];
   const bullets: Prisma.EmploymentBulletCreateManyInput[] = [];
   const notes: Prisma.NoteCreateManyInput[] = [];
-  const employmentIds = new Map<string, string>();
-  const bulletIds = new Map<string, string>();
 
   for (const row of proposal.employments) {
     const id = newId();
-    employmentIds.set(row.key, id);
     employments.push({
       id,
       userId,
@@ -49,7 +48,6 @@ export function planProfileImport(
     });
     row.bullets.forEach((bullet, position) => {
       const bulletId = newId();
-      bulletIds.set(bullet.key, bulletId);
       bullets.push({
         id: bulletId,
         employmentId: id,
@@ -73,32 +71,6 @@ export function planProfileImport(
         });
       }
     }
-  }
-
-  const labels: Prisma.ProfileLabelCreateManyInput[] = [];
-  const labelIds = new Map<string, string>();
-  const seenLabels = new Map<string, string>();
-  for (const row of proposal.labels) {
-    const dedupe = `${row.kind}\0${row.name}`;
-    let labelId = seenLabels.get(dedupe);
-    if (!labelId) {
-      labelId = newId();
-      seenLabels.set(dedupe, labelId);
-      labels.push({ id: labelId, userId, kind: row.kind, name: row.name });
-    }
-    labelIds.set(row.key, labelId);
-  }
-
-  const flavors: Prisma.FlavorCreateManyInput[] = [];
-  const flavorEmployments: Prisma.FlavorEmploymentCreateManyInput[] = [];
-  const flavorBullets: Prisma.FlavorBulletCreateManyInput[] = [];
-  const flavorLabels: Prisma.FlavorLabelCreateManyInput[] = [];
-  for (const flavor of proposal.flavors) {
-    const id = newId();
-    flavors.push({ id, userId, name: flavor.name });
-    linkIds(flavor.employmentKeys, employmentIds, (employmentId) => flavorEmployments.push({ flavorId: id, employmentId }));
-    linkIds(flavor.bulletKeys, bulletIds, (bulletId) => flavorBullets.push({ flavorId: id, bulletId }));
-    linkIds(flavor.labelKeys, labelIds, (labelId) => flavorLabels.push({ flavorId: id, labelId }));
   }
 
   return {
@@ -130,20 +102,33 @@ export function planProfileImport(
       issuedOn: parseCareerDate(row.issuedOn, timeZone),
       url: row.url,
     })),
-    labels,
-    flavors,
-    flavorEmployments,
-    flavorBullets,
-    flavorLabels,
+    skillNames: uniqueSkillNames(proposal.skills),
   };
 }
 
-function linkIds(keys: readonly string[], ids: ReadonlyMap<string, string>, push: (id: string) => void) {
-  const seen = new Set<string>();
-  for (const key of keys) {
-    const id = ids.get(key);
-    if (!id || seen.has(id)) continue;
-    seen.add(id);
-    push(id);
+/** Reuse a tag with the same name, or plan a new one. Does not delete tags used elsewhere. */
+export function resolveSkillTags(
+  names: readonly string[],
+  existing: readonly { id: string; name: string; color: TagColor }[],
+  newId: () => string = randomUUID,
+): SkillTagPlan {
+  const byName = new Map(existing.map((tag) => [tag.name.trim().toLowerCase(), tag]));
+  const used: TagColor[] = existing.map((tag) => tag.color);
+  const create: SkillTagPlan["create"] = [];
+  const tagIds: string[] = [];
+  for (const name of uniqueSkillNames(names)) {
+    const match = byName.get(name.toLowerCase());
+    if (match) {
+      tagIds.push(match.id);
+      continue;
+    }
+    const color = firstFreeTagColor(used);
+    used.push(color);
+    const id = newId();
+    const tag = { id, name, color };
+    create.push(tag);
+    tagIds.push(id);
+    byName.set(name.toLowerCase(), tag);
   }
+  return { create, tagIds };
 }

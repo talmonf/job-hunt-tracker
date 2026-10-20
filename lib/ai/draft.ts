@@ -1,6 +1,6 @@
 import { parseJsonObject } from "./json";
 import { parseProfileText } from "./parse-profile";
-import { needsModel, normalizeProposal, type OutputLanguage, type Proposal } from "./proposal";
+import { needsModel, normalizeProposal, uniqueSkillNames, type OutputLanguage, type Proposal } from "./proposal";
 import { chargeAndComplete } from "./run";
 import type { AiProviderId } from "./providers";
 
@@ -11,17 +11,17 @@ employments: [{key,title,company,startDate,endDate,isCurrent,bullets:[{key,textE
 educations: [{key,school,degree,field,startDate,endDate}],
 volunteers: [{key,organization,role,startDate,endDate,textEn,textHe}],
 certificates: [{key,name,issuer,issuedOn,url}],
-labels: [{key,kind,name}] where kind is "skill" or "theme",
-flavors: [{key,name,employmentKeys,bulletKeys,labelKeys}],
 conflicts: [{field,values}].
 Dates are MM/YYYY, or YYYY when the source has no month. Leave the day out. Empty when unknown. isCurrent is boolean.
-A flavor is a named emphasis on one history, listing which roles, bullets, and skill labels to feature. It is not a second biography.
-When there is one source, leave flavors empty unless the document itself separates two emphases.
-When there are several sources, build one canonical history and propose flavors from the differences.
-labels must include skills and targeting themes. The reader will edit them.
+Do not return skills, labels, or flavors. Skills are taken from the file's Skills section by the parser.
 conflicts lists fields where the sources disagree, with the distinct values.
 Respect the requested output language. "en" fills English and leaves Hebrew empty. "he" does the opposite. "both" fills both, translating whatever is missing.
 Do not invent employers, dates, or degrees that are not in the sources.`;
+
+/** Skills stay with the parser. A model response cannot add, split, or rename them. */
+export function applyParserSkills(proposal: Proposal, parsed: readonly Proposal[]): Proposal {
+  return { ...proposal, skills: uniqueSkillNames(parsed.flatMap((row) => row.skills)) };
+}
 
 export async function buildProposal(input: {
   userId: string;
@@ -31,7 +31,7 @@ export async function buildProposal(input: {
   provider: AiProviderId;
 }): Promise<Proposal> {
   const parsed = input.texts.map((file) => parseProfileText(file.text));
-  const base = parsed[0] ?? normalizeProposal({});
+  const base = applyParserSkills(parsed[0] ?? normalizeProposal({}), parsed);
   if (!needsModel(base, input.language, input.texts.length)) return base;
   const clipped = input.texts
     .map((file, index) => `SOURCE ${index + 1}: ${file.filename}\n${file.text.slice(0, 60_000)}`)
@@ -53,9 +53,9 @@ export async function buildProposal(input: {
   } catch {
     return { ...base, usedModel: true };
   }
-  const proposal = normalizeProposal(parsedJson, true);
+  const proposal = applyParserSkills(normalizeProposal(parsedJson, true), parsed);
   if (proposal.employments.length === 0 && proposal.educations.length === 0 && base.employments.length + base.educations.length > 0) {
-    return { ...base, usedModel: true, labels: proposal.labels.length ? proposal.labels : base.labels, flavors: proposal.flavors, conflicts: proposal.conflicts };
+    return { ...base, usedModel: true, conflicts: proposal.conflicts };
   }
   return proposal;
 }

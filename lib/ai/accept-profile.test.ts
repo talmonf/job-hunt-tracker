@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { planProfileImport } from "./accept-profile";
+import { planProfileImport, resolveSkillTags } from "./accept-profile";
 import { emptyProposal, type Proposal } from "./proposal";
 
 function ids() {
@@ -70,53 +70,22 @@ test("a profile import plans one note per selected role and reuses company names
   assert.equal(plan.notes[0]?.bodyHe, "כתבה");
 });
 
-test("flavors link saved rows, and a repeated skill is stored once", () => {
+test("a repeated skill is stored once, and an existing tag is reused", () => {
   const plan = planProfileImport(
     "user-1",
     proposal({
-      employments: [
-        {
-          key: "e1",
-          title: "Mathematician",
-          company: "Acme",
-          startDate: "",
-          endDate: "",
-          isCurrent: false,
-          createNote: false,
-          bullets: [{ key: "b1", textEn: "Proofs", textHe: "" }],
-        },
-      ],
-      labels: [
-        { key: "l1", kind: "skill", name: "Algebra" },
-        { key: "l2", kind: "skill", name: "Algebra" },
-        { key: "l3", kind: "theme", name: "Algebra" },
-      ],
-      flavors: [
-        {
-          key: "f1",
-          name: "Research",
-          employmentKeys: ["e1", "missing", "e1"],
-          bulletKeys: ["b1"],
-          labelKeys: ["l1", "l2", "l3"],
-        },
-      ],
+      skills: ["Algebra", " algebra ", "Proofs"],
     }),
     "UTC",
     ids(),
   );
+  assert.deepEqual(plan.skillNames, ["Algebra", "Proofs"]);
 
-  assert.deepEqual(
-    plan.labels.map((label) => ({ id: label.id, kind: label.kind, name: label.name })),
-    [
-      { id: "id-3", kind: "skill", name: "Algebra" },
-      { id: "id-4", kind: "theme", name: "Algebra" },
-    ],
+  const linked = resolveSkillTags(
+    plan.skillNames,
+    [{ id: "tag-algebra", name: "algebra", color: "red" }],
+    ids(),
   );
-  assert.equal(plan.flavors[0]?.id, "id-5");
-  assert.deepEqual(plan.flavorEmployments, [{ flavorId: "id-5", employmentId: "id-1" }]);
-  assert.deepEqual(plan.flavorBullets, [{ flavorId: "id-5", bulletId: "id-2" }]);
-  assert.deepEqual(plan.flavorLabels, [
-    { flavorId: "id-5", labelId: "id-3" },
-    { flavorId: "id-5", labelId: "id-4" },
-  ]);
+  assert.deepEqual(linked.tagIds, ["tag-algebra", "id-1"]);
+  assert.deepEqual(linked.create, [{ id: "id-1", name: "Proofs", color: "rose" }]);
 });

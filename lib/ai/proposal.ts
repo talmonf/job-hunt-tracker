@@ -40,16 +40,6 @@ export type ProposedCertificate = {
   url: string;
 };
 
-export type ProposedLabel = { key: string; kind: "skill" | "theme"; name: string };
-
-export type ProposedFlavor = {
-  key: string;
-  name: string;
-  employmentKeys: string[];
-  bulletKeys: string[];
-  labelKeys: string[];
-};
-
 export type ProposedConflict = { field: string; values: string[] };
 
 export type Proposal = {
@@ -60,8 +50,7 @@ export type Proposal = {
   educations: ProposedEducation[];
   volunteers: ProposedVolunteer[];
   certificates: ProposedCertificate[];
-  labels: ProposedLabel[];
-  flavors: ProposedFlavor[];
+  skills: string[];
   conflicts: ProposedConflict[];
   usedModel: boolean;
 };
@@ -75,8 +64,7 @@ export function emptyProposal(): Proposal {
     educations: [],
     volunteers: [],
     certificates: [],
-    labels: [],
-    flavors: [],
+    skills: [],
     conflicts: [],
     usedModel: false,
   };
@@ -173,25 +161,7 @@ export function normalizeProposal(raw: unknown, usedModel = false): Proposal {
       url: text(item.url),
     };
   }).filter((row) => row.name);
-  proposal.labels = list(source.labels).flatMap((row, index): ProposedLabel[] => {
-    const item = record(row);
-    const name = text(item.name);
-    if (!name) return [];
-    return [{ key: text(item.key) || `l${index + 1}`, kind: item.kind === "theme" ? "theme" : "skill", name }];
-  });
-  const employmentKeys = new Set(proposal.employments.map((row) => row.key));
-  const bulletKeys = new Set(proposal.employments.flatMap((row) => row.bullets.map((bullet) => bullet.key)));
-  const labelKeys = new Set(proposal.labels.map((row) => row.key));
-  proposal.flavors = list(source.flavors).map((row, index) => {
-    const item = record(row);
-    return {
-      key: text(item.key) || `f${index + 1}`,
-      name: text(item.name),
-      employmentKeys: textList(item.employmentKeys).filter((key) => employmentKeys.has(key)),
-      bulletKeys: textList(item.bulletKeys).filter((key) => bulletKeys.has(key)),
-      labelKeys: textList(item.labelKeys).filter((key) => labelKeys.has(key)),
-    };
-  }).filter((row) => row.name);
+  proposal.skills = skillNames(source);
   proposal.conflicts = list(source.conflicts).map((row) => {
     const item = record(row);
     return { field: text(item.field), values: textList(item.values) };
@@ -235,6 +205,32 @@ function list(value: unknown): unknown[] {
 
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+}
+
+export function uniqueSkillNames(names: Iterable<string>): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const raw of names) {
+    const name = raw.trim();
+    const key = name.toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    result.push(name);
+  }
+  return result;
+}
+
+/** Skills from the parser, or skill names on an older draft. Themes and flavors are ignored. */
+function skillNames(source: Record<string, unknown>): string[] {
+  if ("skills" in source) return uniqueSkillNames(textList(source.skills));
+  return uniqueSkillNames(
+    list(source.labels).flatMap((row) => {
+      const item = record(row);
+      if (item.kind === "theme") return [];
+      const name = text(item.name);
+      return name ? [name] : [];
+    }),
+  );
 }
 
 function textList(value: unknown): string[] {
@@ -316,31 +312,13 @@ export function readProposalForm(formData: FormData): Proposal {
       url: text(formData.get(`cert_${index}_url`)),
     });
   }
-  const labelCount = count(formData, "labelCount");
-  for (let index = 0; index < labelCount; index += 1) {
-    const name = text(formData.get(`label_${index}_name`));
-    if (!name) continue;
-    proposal.labels.push({
-      key: text(formData.get(`label_${index}_key`)) || `l${index + 1}`,
-      kind: formData.get(`label_${index}_kind`) === "theme" ? "theme" : "skill",
-      name,
-    });
+  const skillCount = count(formData, "skillCount");
+  const skills: string[] = [];
+  for (let index = 0; index < skillCount; index += 1) {
+    const name = text(formData.get(`skill_${index}_name`));
+    if (name) skills.push(name);
   }
-  const employmentKeys = new Set(proposal.employments.map((row) => row.key));
-  const bulletKeys = new Set(proposal.employments.flatMap((row) => row.bullets.map((bullet) => bullet.key)));
-  const labelKeys = new Set(proposal.labels.map((row) => row.key));
-  const flavorCount = count(formData, "flavorCount");
-  for (let index = 0; index < flavorCount; index += 1) {
-    const name = text(formData.get(`flavor_${index}_name`));
-    if (!name) continue;
-    proposal.flavors.push({
-      key: text(formData.get(`flavor_${index}_key`)) || `f${index + 1}`,
-      name,
-      employmentKeys: formData.getAll(`flavor_${index}_emp`).map((value) => text(value)).filter((key) => employmentKeys.has(key)),
-      bulletKeys: formData.getAll(`flavor_${index}_bullet`).map((value) => text(value)).filter((key) => bulletKeys.has(key)),
-      labelKeys: formData.getAll(`flavor_${index}_label`).map((value) => text(value)).filter((key) => labelKeys.has(key)),
-    });
-  }
+  proposal.skills = uniqueSkillNames(skills);
   const conflictCount = count(formData, "conflictCount");
   for (let index = 0; index < conflictCount; index += 1) {
     const field = text(formData.get(`conflict_${index}_field`));
