@@ -65,22 +65,22 @@ export function parseProfileText(raw: string): Proposal {
     .replace(/\r/g, "")
     .split("\n")
     .map((line) => line.trim())
-    .filter((line) => line && !/^page \d+ of \d+$/i.test(line));
+    .filter((line) => !/^page \d+ of \d+$/i.test(line));
   const sections = new Map<SectionId, string[]>();
   let current: SectionId | "preamble" = "preamble";
   const preamble: string[] = [];
   for (const line of lines) {
+    if (!line) {
+      if (current === "about") pushLine(sections, current, "");
+      continue;
+    }
     const header = sectionId(line);
     if (header) {
       current = header;
       continue;
     }
     if (current === "preamble") preamble.push(line);
-    else {
-      const bucket = sections.get(current) ?? [];
-      bucket.push(line);
-      sections.set(current, bucket);
-    }
+    else pushLine(sections, current, line);
   }
   const proposal = emptyProposal();
   if (preamble.length > 1) proposal.headline = preamble[1];
@@ -103,6 +103,13 @@ export function parseProfileText(raw: string): Proposal {
   proposal.certificates = certificates(identity.lines);
   proposal.labels = skills(sections.get("skills") ?? []);
   return proposal;
+}
+
+function pushLine(sections: Map<SectionId, string[]>, id: SectionId, line: string) {
+  const bucket = sections.get(id) ?? [];
+  if (!line && bucket.at(-1) === "") return;
+  bucket.push(line);
+  sections.set(id, bucket);
 }
 
 function sectionId(line: string): SectionId | null {
@@ -190,19 +197,20 @@ function roleFromHead(
 }
 
 const BULLET_MARK = /^[•·●▪◦‣⁃\-–—]\s*/;
-const ABBREVIATION = /(?:^|[\s(])(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|Inc|Ltd|Corp|Co|St|vs|etc|e\.g|i\.e|U\.S|U\.K)\.$/;
 
 function assembleBullets(lines: string[]): string[] {
+  const hasMarks = lines.some((line) => BULLET_MARK.test(line));
   const chunks: string[] = [];
   for (const raw of lines) {
     const marked = BULLET_MARK.test(raw);
     const text = raw.replace(BULLET_MARK, "").trim();
     if (!text) continue;
     const previous = chunks.at(-1);
-    if (!previous || marked || !continuesSentence(previous, text)) chunks.push(text);
+    const startsNew = !previous || marked || (!hasMarks && !continuesSentence(previous, text));
+    if (startsNew) chunks.push(text);
     else chunks[chunks.length - 1] = joinWrap(previous, text);
   }
-  return chunks.flatMap(splitSentences);
+  return chunks;
 }
 
 function continuesSentence(previous: string, next: string): boolean {
@@ -215,22 +223,6 @@ function continuesSentence(previous: string, next: string): boolean {
 function joinWrap(previous: string, next: string): string {
   if (/[A-Za-z]-$/.test(previous)) return `${previous.slice(0, -1)}${next}`;
   return `${previous} ${next}`;
-}
-
-function splitSentences(text: string): string[] {
-  const parts: string[] = [];
-  let start = 0;
-  for (const match of text.matchAll(/[.!?]["']?(?=\s+[\p{Lu}\u0590-\u05FF])/gu)) {
-    const end = (match.index ?? 0) + match[0].length;
-    const chunk = text.slice(start, end);
-    if (ABBREVIATION.test(chunk) || (/(?:^|\s)\p{Lu}\.$/u.test(chunk) && !/[!?]/.test(match[0]))) continue;
-    parts.push(chunk.trim());
-    const gap = text.slice(end).match(/^\s+/)?.[0].length ?? 0;
-    start = end + gap;
-  }
-  const tail = text.slice(start).trim();
-  if (tail) parts.push(tail);
-  return parts;
 }
 
 function studies(lines: string[]) {
@@ -382,9 +374,26 @@ function skills(lines: string[]) {
 }
 
 function languageLines(lines: string[], language: "en" | "he"): string {
-  return lines
-    .filter((line) => (language === "he" ? /[\u0590-\u05FF]/.test(line) : /[A-Za-z]/.test(line) || !/[\u0590-\u05FF]/.test(line)))
-    .join("\n");
+  const paragraphs: string[] = [];
+  let chunk: string[] = [];
+  const flush = () => {
+    const text = chunk
+      .filter((line) => matchesLanguage(line, language))
+      .reduce((previous, line) => (previous ? joinWrap(previous, line) : line), "");
+    if (text) paragraphs.push(text);
+    chunk = [];
+  };
+  for (const line of lines) {
+    if (!line) flush();
+    else chunk.push(line);
+  }
+  flush();
+  return paragraphs.join("\n\n");
+}
+
+function matchesLanguage(line: string, language: "en" | "he"): boolean {
+  if (language === "he") return /[\u0590-\u05FF]/.test(line);
+  return /[A-Za-z]/.test(line) || !/[\u0590-\u05FF]/.test(line);
 }
 
 function hebrewOnly(line: string): boolean {

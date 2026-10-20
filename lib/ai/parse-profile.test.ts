@@ -163,14 +163,14 @@ Bachelor of Science (B.Sc.), Mathematics and Computer Science · (January
     );
   });
 
-  it("joins wrapped lines into sentences", () => {
+  it("keeps each marked bullet intact across sentences and wraps", () => {
     const proposal = parseProfileText(`Experience
 Self-Employed
 Product Builder
 March 2026 - Present
-I own the full 0→1 cycle solo, from requirements and design through hands-on.
+• I own the full 0→1 cycle solo, from requirements and design through hands-on.
 AI-assisted development to analytics that show what people actually use.
-Home Finance Management: Application to track household finances,
+• Home Finance Management: Application to track household finances,
 with reminder emails and Google Calendar integration. A bootstrapping
 RiseUp import (linked bank accounts and credit cards) automatically creates
 the underlying entities (bank accounts, credit cards, insurance policies).
@@ -178,11 +178,31 @@ the underlying entities (bank accounts, credit cards, insurance policies).
     assert.deepEqual(
       proposal.employments[0].bullets.map((bullet) => bullet.textEn),
       [
-        "I own the full 0→1 cycle solo, from requirements and design through hands-on.",
-        "AI-assisted development to analytics that show what people actually use.",
-        "Home Finance Management: Application to track household finances, with reminder emails and Google Calendar integration.",
-        "A bootstrapping RiseUp import (linked bank accounts and credit cards) automatically creates the underlying entities (bank accounts, credit cards, insurance policies).",
+        "I own the full 0→1 cycle solo, from requirements and design through hands-on. AI-assisted development to analytics that show what people actually use.",
+        "Home Finance Management: Application to track household finances, with reminder emails and Google Calendar integration. A bootstrapping RiseUp import (linked bank accounts and credit cards) automatically creates the underlying entities (bank accounts, credit cards, insurance policies).",
       ],
     );
+  });
+
+  it("joins wrapped about lines and keeps paragraph breaks", () => {
+    const proposal = parseProfileText(`Talmon Friedlander
+Senior Product Manager
+Summary
+Senior Product Manager building B2B, B2C and B2B2C SaaS
+products, from enterprise software to digital health. AI/ML has been
+part of my product work for many years.
+
+Generative AI for the past two years, including enter-
+prise tools.
+
+בונה מוצרים
+דיגיטליים.
+`);
+    assert.equal(proposal.headline, "Senior Product Manager");
+    assert.equal(
+      proposal.aboutEn,
+      "Senior Product Manager building B2B, B2C and B2B2C SaaS products, from enterprise software to digital health. AI/ML has been part of my product work for many years.\n\nGenerative AI for the past two years, including enterprise tools.",
+    );
+    assert.equal(proposal.aboutHe, "בונה מוצרים דיגיטליים.");
   });
 });

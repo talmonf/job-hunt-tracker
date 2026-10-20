@@ -3,6 +3,7 @@ import type { Lang } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
 import { employmentNoteLabel } from "@/lib/notes";
 import { acceptProfileImport, discardProfileImport } from "@/lib/actions/ai";
+import { DelayedHoverInput } from "@/components/delayed-hover-input";
 import { SubmitButton, fieldClass, labelClass } from "@/components/widgets";
 
 const monthFieldClass =
@@ -66,27 +67,35 @@ export function ProfileReview({
       ) : null}
       <h3 className="text-base">{t(lang, "employment")}</h3>
       {employments.map((row, index) => (
-        <fieldset key={row.key} className="grid gap-2 rounded-md border border-slate-700 p-3">
-          <input type="hidden" name={`emp_${index}_key`} value={row.key} />
-          <input type="hidden" name={`emp_${index}_bulletCount`} value={row.bullets.length + 1} />
-          <div className="grid grid-cols-2 gap-2">
-            <label><span className={labelClass}>{t(lang, "title")}</span><input className={fieldClass} name={`emp_${index}_title`} defaultValue={row.title} /></label>
-            <label><span className={labelClass}>{t(lang, "company")}</span><input className={fieldClass} name={`emp_${index}_company`} defaultValue={row.company} /></label>
-          </div>
-          <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
-            <MonthField label={t(lang, "start")} name={`emp_${index}_start`} defaultValue={row.startDate} />
-            <MonthField label={t(lang, "end")} name={`emp_${index}_end`} defaultValue={row.endDate} />
-            <label className="flex items-center gap-2 pb-2 text-sm"><input type="checkbox" name={`emp_${index}_current`} value="1" defaultChecked={row.isCurrent} /> {t(lang, "currentRole")}</label>
-          </div>
-          {row.bullets.map((bullet, bulletIndex) => (
-            <BulletFields key={bullet.key} lang={lang} prefix={`emp_${index}_b_${bulletIndex}`} bulletKey={bullet.key} textEn={bullet.textEn} textHe={bullet.textHe} />
-          ))}
-          <BulletFields lang={lang} prefix={`emp_${index}_b_${row.bullets.length}`} bulletKey={`${row.key}b-extra`} textEn="" textHe="" />
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name={`emp_${index}_note`} value="1" defaultChecked={row.createNote && !taken.has(employmentNoteLabel(row))} />
-            {t(lang, "createExperienceNote")}
-          </label>
-        </fieldset>
+        <details key={row.key} className="group rounded-md border border-slate-700">
+          <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 hover:bg-slate-800/40 [&::-webkit-details-marker]:hidden">
+            <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4 shrink-0 fill-current text-slate-400 transition-transform ltr:group-open:rotate-90 rtl:rotate-180 rtl:group-open:rotate-90">
+              <path d="M7.2 4.5a1 1 0 0 1 1.4 0l5 5.2a1 1 0 0 1 0 1.4l-5 5.2a1 1 0 0 1-1.4-1.4L11.4 10 7.2 5.9a1 1 0 0 1 0-1.4Z" />
+            </svg>
+            <span className="min-w-0 truncate text-sm text-slate-200">{employmentSummary(row, lang)}</span>
+          </summary>
+          <fieldset className="grid gap-2 border-t border-slate-700 p-3">
+            <input type="hidden" name={`emp_${index}_key`} value={row.key} />
+            <input type="hidden" name={`emp_${index}_bulletCount`} value={row.bullets.length + 1} />
+            <div className="grid grid-cols-2 gap-2">
+              <label><span className={labelClass}>{t(lang, "title")}</span><input className={fieldClass} name={`emp_${index}_title`} defaultValue={row.title} /></label>
+              <label><span className={labelClass}>{t(lang, "company")}</span><input className={fieldClass} name={`emp_${index}_company`} defaultValue={row.company} /></label>
+            </div>
+            <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
+              <MonthField label={t(lang, "start")} name={`emp_${index}_start`} defaultValue={row.startDate} />
+              <MonthField label={t(lang, "end")} name={`emp_${index}_end`} defaultValue={row.endDate} />
+              <label className="flex items-center gap-2 pb-2 text-sm"><input type="checkbox" name={`emp_${index}_current`} value="1" defaultChecked={row.isCurrent} /> {t(lang, "currentRole")}</label>
+            </div>
+            {row.bullets.map((bullet, bulletIndex) => (
+              <BulletFields key={bullet.key} lang={lang} prefix={`emp_${index}_b_${bulletIndex}`} bulletKey={bullet.key} textEn={bullet.textEn} textHe={bullet.textHe} />
+            ))}
+            <BulletFields lang={lang} prefix={`emp_${index}_b_${row.bullets.length}`} bulletKey={`${row.key}b-extra`} textEn="" textHe="" />
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name={`emp_${index}_note`} value="1" defaultChecked={row.createNote && !taken.has(employmentNoteLabel(row))} />
+              {t(lang, "createExperienceNote")}
+            </label>
+          </fieldset>
+        </details>
       ))}
       <h3 className="text-base">{t(lang, "studies")}</h3>
       {educations.map((row, index) => (
@@ -193,12 +202,27 @@ function MonthField({ label, name, defaultValue }: { label: string; name: string
   );
 }
 
+function employmentSummary(
+  row: { title: string; company: string; startDate: string; endDate: string; isCurrent: boolean },
+  lang: Lang,
+) {
+  const end = row.isCurrent ? t(lang, "present") : row.endDate;
+  const dates = [row.startDate, end].filter(Boolean).join(" – ");
+  return [row.title, row.company, dates].filter(Boolean).join(" · ") || "—";
+}
+
 function BulletFields({ lang, prefix, bulletKey, textEn, textHe }: { lang: Lang; prefix: string; bulletKey: string; textEn: string; textHe: string }) {
   return (
     <div className="grid gap-2 md:grid-cols-2">
       <input type="hidden" name={`${prefix}_key`} value={bulletKey} />
-      <label><span className={labelClass}>{t(lang, "bulletEn")}</span><input className={fieldClass} name={`${prefix}_en`} defaultValue={textEn} /></label>
-      <label><span className={labelClass}>{t(lang, "bulletHe")}</span><input className={fieldClass} name={`${prefix}_he`} defaultValue={textHe} /></label>
+      <label>
+        <span className={labelClass}>{t(lang, "bulletEn")}</span>
+        <DelayedHoverInput className={fieldClass} name={`${prefix}_en`} defaultValue={textEn} />
+      </label>
+      <label>
+        <span className={labelClass}>{t(lang, "bulletHe")}</span>
+        <DelayedHoverInput className={fieldClass} name={`${prefix}_he`} defaultValue={textHe} />
+      </label>
     </div>
   );
 }
