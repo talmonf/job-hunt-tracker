@@ -18,10 +18,13 @@ const sections: { title: MessageKey; paragraphs: MessageKey[] }[] = [
   { title: "privacyOperatorTitle", paragraphs: ["privacyOperatorBody"] },
 ];
 
-function PrivacyArticle({ lang }: { lang: Lang }) {
+function PrivacyArticle({ lang, homeHref }: { lang: Lang; homeHref: string }) {
   return (
     <article className="mx-auto max-w-3xl rounded-xl bg-slate-900 p-5 ring-1 ring-slate-800">
-      <h1 className="text-2xl font-semibold text-white">{t(lang, "privacy")}</h1>
+      <Link className="text-sm text-sky-300 hover:text-sky-200" href={homeHref}>
+        {t(lang, "privacyBack")}
+      </Link>
+      <h1 className="mt-1 text-2xl font-semibold text-white">{t(lang, "privacy")}</h1>
       {sections.map((section) => (
         <section key={section.title} className="mt-6">
           <h2 className="text-lg font-semibold text-white">{t(lang, section.title)}</h2>
@@ -65,7 +68,7 @@ export default async function PrivacyPage({
       <div dir={lang === "he" ? "rtl" : "ltr"}>
         <AppHeader lang={lang} hide={hide} name={user.fullName} role={user.role} path="/privacy" />
         <main className="mx-auto max-w-[1400px] px-4 py-4">
-          <PrivacyArticle lang={lang} />
+          <PrivacyArticle lang={lang} homeHref="/dashboard" />
         </main>
       </div>
     );
@@ -76,7 +79,7 @@ export default async function PrivacyPage({
     <div dir={lang === "he" ? "rtl" : "ltr"} className="min-h-screen">
       <div className="mx-auto max-w-3xl px-4 py-8">
         <PublicHeader lang={lang} />
-        <PrivacyArticle lang={lang} />
+        <PrivacyArticle lang={lang} homeHref="/" />
       </div>
     </div>
   );
