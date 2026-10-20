@@ -5,6 +5,7 @@ import { dateInputValue, formatDate, formatMonthYear } from "@/lib/dates";
 import { t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
 import { assignmentTags, type TagRef } from "@/lib/tags";
+import { discardProfileImport } from "@/lib/actions/ai";
 import {
   deleteCertificate,
   deleteEducation,
@@ -73,28 +74,41 @@ export default async function ProfilePage({
   return (
     <PageFrame lang={lang} title={t(lang, "profile")} description={t(lang, "profileIntro")} search={search}>
       {draftRow && (!firstParam(search.draft) || firstParam(search.draft) === draftRow.id) ? (
-        <p className="mb-4 rounded-md border border-sky-800 px-3 py-2 text-sm text-slate-100">
-          {t(lang, "importReviewReady")}{" "}
-          <a className="text-sky-300 hover:text-sky-200" href="#import-review">
-            {t(lang, "importReview")}
-          </a>
-        </p>
+        <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-sky-800 px-3 py-2 text-sm text-slate-100">
+          <p>
+            {t(lang, "importReviewReady")}{" "}
+            <a className="text-sky-300 hover:text-sky-200" href="#import-review">
+              {t(lang, "importReview")}
+            </a>
+          </p>
+          <form action={discardProfileImport}>
+            <input type="hidden" name="draftId" value={draftRow.id} />
+            <button className="text-rose-300 hover:text-rose-200" type="submit">
+              {t(lang, "discardImport")}
+            </button>
+          </form>
+        </div>
       ) : null}
-      {profileEmpty ? (
-        <form action={importLinkedInPdf} className="mb-6 flex flex-wrap items-center gap-2">
-          <input name="file" type="file" accept="application/pdf,.pdf" required />
-          <SubmitButton label={t(lang, "importLinkedIn")} thin />
-          <details className="relative">
-            <summary
-              className="flex h-6 w-6 cursor-pointer list-none items-center justify-center rounded-full border border-slate-500 text-sm text-slate-200 [&::-webkit-details-marker]:hidden"
-              aria-label={t(lang, "importLinkedInHelp")}
-            >
-              ?
-            </summary>
-            <p className="absolute z-10 mt-1 w-80 max-w-[calc(100vw-2rem)] rounded-md border border-slate-600 bg-slate-900 p-2 text-sm leading-relaxed text-slate-100 shadow-lg">
-              {t(lang, "guideLinkedInSave")}
-            </p>
-          </details>
+      {profileEmpty && !draftRow ? (
+        <form action={importLinkedInPdf} className="mb-6">
+          <div className="mb-1 flex items-center gap-1.5">
+            <span className="text-sm text-slate-200">{t(lang, "importLinkedIn")}</span>
+            <details className="relative">
+              <summary
+                className="flex h-5 w-5 cursor-pointer list-none items-center justify-center rounded-full border border-slate-500 text-xs text-slate-200 [&::-webkit-details-marker]:hidden"
+                aria-label={t(lang, "importLinkedInHelp")}
+              >
+                ?
+              </summary>
+              <p className="absolute z-10 mt-1 w-80 max-w-[calc(100vw-2rem)] rounded-md border border-slate-600 bg-slate-900 p-2 text-sm leading-relaxed text-slate-100 shadow-lg">
+                {t(lang, "guideLinkedInSave")}
+              </p>
+            </details>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <input name="file" type="file" accept="application/pdf,.pdf" required />
+            <SubmitButton label={t(lang, "importAction")} />
+          </div>
         </form>
       ) : null}
       <form action={saveAbout} className="grid gap-3">
