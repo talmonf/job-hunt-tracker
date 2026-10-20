@@ -24,6 +24,7 @@ export function NoteFields({
   tags,
   selectedTagIds = [],
   hide,
+  wide = false,
 }: {
   lang: Lang;
   action: (formData: FormData) => void;
@@ -38,6 +39,7 @@ export function NoteFields({
   tags: TagRef[];
   selectedTagIds?: string[];
   hide: boolean;
+  wide?: boolean;
 }) {
   const initialSubject = note ? subjectValue(note) : presetSubject;
   const initialKind = subjectKind(initialSubject);
@@ -107,51 +109,96 @@ export function NoteFields({
         ) : (
           <p className="pb-1.5 text-[11px] italic text-slate-500">{t(lang, "noteAboutGeneral")}</p>
         )}
+        {wide ? (
+          <>
+            <label className="min-w-[12rem] flex-1">
+              <span className={labelClass}>{t(lang, "title")}</span>
+              <input className={fieldClass} name="title" defaultValue={note?.title ?? ""} required />
+            </label>
+            <label className="w-fit max-w-full">
+              <span className={labelClass}>{t(lang, "noteType")}</span>
+              <NoteTypeSelect lang={lang} type={type} types={types} onType={setType} />
+            </label>
+          </>
+        ) : null}
       </div>
-      <label>
-        <span className={labelClass}>{t(lang, "title")}</span>
-        <input className={fieldClass} name="title" defaultValue={note?.title ?? ""} required />
-      </label>
-      <label>
-        <span className={labelClass}>{t(lang, "noteType")}</span>
-        <select className={fieldClass} name="type" value={type} onChange={(event) => setType(event.target.value as Note["type"])}>
-          {types.map((item) => (
-            <option key={item} value={item}>
-              {noteTypeLabel(lang, item)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <MentionTextarea
-        lang={lang}
-        name="additionalInfo"
-        label={t(lang, "additionalInfo")}
-        defaultValue={note?.additionalInfo ?? ""}
-        rows={3}
-        localContacts={localContacts}
-        googleConnected={googleConnected}
-      />
-      <MentionTextarea
-        lang={lang}
-        name="bodyEn"
-        label={t(lang, "bodyEn")}
-        defaultValue={note?.bodyEn ?? ""}
-        rows={5}
-        localContacts={localContacts}
-        googleConnected={googleConnected}
-      />
-      <MentionTextarea
-        lang={lang}
-        name="bodyHe"
-        label={t(lang, "bodyHe")}
-        defaultValue={note?.bodyHe ?? ""}
-        rows={5}
-        localContacts={localContacts}
-        googleConnected={googleConnected}
-      />
+      {wide ? null : (
+        <>
+          <label>
+            <span className={labelClass}>{t(lang, "title")}</span>
+            <input className={fieldClass} name="title" defaultValue={note?.title ?? ""} required />
+          </label>
+          <label>
+            <span className={labelClass}>{t(lang, "noteType")}</span>
+            <NoteTypeSelect lang={lang} type={type} types={types} onType={setType} wide={false} />
+          </label>
+        </>
+      )}
+      <div className={wide ? "grid gap-3 lg:grid-cols-3" : "grid gap-3"}>
+        <MentionTextarea
+          lang={lang}
+          name="additionalInfo"
+          label={t(lang, "additionalInfo")}
+          defaultValue={note?.additionalInfo ?? ""}
+          rows={wide ? 4 : 3}
+          localContacts={localContacts}
+          googleConnected={googleConnected}
+        />
+        <MentionTextarea
+          lang={lang}
+          name="bodyEn"
+          label={t(lang, "bodyEn")}
+          defaultValue={note?.bodyEn ?? ""}
+          rows={wide ? 4 : 5}
+          localContacts={localContacts}
+          googleConnected={googleConnected}
+        />
+        <MentionTextarea
+          lang={lang}
+          name="bodyHe"
+          label={t(lang, "bodyHe")}
+          defaultValue={note?.bodyHe ?? ""}
+          rows={wide ? 4 : 5}
+          localContacts={localContacts}
+          googleConnected={googleConnected}
+        />
+      </div>
       <TagPicker lang={lang} hide={hide} tags={tags} selected={selectedTagIds} />
-      <SubmitButton label={t(lang, "save")} disabled={kind !== "general" && !entityValue} />
+      <SubmitButton label={t(lang, "save")} thin disabled={kind !== "general" && !entityValue} />
     </form>
+  );
+}
+
+function NoteTypeSelect({
+  lang,
+  type,
+  types,
+  onType,
+  wide = true,
+}: {
+  lang: Lang;
+  type: Note["type"];
+  types: readonly Note["type"][];
+  onType: (type: Note["type"]) => void;
+  wide?: boolean;
+}) {
+  return (
+    <select
+      className={
+        wide
+          ? "w-52 max-w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-start text-sm text-slate-100 outline-none focus:border-sky-500"
+          : fieldClass
+      }
+      name="type"
+      value={type}
+      onChange={(event) => onType(event.target.value as Note["type"])}
+    >
+      {types.map((item) => (
+        <option key={item} value={item}>
+          {noteTypeLabel(lang, item)}
+        </option>
+      ))}
+    </select>
   );
 }
 

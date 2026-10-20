@@ -7,13 +7,16 @@ import { t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
 import { assignmentTags } from "@/lib/tags";
 import { tenureLabel } from "@/lib/tenure";
-import { isHttpUrl } from "@/lib/entity-links";
+import { formatDate } from "@/lib/dates";
+import { loadJobFillAccess } from "@/lib/ai/feature-grants";
 import { deleteCompany, linkContactToCompany, updateCompany } from "@/lib/actions/companies";
-import { createNote } from "@/lib/actions/network";
+import { createContact, createNote } from "@/lib/actions/network";
 import { employmentNoteLabel, jobNoteLabel } from "@/lib/notes";
-import { PageFrame } from "@/components/chrome";
+import { Modal, PageFrame } from "@/components/chrome";
 import { CompanyForm } from "@/components/company-form";
 import { CompanyTabs } from "@/components/company-tabs";
+import { ContactFields } from "@/components/contact-fields";
+import { JobCreateForm } from "@/components/job-create-form";
 import { LinkCompanyContact } from "@/components/link-company-contact";
 import { ConfirmSubmit } from "@/components/widgets";
 import { NoteFields } from "@/components/note-fields";
@@ -21,6 +24,8 @@ import { NoteFields } from "@/components/note-fields";
 export const dynamic = "force-dynamic";
 
 const TABS = ["details", "jobs", "contacts", "notes"] as const;
+const addButton =
+  "w-fit self-start rounded-md bg-sky-500 px-2.5 py-0.5 text-sm font-semibold leading-tight text-slate-950 hover:bg-sky-400";
 
 export default async function CompanyDetailPage({
   params,
@@ -36,7 +41,8 @@ export default async function CompanyDetailPage({
   const lang = user.uiLanguage;
   const requested = firstParam(search.tab);
   const tab = TABS.includes(requested as (typeof TABS)[number]) ? (requested as (typeof TABS)[number]) : "details";
-  const [company, companyOptions, jobs, contacts, employments, catalog] = await Promise.all([
+  const modal = firstParam(search.modal);
+  const [company, companyOptions, jobs, contacts, employments, catalog, jobFillAccess] = await Promise.all([
     prisma.company.findFirst({
       where: { id, userId: user.id },
       include: {
@@ -51,6 +57,7 @@ export default async function CompanyDetailPage({
     prisma.contact.findMany({ where: { userId: user.id }, orderBy: { fullName: "asc" } }),
     prisma.employment.findMany({ where: { userId: user.id }, orderBy: { startDate: "desc" } }),
     prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
+    loadJobFillAccess(user.id),
   ]);
   if (!company) notFound();
   const people = [...company.contacts].sort((a, b) => a.contact.fullName.localeCompare(b.contact.fullName));
@@ -66,6 +73,13 @@ export default async function CompanyDetailPage({
     googleResourceName: contact.googleResourceName,
     linkedinUrl: contact.linkedinUrl,
   }));
+  const googleConnected = Boolean(user.contactsRefreshToken);
+  const jobsHref = `/companies/${company.id}?tab=jobs`;
+  const contactsHref = `/companies/${company.id}?tab=contacts`;
+  const today = new Date();
+  const interestDefault = formatDate(today, user.timezone).split("/").reverse().join("-");
+  const followDefaultDate = new Date(today.getTime() + 7 * 86400000);
+  const followDefault = `${formatDate(followDefaultDate, user.timezone).split("/").reverse().join("-")}T09:00`;
   return (
     <PageFrame
       lang={lang}
@@ -93,7 +107,6 @@ export default async function CompanyDetailPage({
                 selectedTagIds={assignmentTags(company.tags).map((tag) => tag.id)}
                 company={company}
               />
-              <CompanyLinks lang={lang} company={company} />
               <div className="mt-3">
                 <ConfirmSubmit action={deleteCompany} message={t(lang, "deleteConfirm")} label={t(lang, "delete")} className="text-sm text-rose-300">
                   <input type="hidden" name="companyId" value={company.id} />
@@ -101,31 +114,32 @@ export default async function CompanyDetailPage({
               </div>
             </>
           ),
-          jobs:
-            company.jobs.length === 0 ? (
-              <p className="text-sm text-slate-400">—</p>
-            ) : (
-              <ul className="space-y-2 text-sm">
-                {company.jobs.map((job) => (
-                  <li key={job.id}>
-                    <Link className="text-sky-300" href={`/jobs/${job.id}`}>
-                      {dash(job.title ? `${job.companyName} — ${job.title}` : job.companyName, hide)}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ),
+          jobs: (
+            <div className="space-y-4">
+              <Link className={addButton} href={`${jobsHref}&modal=job`}>
+                {t(lang, "addJob")}
+              </Link>
+              {company.jobs.length === 0 ? (
+                <p className="text-sm text-slate-400">—</p>
+              ) : (
+                <ul className="space-y-2 text-sm">
+                  {company.jobs.map((job) => (
+                    <li key={job.id}>
+                      <Link className="text-sky-300" href={`/jobs/${job.id}`}>
+                        {dash(job.title ? `${job.companyName} — ${job.title}` : job.companyName, hide)}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ),
           contacts: (
             <div className="space-y-4">
-              <div className="flex flex-wrap items-end gap-3">
-                <Link
-                  className="w-fit self-start rounded-md bg-sky-500 px-2.5 py-0.5 text-sm font-semibold leading-tight text-slate-950 hover:bg-sky-400"
-                  href={`/contacts/new?company=${company.id}`}
-                >
-                  {t(lang, "addContact")}
-                </Link>
-                <LinkCompanyContact lang={lang} companyId={company.id} contacts={linkable} action={linkContactToCompany} />
-              </div>
+              <Link className={addButton} href={`${contactsHref}&modal=contact`}>
+                {t(lang, "addContact")}
+              </Link>
+              <LinkCompanyContact lang={lang} companyId={company.id} contacts={linkable} action={linkContactToCompany} />
               {people.length === 0 ? (
                 <p className="text-sm text-slate-400">{t(lang, "noCompanyContacts")}</p>
               ) : (
@@ -168,42 +182,49 @@ export default async function CompanyDetailPage({
                 employments={employments.map((row) => ({ id: row.id, label: dash(employmentNoteLabel(row), hide) }))}
                 initialSubject={`company:${company.id}`}
                 localContacts={localContacts}
-                googleConnected={Boolean(user.contactsRefreshToken)}
+                googleConnected={googleConnected}
                 tags={catalog}
                 selectedTagIds={[]}
                 hide={hide}
+                wide
               />
             </div>
           ),
         }}
       />
+      {modal === "job" ? (
+        <Modal title={t(lang, "addJob")} closeHref={jobsHref} closeLabel={t(lang, "close")}>
+          <JobCreateForm
+            lang={lang}
+            hide={hide}
+            returnTo={jobsHref}
+            companyName={company.name}
+            companyNames={companyOptions.map((item) => item.name)}
+            localContacts={localContacts}
+            googleConnected={googleConnected}
+            jobFillAccess={jobFillAccess}
+            interestDate={interestDefault}
+            followUpAt={followDefault}
+            tags={catalog}
+          />
+        </Modal>
+      ) : null}
+      {modal === "contact" ? (
+        <Modal title={t(lang, "addContact")} closeHref={contactsHref} closeLabel={t(lang, "close")}>
+          <ContactFields
+            lang={lang}
+            action={createContact}
+            localContacts={localContacts}
+            googleConnected={googleConnected}
+            googleAtStart
+            tags={catalog}
+            companies={companyOptions}
+            selectedCompanies={[{ name: company.name }]}
+            hide={hide}
+            returnTo={contactsHref}
+          />
+        </Modal>
+      ) : null}
     </PageFrame>
-  );
-}
-
-function CompanyLinks({
-  lang,
-  company,
-}: {
-  lang: "en" | "he";
-  company: { websiteHome: string; websitePeople: string; websiteJobs: string; linkedinUrl: string };
-}) {
-  const rows = [
-    [t(lang, "websiteHome"), company.websiteHome],
-    [t(lang, "websitePeople"), company.websitePeople],
-    [t(lang, "websiteJobs"), company.websiteJobs],
-    [t(lang, "companyLinkedIn"), company.linkedinUrl],
-  ].filter((row): row is [string, string] => Boolean(row[1].trim()) && isHttpUrl(row[1]));
-  if (!rows.length) return null;
-  return (
-    <ul className="mt-4 flex flex-wrap gap-3 text-sm">
-      {rows.map(([label, url]) => (
-        <li key={label}>
-          <a className="text-sky-300" href={url} target="_blank" rel="noreferrer">
-            {label}
-          </a>
-        </li>
-      ))}
-    </ul>
   );
 }

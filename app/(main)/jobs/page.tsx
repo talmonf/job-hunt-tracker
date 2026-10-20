@@ -5,22 +5,16 @@ import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { allParams, firstParam, preserveQuery } from "@/lib/http";
 import { assignmentTags, parseTagMatch, tagFilter, TAG_CHIP_CLASS, TAG_SWATCH_CLASS, type TagMatchMode, type TagRef } from "@/lib/tags";
 import { parseDateOnly } from "@/lib/forms";
-import { ACTIVE_JOB_STATUSES, EMPLOYMENT_TYPES, ENGAGEMENTS, JOB_STATUSES, WORK_ARRANGEMENTS, statusesForJobList } from "@/lib/events";
+import { ACTIVE_JOB_STATUSES, JOB_STATUSES, statusesForJobList } from "@/lib/events";
 import { jobAttributeLabel, statusLabel, t, workArrangementLabel, type Lang } from "@/lib/i18n";
 import { formatProcessProgress, processProgress } from "@/lib/process-steps";
 import { dash, maskText } from "@/lib/mask";
 import { formatDate, formatDateTime } from "@/lib/dates";
-import { createJob } from "@/lib/actions/jobs";
 import { EmptyState, FilterBar, Modal, PageFrame } from "@/components/chrome";
-import { AttributeSelect, DateField, MultiSelect, SubmitButton, WorkArrangementField, compactFieldClass, compactLabelClass, fieldClass, labelClass } from "@/components/widgets";
-import { JobScheduleFields } from "@/components/job-schedule-fields";
+import { DateField, MultiSelect, compactFieldClass, compactLabelClass } from "@/components/widgets";
 import { JobStatusEditor } from "@/components/job-status-editor";
-import { JobUrlsEditor } from "@/components/job-urls";
-import { MentionTextarea } from "@/components/mention-textarea";
+import { JobCreateForm } from "@/components/job-create-form";
 import { TagChips } from "@/components/tag-chip";
-import { TagPicker } from "@/components/tag-picker";
-import { CompanyNameField } from "@/components/company-picker";
-import { FillJobDetails } from "@/components/fill-job-details";
 import { loadJobFillAccess } from "@/lib/ai/feature-grants";
 
 export const dynamic = "force-dynamic";
@@ -227,40 +221,18 @@ export default async function JobsPage({
       )}
       {firstParam(search.modal) === "new" ? (
         <Modal title={t(lang, "addJob")} closeHref={closeHref} closeLabel={t(lang, "close")}>
-          <form id="job-form" action={createJob} className="grid gap-3">
-            <input type="hidden" name="returnTo" value={`/jobs${keep}`} />
-            <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-              <div className="w-64 max-w-full">
-                <CompanyNameField lang={lang} names={companies.map((company) => company.name)} required />
-              </div>
-              <label className="w-80 max-w-full">
-                <span className={labelClass}>{t(lang, "title")}</span>
-                <input className={fieldClass} name="title" />
-              </label>
-              <label className="w-96 max-w-full">
-                <span className={labelClass}>{t(lang, "location")}</span>
-                <input className={fieldClass} name="location" />
-              </label>
-              <AttributeSelect lang={lang} name="employmentType" label={t(lang, "employmentType")} options={EMPLOYMENT_TYPES} />
-              <AttributeSelect lang={lang} name="engagement" label={t(lang, "engagement")} options={ENGAGEMENTS} />
-              <WorkArrangementField lang={lang} options={WORK_ARRANGEMENTS} />
-            </div>
-            <FillJobDetails lang={lang} access={jobFillAccess} lead="create">
-              <MentionTextarea
-                lang={lang}
-                name="description"
-                label={t(lang, "description")}
-                rows={8}
-                localContacts={localContacts}
-                googleConnected={googleConnected}
-                allowUrl={false}
-              />
-            </FillJobDetails>
-            <JobUrlsEditor lang={lang} />
-            <JobScheduleFields lang={lang} interestDate={interestDefault} followUpAt={followDefault} />
-            <TagPicker lang={lang} hide={hide} tags={catalog} selected={[]} />
-            <SubmitButton label={t(lang, "save")} />
-          </form>
+          <JobCreateForm
+            lang={lang}
+            hide={hide}
+            returnTo={`/jobs${keep}`}
+            companyNames={companies.map((company) => company.name)}
+            localContacts={localContacts}
+            googleConnected={googleConnected}
+            jobFillAccess={jobFillAccess}
+            interestDate={interestDefault}
+            followUpAt={followDefault}
+            tags={catalog}
+          />
         </Modal>
       ) : null}
     </PageFrame>

@@ -38,6 +38,7 @@ export function ContactFields({
   selectedCompanies = [],
   hide,
   entityLinkId = "",
+  returnTo = "",
 }: {
   lang: Lang;
   action: (formData: FormData) => void;
@@ -78,6 +79,7 @@ export function ContactFields({
   detailSummary?: ReactNode;
   actionSummary?: ReactNode;
   entityLinkId?: string;
+  returnTo?: string;
 }) {
   const initialNames = initialPersonName(contact);
   const [firstName, setFirstName] = useState(initialNames.firstName);
@@ -258,6 +260,7 @@ export function ContactFields({
       <form action={action} onSubmit={guardName}>
         {contact?.id ? <input type="hidden" name="contactId" value={contact.id} /> : null}
         {entityLinkId ? <input type="hidden" name="entityLinkId" value={entityLinkId} /> : null}
+        {returnTo ? <input type="hidden" name="returnTo" value={returnTo} /> : null}
         <div className="mb-3">
           <TagPicker lang={lang} hide={hide} tags={tags} selected={selectedTagIds} compact />
         </div>
@@ -364,6 +367,7 @@ export function ContactFields({
   return (
     <form action={action} className="grid gap-3 md:grid-cols-2" onSubmit={guardName}>
       {contact ? <input type="hidden" name="contactId" value={contact.id} /> : null}
+      {returnTo ? <input type="hidden" name="returnTo" value={returnTo} /> : null}
       {googleAtStart ? (
         <div className="rounded-md border border-slate-700 p-3 md:col-span-2">
           <p className="mb-2 text-sm text-slate-300">{t(lang, "googleContacts")}</p>

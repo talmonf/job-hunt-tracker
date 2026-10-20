@@ -151,9 +151,9 @@ function parseSubject(raw: string): { kind: ReturnType<typeof subjectKind>; id: 
 export async function createContact(formData: FormData) {
   const user = await requireUser();
   const name = contactName(formData);
-  if (!name.fullName) redirect("/contacts?error=required");
+  if (!name.fullName) redirect(contactReturn(formData, "/contacts?error=required", "error=required"));
   const companies = companiesFromForm(formData);
-  if (companies === "invalid") redirect("/contacts?error=date");
+  if (companies === "invalid") redirect(contactReturn(formData, "/contacts?error=date", "error=date"));
   const contact = await prisma.contact.create({
     data: {
       userId: user.id,
@@ -191,7 +191,14 @@ export async function createContact(formData: FormData) {
       });
     }
   }
-  redirect(`/contacts/${contact.id}?created=1`);
+  redirect(contactReturn(formData, `/contacts/${contact.id}?created=1`, "created=1"));
+}
+
+function contactReturn(formData: FormData, fallback: string, query: string) {
+  const returnTo = requiredText(formData.get("returnTo"));
+  if (!returnTo.startsWith("/") || returnTo.startsWith("//")) return fallback;
+  const join = returnTo.includes("?") ? "&" : "?";
+  return `${returnTo}${join}${query}`;
 }
 
 export async function updateContact(formData: FormData) {

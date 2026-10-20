@@ -81,6 +81,7 @@ export default async function NoteDetailPage({
         tags={catalog}
         selectedTagIds={assignmentTags(note.tags).map((tag) => tag.id)}
         hide={hide}
+        wide
       />
       <EntityLinksSection
         lang={lang}

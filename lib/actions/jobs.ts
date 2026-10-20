@@ -57,7 +57,7 @@ export async function createJob(formData: FormData) {
   });
   await replaceRecordTags("job", job.id, user.id, formData);
   await copyCompanyTags("job", job.id, [company.id]);
-  redirect("/jobs?created=1");
+  redirect(withReturnTo(formData, "/jobs", "created=1"));
 }
 
 export async function updateJob(formData: FormData) {
@@ -246,16 +246,19 @@ async function ownedJob(userId: string, jobId: string) {
   return prisma.job.findFirst({ where: { id: jobId, userId } });
 }
 
+function sameSitePath(value: string, fallback: string) {
+  if (!value.startsWith("/") || value.startsWith("//")) return fallback;
+  return value;
+}
+
 function back(formData: FormData, fallback: string, error: string) {
-  const returnTo = requiredText(formData.get("returnTo"));
-  const path = returnTo.startsWith("/") ? returnTo : fallback;
+  const path = sameSitePath(requiredText(formData.get("returnTo")), fallback);
   const join = path.includes("?") ? "&" : "?";
   return `${path}${join}error=${error}`;
 }
 
 function withReturnTo(formData: FormData, fallback: string, query: string) {
-  const returnTo = requiredText(formData.get("returnTo"));
-  const path = returnTo.startsWith("/") ? returnTo : fallback;
+  const path = sameSitePath(requiredText(formData.get("returnTo")), fallback);
   if (!query) return path;
   const join = path.includes("?") ? "&" : "?";
   return `${path}${join}${query}`;
