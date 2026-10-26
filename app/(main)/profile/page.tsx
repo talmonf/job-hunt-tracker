@@ -25,6 +25,7 @@ import { Modal, PageFrame } from "@/components/chrome";
 import { CollapseRow } from "@/components/collapse-row";
 import { CvLibrary } from "@/components/cv-library";
 import { ProfileReview } from "@/components/profile-review";
+import { FilePicker } from "@/components/file-picker";
 import { DateField, SubmitButton, fieldClass, labelClass } from "@/components/widgets";
 import { RelatedByTags } from "@/components/related-tags";
 import { TagChips } from "@/components/tag-chip";
@@ -114,7 +115,13 @@ export default async function ProfilePage({
             </details>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <input name="file" type="file" accept="application/pdf,.pdf" required />
+            <FilePicker
+              name="file"
+              accept="application/pdf,.pdf"
+              required
+              chooseLabel={t(lang, "chooseFile")}
+              emptyLabel={t(lang, "noFileChosen")}
+            />
             <SubmitButton label={t(lang, "importAction")} />
           </div>
         </form>
