@@ -71,11 +71,11 @@ export default async function StatsPage({
           <thead className="bg-slate-800/80 text-xs uppercase tracking-wide text-slate-300">
             <tr>
               <th className="px-3 py-2" />
-              <th className="px-3 py-2">{t(lang, "statsTotal")}</th>
-              <th className="px-3 py-2">{t(lang, "statsWithAny")}</th>
-              <th className="px-3 py-2">{t(lang, "statsMax")}</th>
-              <th className="px-3 py-2">{t(lang, "statsAverage")}</th>
-              <th className="px-3 py-2">{t(lang, "statsMedian")}</th>
+              <th className={numHead}>{t(lang, "statsTotal")}</th>
+              <th className={numHead}>{t(lang, "statsWithAny")}</th>
+              <th className={numHead}>{t(lang, "statsMax")}</th>
+              <th className={numHead}>{t(lang, "statsAverage")}</th>
+              <th className={numHead}>{t(lang, "statsMedian")}</th>
             </tr>
           </thead>
           <tbody>
@@ -84,11 +84,11 @@ export default async function StatsPage({
               return (
                 <tr key={entity.key} className="border-t border-slate-800">
                   <td className="px-3 py-2">{t(lang, entity.label)}</td>
-                  <td className="px-3 py-2">{countText(stats.total)}</td>
-                  <td className="px-3 py-2">{countText(stats.withAny)}</td>
-                  <td className="px-3 py-2">{countText(stats.max)}</td>
-                  <td className="px-3 py-2">{averageText(stats.average)}</td>
-                  <td className="px-3 py-2">{averageText(stats.median)}</td>
+                  <td className={numCell}>{countText(stats.total)}</td>
+                  <td className={numCell}>{countText(stats.withAny)}</td>
+                  <td className={numCell}>{countText(stats.max)}</td>
+                  <td className={numCell}>{averageText(stats.average)}</td>
+                  <td className={numCell}>{countText(stats.median)}</td>
                 </tr>
               );
             })}
@@ -103,7 +103,7 @@ export default async function StatsPage({
             <tr>
               <th className="px-3 py-2">{t(lang, "statsDay")}</th>
               {DAY_KEYS.map((key) => (
-                <th key={key} className="px-3 py-2">{dayHeader(lang, key)}</th>
+                <th key={key} className={numHead}>{dayHeader(lang, key)}</th>
               ))}
             </tr>
           </thead>
@@ -112,7 +112,7 @@ export default async function StatsPage({
               <tr key={day} className="border-t border-slate-800">
                 <td className="px-3 py-2 whitespace-nowrap">{displayIsoDay(day)}</td>
                 {DAY_KEYS.map((key) => (
-                  <td key={key} className="px-3 py-2">{countText(byDay?.[key].get(day) ?? 0)}</td>
+                  <td key={key} className={numCell}>{countText(byDay?.[key].get(day) ?? 0)}</td>
                 ))}
               </tr>
             ))}
@@ -143,10 +143,13 @@ function dayHeader(lang: Lang, key: CreatedKey): string {
   return t(lang, "events");
 }
 
+const numHead = "px-3 py-2 text-right";
+const numCell = "px-3 py-2 text-right tabular-nums";
+
 function countText(value: number) {
   return value.toLocaleString("en-US");
 }
 
 function averageText(value: number) {
-  return value.toLocaleString("en-US", { maximumFractionDigits: 1 });
+  return value.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
