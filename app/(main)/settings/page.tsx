@@ -152,6 +152,7 @@ export default async function SettingsPage({
         packs={packs}
         stripeReady={Boolean(process.env.STRIPE_SECRET_KEY && process.env.AUTH_URL)}
         platformGrants={platformGrants.map((grant) => grant.provider)}
+        open={section === "ai"}
       />
     </PageFrame>
   );

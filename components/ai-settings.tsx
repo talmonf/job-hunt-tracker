@@ -1,7 +1,7 @@
 import type { AiPaySource, AiProvider } from "@prisma/client";
-import type { Lang } from "@/lib/i18n";
+import type { Lang, MessageKey } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
-import { AI_PROVIDERS, DEFAULT_MODEL, isAiProvider, platformKey } from "@/lib/ai/providers";
+import { AI_PROVIDERS, DEFAULT_MODEL, isAiProvider, platformKey, PROVIDER_KEY_LINK_ORDER, PROVIDER_KEY_URL } from "@/lib/ai/providers";
 import { paySourceLabel } from "@/lib/ai/labels";
 import { platformGrantAllows } from "@/lib/ai/platform-access";
 import { formatIls } from "@/lib/ai/money";
@@ -33,6 +33,12 @@ type UsageRow = {
 };
 type Pack = { id: string; nameEn: string; nameHe: string; creditAgorot: number; priceAgorot: number; active: boolean };
 
+const keyLinkLabel: Record<(typeof PROVIDER_KEY_LINK_ORDER)[number], MessageKey> = {
+  openai: "aiKeyOpenAi",
+  anthropic: "aiKeyClaude",
+  google: "aiKeyGoogle",
+};
+
 export function AiSettings({
   lang,
   paySource,
@@ -45,6 +51,7 @@ export function AiSettings({
   packs,
   stripeReady,
   platformGrants,
+  open = false,
 }: {
   lang: Lang;
   paySource: AiPaySource;
@@ -57,17 +64,32 @@ export function AiSettings({
   packs: Pack[];
   stripeReady: boolean;
   platformGrants: string[];
+  open?: boolean;
 }) {
   const saved = new Map(keys.map((row) => [row.provider, row]));
   const creditsReady = platformGrants.some((provider) => isAiProvider(provider) && platformKey(provider));
   const configured = keys.length > 0 || (paySource === "credits" && creditsReady);
   return (
     <SettingsSection
+      id="ai"
+      className="scroll-mt-20"
+      defaultOpen={open}
       title={t(lang, "aiTitle")}
       badge={configured ? t(lang, "aiConfigured") : t(lang, "aiNotConfigured")}
       badgeClassName={configured ? "bg-emerald-950 text-emerald-300" : "bg-amber-950 text-amber-200"}
     >
       <p className="mb-3 text-sm text-slate-400">{t(lang, "aiIntro")}</p>
+      <p className="mb-3 text-sm text-slate-400">{t(lang, "aiOwnKey")}</p>
+      <p className="text-sm text-slate-400">{t(lang, "aiCreateKey")}</p>
+      <ul className="mb-3 mt-1 space-y-1">
+        {PROVIDER_KEY_LINK_ORDER.map((provider) => (
+          <li key={provider}>
+            <a className="text-sm text-sky-300" href={PROVIDER_KEY_URL[provider]} target="_blank" rel="noopener noreferrer">
+              {t(lang, keyLinkLabel[provider])}
+            </a>
+          </li>
+        ))}
+      </ul>
       <p className="mb-3 text-sm">{t(lang, "balance")}: {formatIls(balanceAgorot)}</p>
       <form action={savePaySource} className="mb-4 flex flex-wrap items-end gap-3">
         <label>

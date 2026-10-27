@@ -1,5 +1,15 @@
 export const AI_PROVIDERS = ["anthropic", "google", "openai", "openrouter"] as const;
 
+export const PROVIDER_KEY_URL = {
+  openai: "https://platform.openai.com/api-keys",
+  anthropic: "https://platform.claude.com/settings/workspaces/default/keys",
+  google: "https://aistudio.google.com/api-keys",
+} as const satisfies Partial<Record<(typeof AI_PROVIDERS)[number], string>>;
+
+export const PROVIDER_KEY_LINK_ORDER = ["openai", "anthropic", "google"] as const satisfies ReadonlyArray<
+  keyof typeof PROVIDER_KEY_URL
+>;
+
 export type AiProviderId = (typeof AI_PROVIDERS)[number];
 
 export function isAiProvider(value: string): value is AiProviderId {

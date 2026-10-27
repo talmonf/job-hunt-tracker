@@ -1,8 +1,15 @@
 import { dismissGuide } from "@/lib/actions/settings";
-import { t } from "@/lib/i18n";
+import { PROVIDER_KEY_LINK_ORDER, PROVIDER_KEY_URL } from "@/lib/ai/providers";
+import { t, type MessageKey } from "@/lib/i18n";
 import { requireUser } from "@/lib/session";
 import { PageFrame } from "@/components/chrome";
 import { SubmitButton } from "@/components/widgets";
+
+const keyLinkLabel: Record<(typeof PROVIDER_KEY_LINK_ORDER)[number], MessageKey> = {
+  openai: "aiKeyOpenAi",
+  anthropic: "aiKeyClaude",
+  google: "aiKeyGoogle",
+};
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +36,26 @@ export default async function GuidePage() {
         <a className="mt-2 inline-block text-sm text-sky-300" href="/profile" target="_blank" rel="noopener noreferrer">
           {t(lang, "guideLinkedInLink")}
         </a>
-        <p className="mt-2 text-sm text-slate-300">{t(lang, "guideAiNote")}</p>
+      </section>
+
+      <section className="mb-6">
+        <h2 className="mb-2 text-lg">{t(lang, "guideAiTitle")}</h2>
+        <p className="text-sm text-slate-300">{t(lang, "guideAiBody")}</p>
+        <p className="mt-2 text-sm text-slate-300">{t(lang, "guideAiOwn")}</p>
+        <p className="mt-2 text-sm text-slate-300">{t(lang, "guideAiCredits")}</p>
+        <p className="mt-2 text-sm text-slate-300">{t(lang, "aiCreateKey")}</p>
+        <ul className="mt-1 space-y-1">
+          {PROVIDER_KEY_LINK_ORDER.map((provider) => (
+            <li key={provider}>
+              <a className="text-sm text-sky-300" href={PROVIDER_KEY_URL[provider]} target="_blank" rel="noopener noreferrer">
+                {t(lang, keyLinkLabel[provider])}
+              </a>
+            </li>
+          ))}
+        </ul>
+        <a className="mt-2 inline-block text-sm text-sky-300" href="/settings?section=ai#ai" target="_blank" rel="noopener noreferrer">
+          {t(lang, "guideAiSettingsLink")}
+        </a>
       </section>
 
       <section className="mb-6">
