@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "crypto";
+import { createCipheriv, createDecipheriv, createHmac, randomBytes, scryptSync } from "crypto";
 
 function key(): Buffer {
   const raw = process.env.APP_ENCRYPTION_KEY || "";
@@ -24,4 +24,9 @@ export function decryptSecret(payload: string): string {
   const decipher = createDecipheriv("aes-256-gcm", key(), iv);
   decipher.setAuthTag(tag);
   return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
+}
+
+/** Stable 8-character code for an account. The activity screen shows this instead of a name. */
+export function auditUserCode(userId: string): string {
+  return createHmac("sha256", key()).update(userId).digest("hex").slice(0, 8);
 }

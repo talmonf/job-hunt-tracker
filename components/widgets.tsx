@@ -872,6 +872,8 @@ export function UserMenu({
   changePasswordLabel,
   usersLabel,
   aiUsageLabel,
+  activityLabel,
+  statsLabel,
   children,
 }: {
   initials: string;
@@ -881,6 +883,8 @@ export function UserMenu({
   changePasswordLabel: string;
   usersLabel: string;
   aiUsageLabel: string;
+  activityLabel: string;
+  statsLabel: string;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -933,6 +937,12 @@ export function UserMenu({
               </Link>
               <Link role="menuitem" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-800" href="/admin/ai-usage">
                 {aiUsageLabel}
+              </Link>
+              <Link role="menuitem" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-800" href="/admin/activity">
+                {activityLabel}
+              </Link>
+              <Link role="menuitem" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-800" href="/admin/stats">
+                {statsLabel}
               </Link>
             </>
           ) : null}

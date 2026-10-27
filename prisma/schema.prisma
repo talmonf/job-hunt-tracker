@@ -164,6 +164,7 @@ model User {
   aiUsage       AiUsage[]
   creditLedger  CreditLedger[]
   profileImports ProfileImport[]
+  activity      ActivityEvent[]
 }
 
 model UserGoals {
@@ -729,4 +730,25 @@ model ProfileImport {
   createdAt DateTime     @default(now())
 
   @@index([userId, status])
+}
+
+enum ActivityKind {
+  page
+  click
+}
+
+/// Signed-in page views and control clicks. The admin screen shows a code, not the account.
+model ActivityEvent {
+  id        String       @id @default(cuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      ActivityKind
+  path      String
+  control   String       @default("")
+  target    String       @default("")
+  createdAt DateTime     @default(now())
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@index([kind, createdAt])
 }

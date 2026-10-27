@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { auth } from "@/auth";
+import { ActivityReporter } from "@/components/activity-reporter";
 import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
@@ -7,11 +9,16 @@ export const metadata: Metadata = {
   description: "Track companies, applications, interviews, and networking.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const session = await auth();
+  const signedIn = Boolean(session?.user?.id);
   return (
     <html lang="en">
       <body className="min-h-screen bg-slate-950 text-slate-100">
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          {signedIn ? <ActivityReporter /> : null}
+        </Providers>
       </body>
     </html>
   );

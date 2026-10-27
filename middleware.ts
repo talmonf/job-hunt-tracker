@@ -42,7 +42,8 @@ export default auth((req) => {
   const allowedWhenLocked =
     pathname.startsWith("/change-password") ||
     pathname.startsWith("/session-sync") ||
-    pathname.startsWith("/api/auth");
+    pathname.startsWith("/api/auth") ||
+    pathname === "/api/audit";
   if (signedIn && locked && !allowedWhenLocked) {
     return NextResponse.redirect(new URL("/change-password", req.nextUrl.origin));
   }

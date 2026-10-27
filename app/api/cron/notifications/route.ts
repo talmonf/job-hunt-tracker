@@ -1,3 +1,4 @@
+import { pruneActivity } from "@/lib/activity";
 import { runNotifications } from "@/lib/notifications";
 
 export async function POST(request: Request) {
@@ -6,6 +7,7 @@ export async function POST(request: Request) {
   if (!secret || header !== `Bearer ${secret}`) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }
+  const prunedActivity = await pruneActivity();
   const result = await runNotifications();
-  return Response.json(result);
+  return Response.json({ ...result, prunedActivity });
 }

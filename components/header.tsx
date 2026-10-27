@@ -57,6 +57,8 @@ export function AppHeader({
             changePasswordLabel={t(lang, "changePassword")}
             usersLabel={t(lang, "users")}
             aiUsageLabel={t(lang, "aiUsage")}
+            activityLabel={t(lang, "activity")}
+            statsLabel={t(lang, "stats")}
           >
             <SignOutButton
               action={signOutAction}

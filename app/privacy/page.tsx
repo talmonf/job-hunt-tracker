@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 const sections: { title: MessageKey; paragraphs: MessageKey[] }[] = [
   { title: "privacyAccountTitle", paragraphs: ["privacyAccountBody", "privacyAccountUrls", "privacyAccountHide"] },
-  { title: "privacyStoredTitle", paragraphs: ["privacyStoredBody", "privacyFilesBody"] },
+  { title: "privacyStoredTitle", paragraphs: ["privacyStoredBody", "privacyActivityBody", "privacyFilesBody"] },
   { title: "privacySentTitle", paragraphs: ["privacySentIntro", "privacySentAi", "privacySentGoogle", "privacySentMail", "privacySentStripe"] },
   { title: "privacySignInTitle", paragraphs: ["privacySignInBody"] },
   { title: "privacyOperatorTitle", paragraphs: ["privacyOperatorBody"] },
