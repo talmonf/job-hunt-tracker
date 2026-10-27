@@ -31,4 +31,4 @@ services:
       CRON_SECRET: ${CRON_SECRET}
     entrypoint: ["/bin/sh", "-c"]
     command:
-      - while true; do sleep 900; curl -fsS -X POST -H "Authorization: Bearer $$CRON_SECRET" http://app:3000/api/cron/notifications || true; done
+      - while true; do sleep 900; curl -fsS -X POST -H "Authorization: Bearer $$CRON_SECRET" http://app:3000/api/cron/notifications || true; curl -fsS -X POST -H "Authorization: Bearer $$CRON_SECRET" http://app:3000/api/cron/search || true; done

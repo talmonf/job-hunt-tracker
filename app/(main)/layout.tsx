@@ -16,7 +16,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   if (!user.guideSeenAt && !guideOpen) redirect("/guide");
   return (
     <div dir={user.uiLanguage === "he" ? "rtl" : "ltr"}>
-      <AppHeader lang={user.uiLanguage} hide={hide} name={user.fullName} role={user.role} path={path} />
+      <AppHeader lang={user.uiLanguage} hide={hide} name={user.fullName} role={user.role} path={path} jobSearch={user.jobSearchEnabled} />
       <main className="mx-auto max-w-[1400px] px-4 py-4">{children}</main>
       <footer className="mx-auto max-w-[1400px] px-4 pb-6">
         <Link className="text-sm text-sky-300 hover:text-sky-200" href="/privacy">

@@ -140,6 +140,12 @@ model User {
   aiPaySource          AiPaySource @default(key)
   creditBalance        Int         @default(0)
   guideSeenAt          DateTime?
+  jobSearchEnabled     Boolean    @default(false)
+  gmailRefreshToken    String?
+  gmailEmail           String?
+  searchRunAt          DateTime?
+  searchLockedAt       DateTime?
+  searchCursor         String     @default("")
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
 
@@ -165,6 +171,12 @@ model User {
   creditLedger  CreditLedger[]
   profileImports ProfileImport[]
   activity      ActivityEvent[]
+  searchSettings SearchSettings?
+  searchRules    SearchRule[]
+  userBoards     UserBoard[]
+  postingDecisions PostingDecision[]
+  mailHits       MailHit[]
+  alertPostings  AlertPosting[]
 }
 
 model UserGoals {
@@ -751,4 +763,161 @@ model ActivityEvent {
   @@index([userId, createdAt])
   @@index([createdAt])
   @@index([kind, createdAt])
+}
+
+enum CareerProvider {
+  greenhouse
+  lever
+  ashby
+  comeet
+  workday
+}
+
+enum PostingSource {
+  board
+  alert
+}
+
+enum PostingDecisionKind {
+  added
+  applied
+  dismissed
+  hidden
+  duplicate
+}
+
+enum MailHitKind {
+  alert
+  reply
+}
+
+model CareerBoard {
+  id            String         @id @default(cuid())
+  provider      CareerProvider
+  externalKey   String
+  companyName   String
+  careersUrl    String         @default("")
+  lastFetchedAt DateTime?
+  lastError     String         @default("")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  postings      BoardPosting[]
+  users         UserBoard[]
+
+  @@unique([provider, externalKey])
+}
+
+model UserBoard {
+  userId  String
+  boardId String
+  enabled Boolean     @default(true)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  board   CareerBoard @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@id([userId, boardId])
+  @@index([boardId])
+}
+
+model BoardPosting {
+  id           String    @id @default(cuid())
+  boardId      String
+  board        CareerBoard @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  externalId   String
+  title        String
+  location     String    @default("")
+  url          String
+  description  String    @default("")
+  publishedAt  DateTime?
+  updatedOnly  Boolean   @default(false)
+  lastSeenAt   DateTime
+  closedAt     DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@unique([boardId, externalId])
+  @@index([boardId, closedAt])
+}
+
+model SearchSettings {
+  id                   String @id @default(cuid())
+  userId               String @unique
+  user                 User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  terms                String @default("")
+  excludedTitle        String @default("")
+  excludedDescription  String @default("")
+  maxAgeDays           Int    @default(14)
+  hideJunior           Boolean @default(false)
+  regionTelAviv        Boolean @default(true)
+  regionSharon         Boolean @default(true)
+  regionCenter         Boolean @default(true)
+  regionJerusalem      Boolean @default(true)
+  regionJudea          Boolean @default(true)
+  regionSouth          Boolean @default(true)
+  regionNorth          Boolean @default(true)
+  extraPlaces          String @default("")
+  alertSenders         String @default("")
+  confirmPhrases       String @default("")
+  rejectPhrases        String @default("")
+}
+
+model SearchRule {
+  id      String  @id @default(cuid())
+  userId  String
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ruleKey String
+  enabled Boolean @default(true)
+
+  @@unique([userId, ruleKey])
+}
+
+model PostingDecision {
+  id         String               @id @default(cuid())
+  userId     String
+  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source     PostingSource
+  sourceId   String
+  decision   PostingDecisionKind
+  jobId      String?
+  createdAt  DateTime             @default(now())
+
+  @@unique([userId, source, sourceId])
+  @@index([jobId])
+}
+
+model MailHit {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gmailId     String
+  kind        MailHitKind
+  companyName String      @default("")
+  title       String      @default("")
+  url         String      @default("")
+  snippet     String      @default("")
+  verdict     String      @default("")
+  applied     Boolean     @default(false)
+  jobId       String?
+  messageAt   DateTime?
+  createdAt   DateTime    @default(now())
+  alerts      AlertPosting[]
+
+  @@unique([userId, gmailId])
+}
+
+model AlertPosting {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mailHitId   String
+  mailHit     MailHit  @relation(fields: [mailHitId], references: [id], onDelete: Cascade)
+  externalId  String
+  companyName String
+  title       String
+  location    String   @default("")
+  url         String
+  description String   @default("")
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, externalId])
+  @@index([mailHitId])
 }

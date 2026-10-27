@@ -47,7 +47,9 @@ export default async function StatsPage({
     entityCounts(summaryFrom, summaryTo),
     dayFrom && dayTo ? dailyCounts(DAY_KEYS, dayFrom, dayTo, timeZone) : Promise.resolve(null),
   ]);
-  const dayRows = eachIsoDay(days.from, days.to).reverse();
+  const dayRows = eachIsoDay(days.from, days.to)
+    .reverse()
+    .filter((day) => DAY_KEYS.some((key) => (byDay?.[key].get(day) ?? 0) > 0));
   return (
     <PageFrame lang={lang} title={t(lang, "stats")} description={t(lang, "statsIntro")}>
       <FilterBar className="mb-4" legend={t(lang, "filters")}>

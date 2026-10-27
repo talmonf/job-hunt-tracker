@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 const sections: { title: MessageKey; paragraphs: MessageKey[] }[] = [
   { title: "privacyAccountTitle", paragraphs: ["privacyAccountBody", "privacyAccountUrls", "privacyAccountHide"] },
   { title: "privacyStoredTitle", paragraphs: ["privacyStoredBody", "privacyActivityBody", "privacyFilesBody"] },
-  { title: "privacySentTitle", paragraphs: ["privacySentIntro", "privacySentAi", "privacySentGoogle", "privacySentMail", "privacySentStripe"] },
+  { title: "privacySentTitle", paragraphs: ["privacySentIntro", "privacySentAi", "privacySentGoogle", "privacySentGmail", "privacySentMail", "privacySentStripe"] },
   { title: "privacySignInTitle", paragraphs: ["privacySignInBody"] },
   { title: "privacyOperatorTitle", paragraphs: ["privacyOperatorBody"] },
 ];
@@ -66,7 +66,7 @@ export default async function PrivacyPage({
     const lang = user.uiLanguage;
     return (
       <div dir={lang === "he" ? "rtl" : "ltr"}>
-        <AppHeader lang={lang} hide={hide} name={user.fullName} role={user.role} path="/privacy" />
+        <AppHeader lang={lang} hide={hide} name={user.fullName} role={user.role} path="/privacy" jobSearch={user.jobSearchEnabled} />
         <main className="mx-auto max-w-[1400px] px-4 py-4">
           <PrivacyArticle lang={lang} homeHref="/dashboard" />
         </main>

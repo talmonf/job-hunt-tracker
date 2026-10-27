@@ -1,4 +1,5 @@
 -- Numbered migrations (newest first — add new lines at the top after each migration).
+[x] 028_job_search.sql
 [x] 027_activity.sql
 [x] 026_profile_tags.sql
 [x] 025_clear_stale_follow_ups.sql

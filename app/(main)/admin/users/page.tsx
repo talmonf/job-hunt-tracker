@@ -11,6 +11,7 @@ import { featureLabel, toolLabel } from "@/lib/ai/labels";
 import { grantCredits } from "@/lib/actions/ai";
 import { createUser, resetUserPassword, setUserActive } from "@/lib/actions/admin";
 import { AudienceTestUserCheck } from "@/components/audience-test-user";
+import { JobSearchUserCheck } from "@/components/job-search-user";
 import { AiFeatureGrantCheck } from "@/components/ai-feature-grant";
 import { PlatformKeyGrantCheck } from "@/components/platform-key-grant";
 import { SPONSORED_FEATURES } from "@/lib/ai/feature-access";
@@ -78,6 +79,7 @@ export default async function UsersPage({
                 <th className="px-3 py-2">{t(lang, "builtinKeys")}</th>
                 <th className="px-3 py-2" title={t(lang, "sponsoredFeaturesHint")}>{t(lang, "sponsoredFeatures")}</th>
                 <th className="px-3 py-2">{t(lang, "audienceTestUser")}</th>
+                <th className="px-3 py-2">{t(lang, "jobSearch")}</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -132,6 +134,9 @@ export default async function UsersPage({
                   </td>
                   <td className="px-3 py-2">
                     <AudienceTestUserCheck id={user.id} checked={user.audienceTestUser} label={t(lang, "audienceTestUser")} />
+                  </td>
+                  <td className="px-3 py-2">
+                    <JobSearchUserCheck id={user.id} checked={user.jobSearchEnabled} label={t(lang, "jobSearch")} />
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex gap-3">

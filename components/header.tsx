@@ -1,20 +1,22 @@
 import Link from "next/link";
-import type { Lang } from "@/lib/i18n";
+import type { Lang, MessageKey } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
+import { mainNav } from "@/lib/search/rules";
 import { maskText } from "@/lib/mask";
 import { setObfuscate, setUserLanguage, signOutAction } from "@/lib/actions/auth";
 import { LanguageSwitch, NavLinks, ObfuscateToggle, SignOutButton, UserMenu } from "./widgets";
 
-const links = [
-  ["/settings", "settings"],
-  ["/profile", "profile"],
-  ["/dashboard", "dashboard"],
-  ["/jobs", "jobs"],
-  ["/companies", "companies"],
-  ["/events", "events"],
-  ["/notes", "notes"],
-  ["/contacts", "networking"],
-] as const;
+const NAV_LABEL: Record<string, MessageKey> = {
+  "/settings": "settings",
+  "/profile": "profile",
+  "/dashboard": "dashboard",
+  "/opportunities": "opportunities",
+  "/jobs": "jobs",
+  "/companies": "companies",
+  "/events": "events",
+  "/notes": "notes",
+  "/contacts": "networking",
+};
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -30,12 +32,14 @@ export function AppHeader({
   name,
   role,
   path,
+  jobSearch = false,
 }: {
   lang: Lang;
   hide: boolean;
   name: string;
   role: "user" | "admin";
   path: string;
+  jobSearch?: boolean;
 }) {
   return (
     <header className="sticky top-0 z-30 border-b border-slate-800 bg-slate-950">
@@ -44,7 +48,12 @@ export function AppHeader({
           {t(lang, "appName")}
         </Link>
         <nav className="flex flex-wrap gap-1">
-          <NavLinks links={links.map(([href, key]) => ({ href, label: t(lang, key) }))} />
+          <NavLinks
+            links={mainNav(jobSearch).flatMap((href) => {
+              const label = NAV_LABEL[href];
+              return label ? [{ href, label: t(lang, label) }] : [];
+            })}
+          />
         </nav>
         <div className="ms-auto flex flex-wrap items-center gap-3">
           <LanguageSwitch action={setUserLanguage} lang={lang} />

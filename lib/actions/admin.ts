@@ -8,6 +8,7 @@ import { requireAdmin } from "../session";
 import { passwordRule } from "../password";
 import { requiredText } from "../forms";
 import { isBuiltinAdmin } from "../admin";
+import { jobSearchPatch } from "../search/rules";
 import { isSponsoredFeature } from "../ai/feature-access";
 import { isBuiltinPlatformProvider } from "../ai/platform-access";
 
@@ -57,6 +58,14 @@ export async function setAudienceTestUser(id: string, added: boolean) {
   if (!id) return;
   await prisma.user.updateMany({ where: { id }, data: { audienceTestUser: added } });
   revalidatePath("/admin/users");
+}
+
+export async function setJobSearchEnabled(id: string, enabled: boolean) {
+  await requireAdmin();
+  if (!id) return;
+  await prisma.user.updateMany({ where: { id }, data: jobSearchPatch(enabled) });
+  revalidatePath("/admin/users");
+  revalidatePath("/opportunities");
 }
 
 export async function setAiFeatureGrant(userId: string, feature: string, allowed: boolean) {
