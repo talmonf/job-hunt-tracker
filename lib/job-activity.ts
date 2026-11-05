@@ -8,6 +8,7 @@ export type LoggedHistoryEvent = {
   endsAt: string | null;
   createdAt: string;
   stage: string | null;
+  channel: string | null;
   resultingStatus: string | null;
   previousStatus: string | null;
   counterpartyName: string;

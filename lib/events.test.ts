@@ -14,6 +14,7 @@ test("event types map to job status", () => {
   assert.equal(defaultResultingStatus("interest"), "interest");
   assert.equal(defaultResultingStatus("outreach"), "contacted");
   assert.equal(defaultResultingStatus("application"), "applied");
+  assert.equal(defaultResultingStatus("response"), null);
   assert.equal(defaultResultingStatus("meeting"), "interviewing");
   assert.equal(defaultResultingStatus("status_change"), null);
 });
@@ -53,6 +54,18 @@ test("status updates include the new status", () => {
     eventHappenedLabel("he", "status_change", null, "parked", "contacted"),
     "עדכון סטטוס (\u2066פניתי → בצד\u2069)",
   );
+});
+
+test("a reply names the channel and the status it leaves", () => {
+  assert.equal(
+    eventHappenedLabel("en", "response", null, "withdrawn", "applied", "phone"),
+    "They got back (Phone · \u2066Applied → Withdrawn\u2069)",
+  );
+  assert.equal(
+    eventHappenedLabel("he", "response", null, "withdrawn", "applied", "phone"),
+    "חזרו אליי (טלפון · \u2066הגשתי → משכתי\u2069)",
+  );
+  assert.equal(eventHappenedLabel("en", "response", null, "interviewing"), "They got back (Interviewing)");
 });
 
 test("upcoming meetings name the interview kind", () => {

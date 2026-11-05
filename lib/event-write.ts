@@ -17,6 +17,7 @@ type TimedRow = {
   endsAt: Date | null;
   createdAt: Date;
   stage: string | null;
+  channel: string | null;
   resultingStatus: string | null;
   previousStatus: string | null;
   counterpartyName: string;
@@ -33,6 +34,7 @@ function toHistory(event: TimedRow): LoggedHistoryEvent {
     endsAt: event.endsAt ? event.endsAt.toISOString() : null,
     createdAt: event.createdAt.toISOString(),
     stage: event.stage,
+    channel: event.channel,
     resultingStatus: event.resultingStatus,
     previousStatus: event.previousStatus,
     counterpartyName: event.counterpartyName,
@@ -128,12 +130,12 @@ export async function persistEvent(user: User, formData: FormData): Promise<Even
   const channel = optionalEnum(formData.get("channel"), CHANNELS) as Channel | null;
   const stage = optionalEnum(formData.get("stage"), STAGES) as MeetingStage | null;
   let resultingStatus = defaultResultingStatus(type);
-  if (type === "status_change") {
+  if (type === "status_change" || type === "response") {
     const picked = requiredText(formData.get("resultingStatus")) as JobStatus;
     if (!JOB_STATUSES.includes(picked)) return { ok: false, error: "required", jobId: job?.id, contactId: contact?.id };
     resultingStatus = picked;
   }
-  if (type === "outreach" && !channel) return { ok: false, error: "required", jobId: job?.id, contactId: contact?.id };
+  if ((type === "outreach" || type === "response") && !channel) return { ok: false, error: "required", jobId: job?.id, contactId: contact?.id };
   if (type === "meeting" && !stage) return { ok: false, error: "required", jobId: job?.id, contactId: contact?.id };
   const noteId = requiredText(formData.get("noteId"));
   const note = noteId ? await prisma.note.findFirst({ where: { id: noteId, userId: user.id } }) : null;
@@ -148,7 +150,7 @@ export async function persistEvent(user: User, formData: FormData): Promise<Even
     endsAt,
     jobId: job?.id ?? null,
     contactId: contact?.id ?? null,
-    channel: type === "outreach" || type === "meeting" ? channel : null,
+    channel: type === "outreach" || type === "meeting" || type === "response" ? channel : null,
     counterpartyName: requiredText(formData.get("counterpartyName")),
     stage: type === "meeting" ? stage : null,
     resultingStatus,
@@ -163,7 +165,7 @@ export async function persistEvent(user: User, formData: FormData): Promise<Even
         data: {
           userId: user.id,
           ...data,
-          previousStatus: type === "status_change" ? (job?.status ?? null) : null,
+          previousStatus: type === "status_change" || type === "response" ? (job?.status ?? null) : null,
         },
       });
   let calendarFailed = false;

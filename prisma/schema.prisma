@@ -39,6 +39,7 @@ enum EventType {
   interest
   outreach
   application
+  response
   meeting
   status_change
 }

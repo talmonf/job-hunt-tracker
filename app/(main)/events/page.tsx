@@ -172,7 +172,7 @@ export default async function EventsPage({
                 const scheduled = eventScheduledStart(event);
                 return (
                 <tr key={event.id} className="border-t border-slate-800">
-                  <td className="px-3 py-2">{eventHappenedLabel(lang, event.type, event.stage, event.resultingStatus, event.previousStatus)}</td>
+                  <td className="px-3 py-2">{eventHappenedLabel(lang, event.type, event.stage, event.resultingStatus, event.previousStatus, event.channel)}</td>
                   <td className="whitespace-nowrap px-3 py-2">{formatDateTime(eventLoggedAt(event), user.timezone)}</td>
                   <td className="whitespace-nowrap px-3 py-2">
                     {scheduled ? formatScheduledRange(scheduled, event.endsAt, user.timezone, lang) : "—"}

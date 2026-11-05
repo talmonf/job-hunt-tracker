@@ -306,6 +306,8 @@ const dict = {
     tailored: "CV was tailored to this role",
     whichCv: "CV sent",
     resultingStatus: "New status",
+    chooseStatus: "Choose a status",
+    responseStatusHint: "Withdrawn if you decline.",
     pipeline: "Pipeline",
     thisWeek: "This week",
     allTime: "All time",
@@ -563,7 +565,7 @@ const dict = {
     guideAiSettingsLink: "Open AI settings in a new tab",
     guideWorkTitle: "How to work",
     guideJobs: "On Jobs, add a role even before a posting exists. Paste a description and use Fill form from description, then review the company, title, location, and tags before saving.",
-    guideStatus: "A role's status moves when you log what happened: interest, outreach, an application, or a meeting. Set a follow-up so a quiet role stays visible.",
+    guideStatus: "A role's status moves when you log what happened: interest, outreach, an application, them getting back, or a meeting. Set a follow-up so a quiet role stays visible.",
     guidePeople: "Companies holds the organizations you are tracking. Networking holds the people, including contacts you link from Google under Settings. A note can belong to a job, a contact, a company, a profile role, or just to you.",
     guideDashboard: "The dashboard compares this week with the goals under Settings, then My goals. Search time follows the MentMe formula unless you set an override.",
     guideOptional: "You can also link Google Calendar, turn on the upcoming-dates email, switch language, and hide personal info from the header.",
@@ -979,6 +981,8 @@ const dict = {
     tailored: "קורות החיים הותאמו למשרה",
     whichCv: "קורות החיים שנשלחו",
     resultingStatus: "סטטוס חדש",
+    chooseStatus: "בחירת סטטוס",
+    responseStatusHint: "משכתי אם מוותרים.",
     pipeline: "סטטוסים",
     thisWeek: "השבוע",
     allTime: "כל הזמנים",
@@ -1236,7 +1240,7 @@ const dict = {
     guideAiSettingsLink: "פתיחת הגדרות הבינה המלאכותית בלשונית חדשה",
     guideWorkTitle: "איך עובדים",
     guideJobs: "במשרות מוסיפים תפקיד גם לפני שיש מודעה. מדביקים תיאור ומשתמשים במילוי הטופס מהתיאור, ואז בודקים חברה, תפקיד, מיקום ותגיות לפני השמירה.",
-    guideStatus: "הסטטוס של תפקיד זז כשרושמים מה קרה: עניין, פנייה, הגשה או פגישה. קובעים פולואפ כדי שתפקיד שקט יישאר גלוי.",
+    guideStatus: "הסטטוס של תפקיד זז כשרושמים מה קרה: עניין, פנייה, הגשה, חזרו אליי, או פגישה. קובעים פולואפ כדי שתפקיד שקט יישאר גלוי.",
     guidePeople: "חברות הן הארגונים שאתם עוקבים אחריהם. בנטוורקינג נמצאים האנשים, כולל אנשי קשר שמקשרים מ־Google בהגדרות. הערה יכולה להיות של משרה, של איש קשר, של חברה, של תפקיד בפרופיל, או רק שלכם.",
     guideDashboard: "הדשבורד משווה את השבוע ליעדים תחת הגדרות, ואז היעדים שלי. זמן החיפוש לפי נוסחת MentMe, אלא אם מגדירים ערך ידני.",
     guideOptional: "אפשר גם לקשר את יומן Google, להפעיל את אימייל התאריכים הקרובים, להחליף שפה, ולהסתיר מידע אישי מהכותרת.",
@@ -1384,6 +1388,7 @@ const typeEn: Record<string, string> = {
   interest: "Initial interest",
   outreach: "Contacted them",
   application: "Application sent",
+  response: "They got back",
   meeting: "Meeting scheduled",
   status_change: "Status update",
 };
@@ -1392,6 +1397,7 @@ const typeHe: Record<string, string> = {
   interest: "עניין ראשוני",
   outreach: "פנייה",
   application: "הגשת מועמדות",
+  response: "חזרו אליי",
   meeting: "פגישה נקבעה",
   status_change: "עדכון סטטוס",
 };
@@ -1564,14 +1570,19 @@ export function eventHappenedLabel(
   stage?: string | null,
   resultingStatus?: string | null,
   previousStatus?: string | null,
+  channel?: string | null,
 ): string {
-  if (type === "status_change") {
+  if (type === "status_change" || type === "response") {
     const typeText = eventTypeLabel(lang, type);
-    if (previousStatus && resultingStatus) {
-      const change = `\u2066${statusLabel(lang, previousStatus)} → ${statusLabel(lang, resultingStatus)}\u2069`;
-      return `${typeText} (${change})`;
-    }
-    return resultingStatus ? `${typeText} (${statusLabel(lang, resultingStatus)})` : typeText;
+    const outcome =
+      previousStatus && resultingStatus
+        ? `\u2066${statusLabel(lang, previousStatus)} → ${statusLabel(lang, resultingStatus)}\u2069`
+        : resultingStatus
+          ? statusLabel(lang, resultingStatus)
+          : "";
+    const via = type === "response" && channel ? channelLabel(lang, channel) : "";
+    const detail = [via, outcome].filter(Boolean).join(" · ");
+    return detail ? `${typeText} (${detail})` : typeText;
   }
   if (type !== "meeting") return eventTypeLabel(lang, type);
   const stageText = stage ? stageLabel(lang, stage) : "";

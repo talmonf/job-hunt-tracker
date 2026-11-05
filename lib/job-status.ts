@@ -1,6 +1,6 @@
 import { prisma } from "./prisma";
 import type { JobStatus } from "@prisma/client";
-import { followUpSuperseded } from "./follow-up";
+import { FOLLOW_UP_UPDATE_TYPES, followUpSuperseded } from "./follow-up";
 
 export async function recomputeJobStatus(jobId: string) {
   const latest = await prisma.event.findFirst({
@@ -15,7 +15,7 @@ export async function recomputeJobStatus(jobId: string) {
   });
   if (!job.followUpAt) return;
   const events = await prisma.event.findMany({
-    where: { jobId, type: { in: ["outreach", "application", "meeting", "status_change"] } },
+    where: { jobId, type: { in: [...FOLLOW_UP_UPDATE_TYPES] } },
     select: { type: true, occurredAt: true, startsAt: true },
   });
   if (!followUpSuperseded({ followUpAt: job.followUpAt, status, events })) return;

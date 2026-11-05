@@ -42,7 +42,7 @@ test("an update at or after the follow-up clears it, an earlier one does not", (
     followUpSuperseded({ followUpAt: due, status: "contacted", events: [event("outreach", before)] }),
     false,
   );
-  for (const type of ["outreach", "application", "status_change"]) {
+  for (const type of ["outreach", "application", "response", "status_change"]) {
     assert.equal(followUpSuperseded({ followUpAt: due, status: "applied", events: [event(type, due)] }), true);
     assert.equal(followUpSuperseded({ followUpAt: due, status: "applied", events: [event(type, after)] }), true);
   }

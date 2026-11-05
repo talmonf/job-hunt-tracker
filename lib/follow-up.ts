@@ -4,7 +4,9 @@ import { eventScheduledStart } from "./events";
 /** Statuses where a follow-up would only nag. Offer, on hold, and parked still need a check-in. */
 const FINISHED_STATUSES = new Set<JobStatus>(["rejected", "not_applicable", "withdrawn"]);
 
-const UPDATING_TYPES = new Set<EventType>(["outreach", "application", "meeting", "status_change"]);
+export const FOLLOW_UP_UPDATE_TYPES = ["outreach", "application", "response", "meeting", "status_change"] as const satisfies readonly EventType[];
+
+const UPDATING_TYPES = new Set<EventType>(FOLLOW_UP_UPDATE_TYPES);
 
 export type FollowUpEvent = {
   type: string;
@@ -14,7 +16,7 @@ export type FollowUpEvent = {
 
 /**
  * A follow-up date is obsolete when the role is finished, or when an outreach,
- * application, meeting, or status change is already at or after that date.
+ * application, reply, meeting, or status change is already at or after that date.
  * Interest events do not count: they start the quiet period the date is for.
  * Meetings are compared at startsAt, or occurredAt when startsAt is empty.
  */

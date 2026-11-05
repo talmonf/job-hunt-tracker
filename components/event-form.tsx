@@ -185,7 +185,39 @@ export function EventForm({
           </label>
         </>
       ) : null}
-      {type === "outreach" || type === "meeting" ? (
+      {type === "response" ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="w-fit max-w-full">
+            <span className={labelClass}>{t(lang, "channel")}</span>
+            <select className={`${fieldClass} w-40`} name="channel" defaultValue={event?.channel || "phone"}>
+              {CHANNELS.map((channel) => (
+                <option key={channel} value={channel}>
+                  {channelLabel(lang, channel)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="min-w-0">
+            <span className={labelClass}>{t(lang, "resultingStatus")}</span>
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <select
+                className={`${fieldClass} w-40`}
+                name="resultingStatus"
+                defaultValue={event?.resultingStatus || defaultResultingStatus || ""}
+                required
+              >
+                <option value="">{t(lang, "chooseStatus")}</option>
+                {JOB_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {statusLabel(lang, status)}
+                  </option>
+                ))}
+              </select>
+              <span className="text-[11px] italic text-slate-500">{t(lang, "responseStatusHint")}</span>
+            </span>
+          </label>
+        </div>
+      ) : type === "outreach" || type === "meeting" ? (
         <label>
           <span className={labelClass}>{t(lang, "channel")}</span>
           <select className={fieldClass} name="channel" defaultValue={event?.channel || (type === "meeting" ? "video" : "email")}>
