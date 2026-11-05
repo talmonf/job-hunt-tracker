@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import type { Prisma, TagColor } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { distinctCompanyNames } from "../company-name";
 import { parseCareerDate } from "../forms";
 import { employmentNoteLabel, experienceNoteBodies } from "../notes";
@@ -18,7 +18,7 @@ export type ProfileImportPlan = {
 };
 
 export type SkillTagPlan = {
-  create: { id: string; name: string; color: TagColor }[];
+  create: { id: string; name: string; color: string }[];
   tagIds: string[];
 };
 
@@ -109,11 +109,11 @@ export function planProfileImport(
 /** Reuse a tag with the same name, or plan a new one. Does not delete tags used elsewhere. */
 export function resolveSkillTags(
   names: readonly string[],
-  existing: readonly { id: string; name: string; color: TagColor }[],
+  existing: readonly { id: string; name: string; color: string }[],
   newId: () => string = randomUUID,
 ): SkillTagPlan {
   const byName = new Map(existing.map((tag) => [tag.name.trim().toLowerCase(), tag]));
-  const used: TagColor[] = existing.map((tag) => tag.color);
+  const used: string[] = existing.map((tag) => tag.color);
   const create: SkillTagPlan["create"] = [];
   const tagIds: string[] = [];
   for (const name of uniqueSkillNames(names)) {

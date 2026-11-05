@@ -527,32 +527,12 @@ model Notification {
   @@unique([userId, dedupeKey])
 }
 
-enum TagColor {
-  red
-  rose
-  pink
-  fuchsia
-  purple
-  violet
-  indigo
-  blue
-  sky
-  cyan
-  teal
-  emerald
-  green
-  lime
-  yellow
-  amber
-  orange
-}
-
 model Tag {
   id          String   @id @default(cuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name        String
-  color       TagColor
+  color       String
   createdAt   DateTime @default(now())
   jobs        JobTag[]
   contacts    ContactTag[]

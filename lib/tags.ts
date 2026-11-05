@@ -1,136 +1,205 @@
-import type { TagColor } from "@prisma/client";
+export const TAG_PALETTE = [
+  { id: "red", hex: "#ef4444" },
+  { id: "orange", hex: "#f97316" },
+  { id: "yellow", hex: "#eab308" },
+  { id: "lime", hex: "#84cc16" },
+  { id: "green", hex: "#22c55e" },
+  { id: "teal", hex: "#14b8a6" },
+  { id: "blue", hex: "#3b82f6" },
+  { id: "navy", hex: "#1e40af" },
+  { id: "violet", hex: "#8b5cf6" },
+  { id: "magenta", hex: "#d946ef" },
+  { id: "pink", hex: "#ec4899" },
+  { id: "maroon", hex: "#9f1239" },
+  { id: "brown", hex: "#b45309" },
+  { id: "gray", hex: "#94a3b8" },
+  { id: "white", hex: "#f8fafc" },
+  { id: "black", hex: "#27272a" },
+] as const;
 
-export const TAG_COLORS = [
-  "red",
-  "rose",
-  "pink",
-  "fuchsia",
-  "purple",
-  "violet",
-  "indigo",
-  "blue",
-  "sky",
-  "cyan",
-  "teal",
-  "emerald",
-  "green",
-  "lime",
-  "yellow",
-  "amber",
-  "orange",
-] as const satisfies readonly TagColor[];
+export type TagPaletteId = (typeof TAG_PALETTE)[number]["id"];
 
-export type TagRef = {
-  id: string;
-  name: string;
-  color: TagColor;
-};
-
-export const TAG_CHIP_CLASS: Record<TagColor, string> = {
-  red: "bg-red-500/15 text-red-200",
-  rose: "bg-rose-500/15 text-rose-200",
-  pink: "bg-pink-500/15 text-pink-200",
-  fuchsia: "bg-fuchsia-500/15 text-fuchsia-200",
-  purple: "bg-purple-500/15 text-purple-200",
-  violet: "bg-violet-500/15 text-violet-200",
-  indigo: "bg-indigo-500/15 text-indigo-200",
-  blue: "bg-blue-500/15 text-blue-200",
-  sky: "bg-sky-500/15 text-sky-200",
-  cyan: "bg-cyan-500/15 text-cyan-200",
-  teal: "bg-teal-500/15 text-teal-200",
-  emerald: "bg-emerald-500/15 text-emerald-200",
-  green: "bg-green-500/15 text-green-200",
-  lime: "bg-lime-500/15 text-lime-200",
-  yellow: "bg-yellow-500/15 text-yellow-200",
-  amber: "bg-amber-500/15 text-amber-200",
-  orange: "bg-orange-500/15 text-orange-200",
-};
-
-export const TAG_SWATCH_CLASS: Record<TagColor, string> = {
-  red: "bg-red-400",
-  rose: "bg-rose-400",
-  pink: "bg-pink-400",
-  fuchsia: "bg-fuchsia-400",
-  purple: "bg-purple-400",
-  violet: "bg-violet-400",
-  indigo: "bg-indigo-400",
-  blue: "bg-blue-400",
-  sky: "bg-sky-400",
-  cyan: "bg-cyan-400",
-  teal: "bg-teal-400",
-  emerald: "bg-emerald-400",
-  green: "bg-green-400",
-  lime: "bg-lime-400",
-  yellow: "bg-yellow-400",
-  amber: "bg-amber-400",
-  orange: "bg-orange-400",
-};
-
-/** Hue of each Tailwind 400 swatch. Neighboring names such as red, rose, and pink sit only a few degrees apart. */
-const TAG_HUE: Record<TagColor, number> = {
-  red: 0,
-  rose: 351,
-  pink: 329,
-  fuchsia: 292,
-  purple: 270,
-  violet: 255,
-  indigo: 234,
-  blue: 213,
-  sky: 198,
-  cyan: 188,
-  teal: 172,
-  emerald: 158,
-  green: 142,
-  lime: 83,
-  yellow: 48,
-  amber: 43,
-  orange: 27,
+/** Tailwind 400 swatches from the old named palette, so a saved tag keeps its color. */
+const LEGACY_TAG_COLOR: Record<string, string> = {
+  red: "#f87171",
+  rose: "#fb7185",
+  pink: "#f472b6",
+  fuchsia: "#e879f9",
+  purple: "#c084fc",
+  violet: "#a78bfa",
+  indigo: "#818cf8",
+  blue: "#60a5fa",
+  sky: "#38bdf8",
+  cyan: "#22d3ee",
+  teal: "#2dd4bf",
+  emerald: "#34d399",
+  green: "#4ade80",
+  lime: "#a3e635",
+  yellow: "#facc15",
+  amber: "#fbbf24",
+  orange: "#fb923c",
 };
 
 const MIN_TAG_HUE_GAP = 45;
+const NEUTRAL_SATURATION = 0.25;
 
-/** Primaries first, then backups, so the five quick swatches stay easy to tell apart. */
+/** Spread-out hues first, then the darker and neutral swatches. */
 const TAG_SUGGESTION_ORDER = [
   "red",
   "yellow",
   "green",
   "blue",
-  "purple",
-  "cyan",
-  "orange",
-  "lime",
-  "fuchsia",
-  "emerald",
-  "indigo",
-  "amber",
-  "sky",
-  "teal",
   "violet",
+  "orange",
+  "teal",
   "pink",
-  "rose",
-] as const satisfies readonly TagColor[];
+  "lime",
+  "magenta",
+  "navy",
+  "maroon",
+  "brown",
+  "gray",
+  "white",
+  "black",
+] as const satisfies readonly TagPaletteId[];
 
-function hueGap(a: TagColor, b: TagColor) {
-  const delta = Math.abs(TAG_HUE[a] - TAG_HUE[b]);
+const TAG_SUGGESTION_HEX: readonly string[] = TAG_SUGGESTION_ORDER.map((id) => TAG_PALETTE.find((item) => item.id === id)!.hex);
+
+export type TagRef = {
+  id: string;
+  name: string;
+  color: string;
+};
+
+export const tagChipClass = "inline-flex items-center rounded-full px-2 py-0.5 text-xs";
+
+export function normalizeTagColor(value: string): string | null {
+  const trimmed = value.trim().toLowerCase();
+  const legacy = LEGACY_TAG_COLOR[trimmed];
+  if (legacy) return legacy;
+  const rgb = trimmed.match(/^rgba?\(\s*(\d{1,3})\s*[, ]\s*(\d{1,3})\s*[, ]\s*(\d{1,3})\s*\)$/);
+  if (rgb) {
+    const channels = [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])];
+    if (channels.some((channel) => channel > 255)) return null;
+    return rgbToHex(channels[0], channels[1], channels[2]);
+  }
+  const hex = trimmed.match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/);
+  if (!hex) return null;
+  const digits = hex[1].length === 3 ? [...hex[1]].map((channel) => channel + channel).join("") : hex[1];
+  return `#${digits}`;
+}
+
+export function rgbToHex(r: number, g: number, b: number): string {
+  const channel = (value: number) => Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, "0");
+  return `#${channel(r)}${channel(g)}${channel(b)}`;
+}
+
+export function hexToRgb(color: string): { r: number; g: number; b: number } | null {
+  const hex = normalizeTagColor(color);
+  if (!hex) return null;
+  return {
+    r: Number.parseInt(hex.slice(1, 3), 16),
+    g: Number.parseInt(hex.slice(3, 5), 16),
+    b: Number.parseInt(hex.slice(5, 7), 16),
+  };
+}
+
+export function hexToHsv(color: string): { h: number; s: number; v: number } | null {
+  const rgb = hexToRgb(color);
+  if (!rgb) return null;
+  const r = rgb.r / 255;
+  const g = rgb.g / 255;
+  const b = rgb.b / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+  let h = 0;
+  if (delta !== 0) {
+    if (max === r) h = ((g - b) / delta) % 6;
+    else if (max === g) h = (b - r) / delta + 2;
+    else h = (r - g) / delta + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+  return { h, s: max === 0 ? 0 : delta / max, v: max };
+}
+
+export function hsvToHex(h: number, s: number, v: number): string {
+  const hue = ((h % 360) + 360) % 360;
+  const chroma = v * s;
+  const x = chroma * (1 - Math.abs(((hue / 60) % 2) - 1));
+  const m = v - chroma;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (hue < 60) [r, g, b] = [chroma, x, 0];
+  else if (hue < 120) [r, g, b] = [x, chroma, 0];
+  else if (hue < 180) [r, g, b] = [0, chroma, x];
+  else if (hue < 240) [r, g, b] = [0, x, chroma];
+  else if (hue < 300) [r, g, b] = [x, 0, chroma];
+  else [r, g, b] = [chroma, 0, x];
+  return rgbToHex((r + m) * 255, (g + m) * 255, (b + m) * 255);
+}
+
+export function isLightTagColor(color: string): boolean {
+  const rgb = hexToRgb(color);
+  if (!rgb) return false;
+  return (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255 > 0.82;
+}
+
+export function tagChipStyle(color: string): { backgroundColor: string; color: string } {
+  const rgb = hexToRgb(color) ?? { r: 239, g: 68, b: 68 };
+  const mix = (channel: number) => Math.round(channel * 0.28 + 255 * 0.72);
+  return {
+    backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.16)`,
+    color: `rgb(${mix(rgb.r)}, ${mix(rgb.g)}, ${mix(rgb.b)})`,
+  };
+}
+
+export function tagSwatchStyle(color: string): { backgroundColor: string } {
+  const rgb = hexToRgb(color) ?? { r: 239, g: 68, b: 68 };
+  return { backgroundColor: `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})` };
+}
+
+function canonical(color: string): string {
+  return normalizeTagColor(color) ?? color.trim().toLowerCase();
+}
+
+function hueDistance(a: string, b: string): number {
+  const left = hexToHsv(a);
+  const right = hexToHsv(b);
+  if (!left || !right) return 180;
+  if (left.s < NEUTRAL_SATURATION || right.s < NEUTRAL_SATURATION) {
+    return left.s < NEUTRAL_SATURATION && right.s < NEUTRAL_SATURATION ? 0 : 180;
+  }
+  const delta = Math.abs(left.h - right.h);
   return Math.min(delta, 360 - delta);
 }
 
-export function suggestTagColors(used: Iterable<TagColor>, selected: TagColor, limit = 5): TagColor[] {
-  const taken = new Set(used);
-  const available = TAG_SUGGESTION_ORDER.filter((color) => color === selected || !taken.has(color));
-  const picks: TagColor[] = [selected];
+function sortKey(color: string): number {
+  const hsv = hexToHsv(color);
+  if (!hsv || hsv.s < NEUTRAL_SATURATION) return 400 + (hsv ? 1 - hsv.v : 1);
+  return hsv.h;
+}
+
+export function suggestTagColors(used: Iterable<string>, selected: string, limit = 5): string[] {
+  const taken = new Set([...used].map(canonical));
+  const current = canonical(selected);
+  const pool = TAG_SUGGESTION_HEX.filter((color) => color === current || !taken.has(color));
+  const available = pool.includes(current) ? pool : [current, ...pool];
+  const picks: string[] = [current];
   for (const color of available) {
     if (picks.length >= limit) break;
     if (picks.includes(color)) continue;
-    if (picks.some((pick) => hueGap(pick, color) < MIN_TAG_HUE_GAP)) continue;
+    if (picks.some((pick) => hueDistance(pick, color) < MIN_TAG_HUE_GAP)) continue;
     picks.push(color);
   }
   while (picks.length < limit) {
-    let best: TagColor | null = null;
+    let best: string | null = null;
     let bestGap = -1;
     for (const color of available) {
       if (picks.includes(color)) continue;
-      const gap = Math.min(...picks.map((pick) => hueGap(pick, color)));
+      const gap = Math.min(...picks.map((pick) => hueDistance(pick, color)));
       if (gap > bestGap) {
         bestGap = gap;
         best = color;
@@ -139,12 +208,14 @@ export function suggestTagColors(used: Iterable<TagColor>, selected: TagColor, l
     if (!best) break;
     picks.push(best);
   }
-  return picks.sort((a, b) => TAG_HUE[a] - TAG_HUE[b]);
+  return picks.sort((a, b) => sortKey(a) - sortKey(b));
 }
 
-export function firstFreeTagColor(used: Iterable<TagColor>): TagColor {
-  const taken = new Set(used);
-  return TAG_COLORS.find((color) => !taken.has(color)) ?? TAG_COLORS[0];
+export function firstFreeTagColor(used: Iterable<string>): string {
+  const taken = [...used].map(canonical);
+  const spaced = TAG_SUGGESTION_HEX.find((color) => taken.every((have) => hueDistance(color, have) >= MIN_TAG_HUE_GAP));
+  if (spaced) return spaced;
+  return TAG_SUGGESTION_HEX.find((color) => !taken.includes(color)) ?? TAG_PALETTE[0].hex;
 }
 
 export type TagMatchMode = "any" | "all";

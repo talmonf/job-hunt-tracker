@@ -1,10 +1,9 @@
-import type { TagColor } from "@prisma/client";
 import { maskText } from "@/lib/mask";
-import { TAG_CHIP_CLASS, type TagRef } from "@/lib/tags";
+import { tagChipClass, tagChipStyle, type TagRef } from "@/lib/tags";
 
-export function TagChip({ name, color, hide }: { name: string; color: TagColor; hide: boolean }) {
+export function TagChip({ name, color, hide }: { name: string; color: string; hide: boolean }) {
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${TAG_CHIP_CLASS[color]}`}>
+    <span className={tagChipClass} style={tagChipStyle(color)}>
       {maskText(name, hide)}
     </span>
   );

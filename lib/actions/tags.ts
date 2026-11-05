@@ -1,15 +1,15 @@
-import { Prisma, type TagColor } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import { requiredText } from "../forms";
-import { TAG_COLORS } from "../tags";
+import { normalizeTagColor } from "../tags";
 
-export type TagRow = { id: string; name: string; color: TagColor };
+export type TagRow = { id: string; name: string; color: string };
 
 export type TagWriteResult = { ok: true; tag: TagRow } | { ok: false; error: "required" | "tagName" };
 
-function readColor(value: FormDataEntryValue | null): TagColor | null {
+function readColor(value: FormDataEntryValue | null): string | null {
   const text = requiredText(value);
-  return (TAG_COLORS as readonly string[]).includes(text) ? (text as TagColor) : null;
+  return text ? normalizeTagColor(text) : null;
 }
 
 async function nameTaken(userId: string, name: string, exceptId?: string) {

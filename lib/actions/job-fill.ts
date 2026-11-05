@@ -1,6 +1,5 @@
 "use server";
 
-import type { TagColor } from "@prisma/client";
 import { prisma } from "../prisma";
 import { requireUser } from "../session";
 import { createTag } from "./tags";
@@ -18,7 +17,7 @@ export type FillJobResult =
   | { ok: false; error: FillJobError };
 
 export type ProposedTagResult =
-  | { ok: true; tag: { id: string; name: string; color: TagColor } }
+  | { ok: true; tag: { id: string; name: string; color: string } }
   | { ok: false; error: "required" | "tagName" };
 
 async function resolveOwnKey(userId: string): Promise<AiProviderId | null> {

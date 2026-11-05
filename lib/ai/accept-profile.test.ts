@@ -83,9 +83,9 @@ test("a repeated skill is stored once, and an existing tag is reused", () => {
 
   const linked = resolveSkillTags(
     plan.skillNames,
-    [{ id: "tag-algebra", name: "algebra", color: "red" }],
+    [{ id: "tag-algebra", name: "algebra", color: "#f87171" }],
     ids(),
   );
   assert.deepEqual(linked.tagIds, ["tag-algebra", "id-1"]);
-  assert.deepEqual(linked.create, [{ id: "id-1", name: "Proofs", color: "rose" }]);
+  assert.deepEqual(linked.create, [{ id: "id-1", name: "Proofs", color: "#eab308" }]);
 });

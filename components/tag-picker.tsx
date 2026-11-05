@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { t, type Lang } from "@/lib/i18n";
 import { maskText } from "@/lib/mask";
-import { TAG_CHIP_CLASS, type TagRef } from "@/lib/tags";
+import { tagChipClass, tagChipStyle, type TagRef } from "@/lib/tags";
 import { SubmitButton, fieldClass, quietButton } from "./widgets";
 
 export const JOB_TAGS_ADD_EVENT = "job-tags-add";
@@ -82,7 +82,7 @@ export function TagPicker({
       <div>
         <div className="flex flex-wrap items-center gap-2">
           {chosen.map((tag) => (
-            <span key={tag.id} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${TAG_CHIP_CLASS[tag.color]}`}>
+            <span key={tag.id} className={`${tagChipClass} gap-1`} style={tagChipStyle(tag.color)}>
               {maskText(tag.name, hide)}
               <button
                 className="leading-none"
@@ -119,7 +119,7 @@ export function TagPicker({
                           }
                         >
                           <span className="w-4 shrink-0 text-xs text-slate-300">{on ? "✓" : ""}</span>
-                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${TAG_CHIP_CLASS[tag.color]}`}>
+                          <span className={tagChipClass} style={tagChipStyle(tag.color)}>
                             {maskText(tag.name, hide)}
                           </span>
                         </button>
@@ -159,7 +159,7 @@ export function TagPicker({
       {chosen.length ? (
         <div className="mb-2 flex flex-wrap gap-1">
           {chosen.map((tag) => (
-            <span key={tag.id} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${TAG_CHIP_CLASS[tag.color]}`}>
+            <span key={tag.id} className={`${tagChipClass} gap-1`} style={tagChipStyle(tag.color)}>
               {maskText(tag.name, hide)}
               <button
                 className="leading-none"
@@ -191,7 +191,7 @@ export function TagPicker({
                       setOpen(false);
                     }}
                   >
-                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${TAG_CHIP_CLASS[tag.color]}`}>
+                    <span className={tagChipClass} style={tagChipStyle(tag.color)}>
                       {maskText(tag.name, hide)}
                     </span>
                   </button>

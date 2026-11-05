@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { allParams, firstParam, preserveQuery } from "@/lib/http";
-import { assignmentTags, parseTagMatch, tagFilter, TAG_CHIP_CLASS, TAG_SWATCH_CLASS, type TagMatchMode, type TagRef } from "@/lib/tags";
+import { assignmentTags, parseTagMatch, tagChipStyle, tagFilter, tagSwatchStyle, type TagMatchMode, type TagRef } from "@/lib/tags";
 import { parseDateOnly } from "@/lib/forms";
 import { ACTIVE_JOB_STATUSES, JOB_STATUSES, statusesForJobList } from "@/lib/events";
 import { jobAttributeLabel, statusLabel, t, workArrangementLabel, type Lang } from "@/lib/i18n";
@@ -267,10 +267,10 @@ function TagFilter({
               <label key={tag.id} title={name} className="shrink-0 cursor-pointer rounded-full has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-sky-400">
                 <input className="peer sr-only" type="checkbox" name="tag" value={tag.id} defaultChecked={selected.includes(tag.id)} />
                 <span className="inline-flex items-center gap-1 rounded-full border border-slate-600 px-2 py-0.5 text-xs text-slate-400 peer-checked:hidden">
-                  <span className={`h-1.5 w-1.5 rounded-full ${TAG_SWATCH_CLASS[tag.color]}`} aria-hidden />
+                  <span className="h-1.5 w-1.5 rounded-full ring-1 ring-white/40" style={tagSwatchStyle(tag.color)} aria-hidden />
                   {name}
                 </span>
-                <span className={`hidden items-center gap-1 rounded-full px-2 py-0.5 text-xs ring-1 ring-white/70 peer-checked:inline-flex ${TAG_CHIP_CLASS[tag.color]}`}>
+                <span className="hidden items-center rounded-full px-2 py-0.5 text-xs ring-1 ring-white/70 peer-checked:inline-flex" style={tagChipStyle(tag.color)}>
                   {name}
                 </span>
               </label>
