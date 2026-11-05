@@ -8,6 +8,10 @@ import { TagPicker } from "./tag-picker";
 
 const narrowSelectClass =
   "w-40 max-w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-start text-sm text-slate-100 outline-none focus:border-sky-500";
+const dateInputClass =
+  "w-36 max-w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-start text-sm text-slate-100 outline-none focus:border-sky-500";
+const inlineLabelClass = "shrink-0 text-xs leading-none text-slate-300";
+const hintClass = "text-[11px] italic text-slate-500";
 
 export function CompanyForm({
   action,
@@ -36,53 +40,53 @@ export function CompanyForm({
   };
 }) {
   return (
-    <form action={action} className="grid gap-3 md:grid-cols-2">
+    <form action={action} className="grid max-w-5xl gap-3">
       {company ? <input type="hidden" name="companyId" value={company.id} /> : null}
-      <div className="md:col-span-2">
-        <TagPicker lang={lang} hide={hide} tags={tags} selected={selectedTagIds} compact={Boolean(company)} />
-      </div>
-      <div className="grid items-start gap-3 md:col-span-2 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
-        <div className="grid gap-3">
-          <label>
-            <span className={labelClass}>{t(lang, "company")}</span>
-            <input className={fieldClass} name="name" defaultValue={company?.name ?? ""} required />
+      <label>
+        <span className={labelClass}>{t(lang, "company")}</span>
+        <input className={fieldClass} name="name" defaultValue={company?.name ?? ""} required />
+      </label>
+      <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+          <label className="flex items-center gap-2">
+            <span className={inlineLabelClass}>{t(lang, "dateFounded")}</span>
+            <input className={dateInputClass} name="foundedOn" defaultValue={company?.foundedOn ?? ""} dir="ltr" />
           </label>
-          <div className="flex flex-wrap items-end gap-3">
-            <label className="w-36 max-w-full">
-              <span className={labelClass}>{t(lang, "dateFounded")}</span>
-              <input className={fieldClass} name="foundedOn" defaultValue={company?.foundedOn ?? ""} dir="ltr" placeholder={t(lang, "partialDateHint")} />
-            </label>
-            <label className="w-fit max-w-full">
-              <span className={labelClass}>{t(lang, "employeeCount")}</span>
-              <select className={narrowSelectClass} name="employeeCount" defaultValue={company?.employeeCount ?? ""}>
-                <option value="">—</option>
-                {COMPANY_SIZES.map((size) => (
-                  <option key={size} value={size}>
-                    {companySizeLabel(lang, size)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+          <span className={hintClass}>{t(lang, "partialDateHint")}</span>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label className="w-fit max-w-full">
+          <span className={labelClass}>{t(lang, "employeeCount")}</span>
+          <select className={narrowSelectClass} name="employeeCount" defaultValue={company?.employeeCount ?? ""}>
+            <option value="">—</option>
+            {COMPANY_SIZES.map((size) => (
+              <option key={size} value={size}>
+                {companySizeLabel(lang, size)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <label>
+        <span className={labelClass}>{t(lang, "offices")}</span>
+        <input className={fieldClass} name="offices" defaultValue={company?.offices ?? ""} />
+      </label>
+      <fieldset className="m-0 min-w-0 rounded-lg border border-slate-700 px-3 pb-3">
+        <legend className="bg-slate-900 px-1 text-xs text-slate-300">{t(lang, "urls")}</legend>
+        <div className="grid gap-3">
           <UrlField name="websiteHome" label={t(lang, "websiteHome")} value={company?.websiteHome ?? ""} />
           <UrlField name="websitePeople" label={t(lang, "websitePeople")} value={company?.websitePeople ?? ""} />
           <UrlField name="websiteJobs" label={t(lang, "websiteJobs")} value={company?.websiteJobs ?? ""} />
           <UrlField name="linkedinUrl" label={t(lang, "companyLinkedIn")} value={company?.linkedinUrl ?? ""} />
         </div>
-      </div>
-      <label className="md:col-span-2">
-        <span className={labelClass}>{t(lang, "offices")}</span>
-        <input className={fieldClass} name="offices" defaultValue={company?.offices ?? ""} />
-      </label>
+      </fieldset>
+      <TagPicker lang={lang} hide={hide} tags={tags} selected={selectedTagIds} />
       {company ? (
-        <label className="flex items-center gap-2 text-sm md:col-span-2">
+        <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" name="following" value="1" defaultChecked={company.following} />
           {t(lang, "following")}
         </label>
       ) : null}
-      <div className="md:col-span-2">
+      <div>
         <SubmitButton label={t(lang, "save")} thin />
       </div>
     </form>
@@ -101,7 +105,16 @@ function UrlField({ name, label, value }: { name: string; label: string; value: 
       ) : (
         <span className={labelClass}>{label}</span>
       )}
-      <input className={fieldClass} name={name} defaultValue={value} dir="ltr" aria-label={label} />
+      <input
+        className={fieldClass}
+        name={name}
+        type="text"
+        inputMode="url"
+        defaultValue={value}
+        dir="ltr"
+        placeholder="https://"
+        aria-label={label}
+      />
     </div>
   );
 }

@@ -124,10 +124,22 @@ function policyMessage(lang: Lang, rule: string) {
   return t(lang, "errorGeneric");
 }
 
-export function Modal({ title, closeHref, closeLabel, children }: { title: string; closeHref: string; closeLabel: string; children: ReactNode }) {
+export function Modal({
+  title,
+  closeHref,
+  closeLabel,
+  wide = false,
+  children,
+}: {
+  title: string;
+  closeHref: string;
+  closeLabel: string;
+  wide?: boolean;
+  children: ReactNode;
+}) {
   return (
     <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-slate-950/75 p-4">
-      <div className="mt-8 w-full max-w-2xl rounded-xl bg-slate-900 p-4 ring-1 ring-slate-700">
+      <div className={`mt-8 w-full rounded-xl bg-slate-900 p-4 ring-1 ring-slate-700 ${wide ? "max-w-5xl" : "max-w-2xl"}`}>
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{title}</h2>
           <div className="flex items-center gap-3 text-sm">

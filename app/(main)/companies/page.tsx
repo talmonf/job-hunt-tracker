@@ -129,7 +129,7 @@ export default async function CompaniesPage({
         </div>
       )}
       {firstParam(search.modal) === "new" ? (
-        <Modal title={t(lang, "addCompany")} closeHref={closeHref} closeLabel={t(lang, "close")}>
+        <Modal title={t(lang, "addCompany")} closeHref={closeHref} closeLabel={t(lang, "close")} wide>
           <CompanyForm action={createCompany} lang={lang} hide={hide} tags={catalog} />
         </Modal>
       ) : null}
