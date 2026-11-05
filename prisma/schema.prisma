@@ -270,6 +270,7 @@ model Company {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name          String
   nameKey       String
+  description   String   @default("")
   offices       String   @default("")
   websiteHome   String   @default("")
   websitePeople String   @default("")

@@ -29,6 +29,7 @@ export function CompanyForm({
   company?: {
     id: string;
     name: string;
+    description: string;
     offices: string;
     websiteHome: string;
     websitePeople: string;
@@ -66,6 +67,10 @@ export function CompanyForm({
           </select>
         </label>
       </div>
+      <label>
+        <span className={labelClass}>{t(lang, "description")}</span>
+        <textarea className={fieldClass} name="description" rows={4} defaultValue={company?.description ?? ""} />
+      </label>
       <label>
         <span className={labelClass}>{t(lang, "offices")}</span>
         <input className={fieldClass} name="offices" defaultValue={company?.offices ?? ""} />

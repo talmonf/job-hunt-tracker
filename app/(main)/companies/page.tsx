@@ -95,6 +95,11 @@ export default async function CompaniesPage({
                       <Link className="text-sky-300" href={`/companies/${company.id}`}>
                         {dash(company.name, hide)}
                       </Link>
+                      {company.description.trim() ? (
+                        <p className="mt-0.5 max-w-sm truncate text-xs text-slate-400">
+                          {dash(company.description.replace(/\s+/g, " "), hide)}
+                        </p>
+                      ) : null}
                     </td>
                     <td className="px-3 py-2">
                       <CompanyFollowingToggle companyId={company.id} following={company.following} lang={lang} />

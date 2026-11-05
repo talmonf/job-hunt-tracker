@@ -111,6 +111,7 @@ function companyFields(formData: FormData) {
     employeeCount = rawSize;
   }
   return {
+    description: requiredText(formData.get("description")),
     offices: requiredText(formData.get("offices")),
     websiteHome: requiredText(formData.get("websiteHome")),
     websitePeople: requiredText(formData.get("websitePeople")),
