@@ -42,11 +42,11 @@ export function CompanyForm({
   return (
     <form action={action} className="grid max-w-5xl gap-3">
       {company ? <input type="hidden" name="companyId" value={company.id} /> : null}
-      <label>
-        <span className={labelClass}>{t(lang, "company")}</span>
-        <input className={fieldClass} name="name" defaultValue={company?.name ?? ""} required />
-      </label>
       <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
+        <label className="w-64 max-w-full">
+          <span className={labelClass}>{t(lang, "company")}</span>
+          <input className={fieldClass} name="name" defaultValue={company?.name ?? ""} required />
+        </label>
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
           <label className="flex items-center gap-2">
             <span className={inlineLabelClass}>{t(lang, "dateFounded")}</span>
