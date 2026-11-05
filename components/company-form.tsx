@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import type { Lang } from "@/lib/i18n";
 import { companySizeLabel, t } from "@/lib/i18n";
 import { COMPANY_SIZES } from "@/lib/company-size";
@@ -78,10 +81,10 @@ export function CompanyForm({
       <fieldset className="m-0 min-w-0 rounded-lg border border-slate-700 px-3 pb-3">
         <legend className="bg-slate-900 px-1 text-xs text-slate-300">{t(lang, "urls")}</legend>
         <div className="grid gap-3">
-          <UrlField name="websiteHome" label={t(lang, "websiteHome")} value={company?.websiteHome ?? ""} />
-          <UrlField name="websitePeople" label={t(lang, "websitePeople")} value={company?.websitePeople ?? ""} />
-          <UrlField name="websiteJobs" label={t(lang, "websiteJobs")} value={company?.websiteJobs ?? ""} />
-          <UrlField name="linkedinUrl" label={t(lang, "companyLinkedIn")} value={company?.linkedinUrl ?? ""} />
+          <UrlField lang={lang} name="websiteHome" label={t(lang, "websiteHome")} value={company?.websiteHome ?? ""} saved={Boolean(company)} />
+          <UrlField lang={lang} name="websitePeople" label={t(lang, "websitePeople")} value={company?.websitePeople ?? ""} saved={Boolean(company)} />
+          <UrlField lang={lang} name="websiteJobs" label={t(lang, "websiteJobs")} value={company?.websiteJobs ?? ""} saved={Boolean(company)} />
+          <UrlField lang={lang} name="linkedinUrl" label={t(lang, "companyLinkedIn")} value={company?.linkedinUrl ?? ""} saved={Boolean(company)} />
         </div>
       </fieldset>
       <TagPicker lang={lang} hide={hide} tags={tags} selected={selectedTagIds} />
@@ -98,19 +101,72 @@ export function CompanyForm({
   );
 }
 
-function UrlField({ name, label, value }: { name: string; label: string; value: string }) {
+function UrlField({
+  lang,
+  name,
+  label,
+  value,
+  saved,
+}: {
+  lang: Lang;
+  name: string;
+  label: string;
+  value: string;
+  saved: boolean;
+}) {
   const href = value.trim();
-  const linked = isHttpUrl(href);
-  return (
-    <div>
-      {linked ? (
-        <a className={`${labelClass} text-sky-300 hover:text-sky-200`} href={href} target="_blank" rel="noreferrer">
-          {label}
-        </a>
-      ) : (
+  const canShowLink = saved && href !== "";
+  const [editing, setEditing] = useState(!canShowLink);
+  const opened = useRef(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (opened.current) inputRef.current?.focus();
+  }, [editing]);
+
+  if (!editing) {
+    return (
+      <div>
         <span className={labelClass}>{label}</span>
-      )}
+        <div className="flex min-w-0 items-center gap-1">
+          {isHttpUrl(href) ? (
+            <a
+              className="min-w-0 truncate text-sm text-sky-300 hover:text-sky-200"
+              href={href}
+              target="_blank"
+              rel="noreferrer"
+              dir="ltr"
+              title={href}
+            >
+              {href}
+            </a>
+          ) : (
+            <span className="min-w-0 truncate text-sm text-slate-100" dir="ltr" title={href}>
+              {href}
+            </span>
+          )}
+          <button
+            type="button"
+            className="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+            aria-label={t(lang, "edit")}
+            onClick={() => {
+              opened.current = true;
+              setEditing(true);
+            }}
+          >
+            <PencilIcon />
+          </button>
+          <input type="hidden" name={name} value={value} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <label>
+      <span className={labelClass}>{label}</span>
       <input
+        ref={inputRef}
         className={fieldClass}
         name={name}
         type="text"
@@ -120,6 +176,15 @@ function UrlField({ name, label, value }: { name: string; label: string; value: 
         placeholder="https://"
         aria-label={label}
       />
-    </div>
+    </label>
+  );
+}
+
+function PencilIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4 fill-current">
+      <path d="M13.2 2.8a1.5 1.5 0 0 1 2.1 0l1.9 1.9a1.5 1.5 0 0 1 0 2.1l-8.3 8.3-3.6.7.6-3.7 7.3-9.3Z" />
+      <path d="M3 17.2h14v1.3H3z" />
+    </svg>
   );
 }
