@@ -7,17 +7,20 @@ import { t } from "@/lib/i18n";
 import { dash } from "@/lib/mask";
 import { assignmentTags } from "@/lib/tags";
 import { tenureLabel } from "@/lib/tenure";
-import { formatDate } from "@/lib/dates";
+import { dateInputValue, formatDate } from "@/lib/dates";
 import { loadJobFillAccess } from "@/lib/ai/feature-grants";
 import { deleteCompany, linkContactToCompany, updateCompany } from "@/lib/actions/companies";
 import { createContact, createNote } from "@/lib/actions/network";
-import { employmentNoteLabel, jobNoteLabel } from "@/lib/notes";
+import { employmentNoteLabel, jobNoteLabel, notePreview } from "@/lib/notes";
 import { Modal, PageFrame } from "@/components/chrome";
 import { CompanyForm } from "@/components/company-form";
 import { CompanyTabs } from "@/components/company-tabs";
 import { ContactFields } from "@/components/contact-fields";
+import { ContactDateEditor, ContactStatusEditor, ContactWillingEditor } from "@/components/contact-inline";
+import { ExpandableNote } from "@/components/expandable-note";
 import { JobCreateForm } from "@/components/job-create-form";
 import { LinkCompanyContact } from "@/components/link-company-contact";
+import { TagChips } from "@/components/tag-chip";
 import { ConfirmSubmit } from "@/components/widgets";
 import { NoteFields } from "@/components/note-fields";
 
@@ -47,7 +50,16 @@ export default async function CompanyDetailPage({
       where: { id, userId: user.id },
       include: {
         jobs: { orderBy: [{ companyName: "asc" }, { title: "asc" }] },
-        contacts: { include: { contact: true } },
+        contacts: {
+          include: {
+            contact: {
+              include: {
+                tags: { include: { tag: true } },
+                notes: { orderBy: { updatedAt: "desc" }, take: 1 },
+              },
+            },
+          },
+        },
         notes: { orderBy: { updatedAt: "desc" } },
         tags: { include: { tag: true } },
       },
@@ -143,21 +155,62 @@ export default async function CompanyDetailPage({
               {people.length === 0 ? (
                 <p className="text-sm text-slate-400">{t(lang, company.kind === "own" ? "noOwnCompanyContacts" : "noCompanyContacts")}</p>
               ) : (
-                <ul className="space-y-2 text-sm">
-                  {people.map((row) => {
-                    const range = tenureLabel(row, { unknown: t(lang, "dateUnknown"), present: t(lang, "present") });
-                    return (
-                      <li key={row.contactId}>
-                        <Link className="text-sky-300" href={`/contacts/${row.contactId}`}>
-                          {dash(row.contact.fullName, hide)}
-                        </Link>
-                        {row.contact.role ? <span className="text-slate-400"> · {dash(row.contact.role, hide)}</span> : null}
-                        {row.relationship.trim() ? <span className="text-slate-400"> · {dash(row.relationship, hide)}</span> : null}
-                        {range ? <span className="text-slate-400"> · {range}</span> : null}
-                      </li>
-                    );
-                  })}
-                </ul>
+                <div className="overflow-x-auto rounded-lg border border-slate-700">
+                  <table className="min-w-full text-start text-sm">
+                    <thead className="bg-slate-800/80 text-xs uppercase tracking-wide text-slate-300">
+                      <tr>
+                        <th className="px-3 py-2">{t(lang, "fullName")}</th>
+                        <th className="px-3 py-2">{t(lang, "tags")}</th>
+                        <th className="px-3 py-2">{t(lang, "role")}</th>
+                        <th className="px-3 py-2">{t(lang, "workplace")}</th>
+                        <th className="px-3 py-2">{t(lang, "relationship")}</th>
+                        <th className="px-3 py-2">{`${t(lang, "workedFrom")} – ${t(lang, "workedTo")}`}</th>
+                        <th className="px-3 py-2">{t(lang, "status")}</th>
+                        <th className="px-3 py-2">{t(lang, "nextActionDate")}</th>
+                        <th className="px-3 py-2">{t(lang, "willing")}</th>
+                        <th className="px-3 py-2">{t(lang, "note")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {people.map((row) => {
+                        const contact = row.contact;
+                        const range = tenureLabel(row, { unknown: t(lang, "dateUnknown"), present: t(lang, "present") });
+                        return (
+                          <tr key={row.contactId} className="border-t border-slate-800">
+                            <td className="px-3 py-2">
+                              <Link className="text-sky-300" href={`/contacts/${contact.id}`}>{dash(contact.fullName, hide)}</Link>
+                            </td>
+                            <td className="px-3 py-2"><TagChips tags={assignmentTags(contact.tags)} hide={hide} /></td>
+                            <td className="px-3 py-2">{dash(contact.role, hide)}</td>
+                            <td className="px-3 py-2">{dash(contact.workplace, hide)}</td>
+                            <td className="px-3 py-2">{dash(row.relationship, hide)}</td>
+                            <td className="px-3 py-2">{range || "—"}</td>
+                            <td className="px-3 py-2">
+                              <ContactStatusEditor contactId={contact.id} status={contact.status} lang={lang} />
+                            </td>
+                            <td className="px-3 py-2">
+                              <ContactDateEditor
+                                contactId={contact.id}
+                                value={contact.nextActionDate ? dateInputValue(contact.nextActionDate, user.timezone) : ""}
+                                lang={lang}
+                              />
+                            </td>
+                            <td className="px-3 py-2">
+                              <ContactWillingEditor contactId={contact.id} willing={contact.willingToRecommend} lang={lang} />
+                            </td>
+                            <td className="px-3 py-2">
+                              <ExpandableNote
+                                text={contact.notes[0] ? dash(notePreview(contact.notes[0], lang), hide) : "—"}
+                                moreLabel={t(lang, "more")}
+                                lessLabel={t(lang, "less")}
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           ),
