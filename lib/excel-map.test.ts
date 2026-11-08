@@ -42,9 +42,11 @@ test("winter dates still land at 09:00 local", () => {
 test("application answers fill the summary and the job status", () => {
   assert.equal(applicationOutcome("לא עברתי"), "rejected");
   assert.equal(applicationOutcome("קיבלתי הצעה"), "offer");
+  assert.equal(applicationOutcome("חתמתי על חוזה"), "signed");
   assert.equal(applicationOutcome("עברתי לראיון"), "interviewing");
   assert.equal(applicationOutcome("לא קיבלתי הצעה"), null);
   assert.equal(isTerminalJobStatus("rejected"), true);
+  assert.equal(isTerminalJobStatus("signed"), true);
   assert.equal(isTerminalJobStatus("interviewing"), false);
   assert.equal(followUpNoteFromReminder("כן"), "שלחתי מייל תזכורת: כן");
   assert.match(applicationSummary({ how: "לינקדאין", response: "לא עברתי", gotUpdate: "לא", notes: "הערה", reply: "" }), /תשובה: לא עברתי/);

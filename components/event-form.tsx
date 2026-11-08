@@ -73,7 +73,7 @@ export function EventForm({
   submitInline?: (formData: FormData) => Promise<InlineEventResult>;
   onInlineResult?: (result: Extract<InlineEventResult, { ok: true }>) => void;
 }) {
-  const [type, setType] = useState(event?.type || defaultType || "interest");
+  const [type, setType] = useState(event?.type || defaultType || "");
   const [jobId, setJobId] = useState(defaultJobId || "");
   const [inlineError, setInlineError] = useState("");
   const [inlinePending, setInlinePending] = useState(false);
@@ -109,15 +109,25 @@ export function EventForm({
           <input type="hidden" name="contactId" value={defaultContactId || ""} />
         </>
       ) : null}
-      <label>
+      <label className="w-fit max-w-full">
         <span className={labelClass}>{t(lang, "eventType")}</span>
-        <select className={fieldClass} name="type" value={type} onChange={(e) => setType(e.target.value)}>
-          {EVENT_TYPES.map((value) => (
-            <option key={value} value={value}>
-              {eventTypeLabel(lang, value)}
-            </option>
-          ))}
-        </select>
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <select
+            className="w-56 max-w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-start text-sm text-slate-100 outline-none focus:border-sky-500"
+            name="type"
+            value={type}
+            required
+            onChange={(e) => setType(e.target.value)}
+          >
+            <option value="">{t(lang, "chooseEventType")}</option>
+            {EVENT_TYPES.map((value) => (
+              <option key={value} value={value}>
+                {eventTypeLabel(lang, value)}
+              </option>
+            ))}
+          </select>
+          {type === "contract" ? <span className="text-[11px] italic text-slate-500">{t(lang, "contractStatusHint")}</span> : null}
+        </span>
       </label>
       {lockLinks ? null : (
         <div className="grid gap-3 sm:grid-cols-2">

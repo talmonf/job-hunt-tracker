@@ -2,7 +2,7 @@ import type { EventType, JobStatus } from "@prisma/client";
 import { eventScheduledStart } from "./events";
 
 /** Statuses where a follow-up would only nag. Offer, on hold, and parked still need a check-in. */
-const FINISHED_STATUSES = new Set<JobStatus>(["rejected", "not_applicable", "withdrawn"]);
+const FINISHED_STATUSES = new Set<JobStatus>(["rejected", "not_applicable", "withdrawn", "signed"]);
 
 export const FOLLOW_UP_UPDATE_TYPES = ["outreach", "application", "response", "meeting", "status_change"] as const satisfies readonly EventType[];
 

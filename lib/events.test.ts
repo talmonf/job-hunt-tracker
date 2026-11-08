@@ -16,6 +16,7 @@ test("event types map to job status", () => {
   assert.equal(defaultResultingStatus("application"), "applied");
   assert.equal(defaultResultingStatus("response"), null);
   assert.equal(defaultResultingStatus("meeting"), "interviewing");
+  assert.equal(defaultResultingStatus("contract"), "signed");
   assert.equal(defaultResultingStatus("status_change"), null);
 });
 
@@ -40,6 +41,8 @@ test("meeting labels say the stage was scheduled", () => {
   assert.equal(eventHappenedLabel("en", "meeting", "hr"), "HR / screening meeting scheduled");
   assert.equal(eventHappenedLabel("he", "meeting", "hr"), "פגישה נקבעה (אישיותי / HR)");
   assert.equal(eventHappenedLabel("en", "application"), "Application sent");
+  assert.equal(eventHappenedLabel("en", "contract"), "Signed the contract");
+  assert.equal(eventHappenedLabel("he", "contract"), "חתמתי על חוזה");
 });
 
 test("status updates include the new status", () => {

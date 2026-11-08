@@ -188,10 +188,10 @@ function isUnique(error: unknown) {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 }
 
-const activeJobStatuses = new Set<string>(ACTIVE_JOB_STATUSES);
+const shownOnCompany = new Set<string>([...ACTIVE_JOB_STATUSES, "signed"]);
 
-/** One role always shows. Several roles show only the ones still being pursued. */
+/** One role always shows. Several roles show the ones still in play, and a signed contract. */
 export function jobsForCompanyStatus<T extends { status: string }>(jobs: readonly T[]): T[] {
   if (jobs.length <= 1) return [...jobs];
-  return jobs.filter((job) => activeJobStatuses.has(job.status));
+  return jobs.filter((job) => shownOnCompany.has(job.status));
 }

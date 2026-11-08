@@ -7,6 +7,7 @@ export const JOB_STATUSES = [
   "applied",
   "interviewing",
   "offer",
+  "signed",
   "rejected",
   "not_applicable",
   "withdrawn",
@@ -37,7 +38,7 @@ export const HYBRID_NOTE_MAX = 200;
 
 export const ENGAGEMENTS = ["employee", "freelance"] as const satisfies readonly Engagement[];
 
-export const EVENT_TYPES = ["interest", "outreach", "application", "response", "meeting", "status_change"] as const satisfies readonly EventType[];
+export const EVENT_TYPES = ["interest", "outreach", "application", "response", "meeting", "contract", "status_change"] as const satisfies readonly EventType[];
 
 export const CHANNELS = ["email", "whatsapp", "linkedin_inmail", "phone", "video", "in_person", "other"] as const;
 
@@ -107,6 +108,8 @@ export function defaultResultingStatus(type: EventType): JobStatus | null {
       return null;
     case "meeting":
       return "interviewing";
+    case "contract":
+      return "signed";
     case "status_change":
       return null;
   }

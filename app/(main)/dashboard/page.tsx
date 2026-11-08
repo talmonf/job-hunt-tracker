@@ -149,7 +149,7 @@ export default async function DashboardPage({
         />
       </div>
       <h2 className="mb-3 mt-8 text-lg">{t(lang, "pipeline")}</h2>
-      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5 xl:grid-cols-10">
+      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-11">
         {JOB_STATUSES.map((status) => (
           <li key={status}>
             <Link

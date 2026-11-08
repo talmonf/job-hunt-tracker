@@ -33,6 +33,7 @@ enum JobStatus {
   on_hold
   parked
   not_applicable
+  signed
 }
 
 enum EventType {
@@ -42,6 +43,7 @@ enum EventType {
   response
   meeting
   status_change
+  contract
 }
 
 enum Channel {

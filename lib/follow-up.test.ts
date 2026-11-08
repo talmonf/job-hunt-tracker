@@ -15,7 +15,7 @@ test("a missing follow-up date is not cleared again", () => {
 });
 
 test("a finished role drops its follow-up even when nothing happened after the date", () => {
-  for (const status of ["rejected", "not_applicable", "withdrawn"]) {
+  for (const status of ["rejected", "not_applicable", "withdrawn", "signed"]) {
     assert.equal(followUpSuperseded({ followUpAt: due, status, events: [event("interest", before)] }), true);
   }
 });

@@ -1,4 +1,5 @@
 import { prisma } from "../prisma";
+import type { JobStatus } from "@prisma/client";
 import { recomputeJobStatus } from "../job-status";
 import { fetchBoard } from "./fetch";
 import { gmailAccess, listMessageIds, readMessage } from "./gmail";
@@ -182,7 +183,7 @@ async function storeReply(
   userId: string,
   message: { id: string; subject: string; snippet: string; date: Date | null; text: string },
   verdict: "applied" | "rejected",
-  jobs: { id: string; companyName: string; title: string; status: "interest" | "contacted" | "applied" | "interviewing" | "offer" | "rejected" | "withdrawn" | "on_hold" | "parked" | "not_applicable" }[],
+  jobs: { id: string; companyName: string; title: string; status: JobStatus }[],
 ) {
   const target = extractReplyTarget(message.subject, message.text);
   const job = matchKnownJob(target.company, target.title, jobs);

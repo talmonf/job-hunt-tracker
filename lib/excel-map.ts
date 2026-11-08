@@ -5,7 +5,7 @@ import { excelSerialToUtcDate, wallClockToUtc } from "./dates";
 /** Clock used when a MentMe cell has a calendar date and no time. */
 export const IMPORTED_DATE_TIME = "09:00";
 
-const TERMINAL_JOB_STATUSES = new Set<JobStatus>(["rejected", "offer", "withdrawn", "not_applicable"]);
+const TERMINAL_JOB_STATUSES = new Set<JobStatus>(["rejected", "offer", "signed", "withdrawn", "not_applicable"]);
 
 export function isTerminalJobStatus(status: string | null | undefined): status is JobStatus {
   return !!status && TERMINAL_JOB_STATUSES.has(status as JobStatus);
@@ -24,6 +24,7 @@ export function applicationOutcome(response: string): JobStatus | null {
   if (/משכתי את המועמדות|משכתי מועמדות|withdrawn/.test(text)) return "withdrawn";
   if (/לא רלוונטי|לא מתאים|not applicable/.test(text)) return "not_applicable";
   if (/לא קיבלתי הצעה/.test(text)) return null;
+  if (/חתמתי על חוזה|חוזה חתום|contract signed|signed the contract/.test(text)) return "signed";
   if (/קיבלתי הצעה|הצעת עבודה|\boffer\b/.test(text)) return "offer";
   if (/זומנתי|עברתי לראיון|יש ראיון|\binterview\b|ראיון/.test(text)) return "interviewing";
   return null;
