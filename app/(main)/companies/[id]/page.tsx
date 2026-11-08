@@ -52,7 +52,7 @@ export default async function CompanyDetailPage({
         tags: { include: { tag: true } },
       },
     }),
-    prisma.company.findMany({ where: { userId: user.id }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.company.findMany({ where: { userId: user.id }, orderBy: { name: "asc" }, select: { id: true, name: true, kind: true } }),
     prisma.job.findMany({ where: { userId: user.id }, orderBy: { companyName: "asc" } }),
     prisma.contact.findMany({ where: { userId: user.id }, orderBy: { fullName: "asc" } }),
     prisma.employment.findMany({ where: { userId: user.id }, orderBy: { startDate: "desc" } }),
@@ -85,14 +85,14 @@ export default async function CompanyDetailPage({
       lang={lang}
       backHref="/companies"
       title={dash(company.name, hide)}
-      description={t(lang, "companyDetailIntro")}
+      description={company.kind === "own" ? t(lang, "companyOwnIntro") : t(lang, "companyDetailIntro")}
       search={search}
     >
       <CompanyTabs
         initial={tab}
         tabs={[
           { id: "details", label: t(lang, "detailsSection") },
-          { id: "jobs", label: t(lang, "jobs") },
+          { id: "jobs", label: company.kind === "own" ? t(lang, "roles") : t(lang, "jobs") },
           { id: "contacts", label: t(lang, "contacts") },
           { id: "notes", label: t(lang, "notes") },
         ]}
@@ -139,9 +139,9 @@ export default async function CompanyDetailPage({
               <Link className={addButton} href={`${contactsHref}&modal=contact`}>
                 {t(lang, "addContact")}
               </Link>
-              <LinkCompanyContact lang={lang} companyId={company.id} contacts={linkable} action={linkContactToCompany} />
+              <LinkCompanyContact lang={lang} companyId={company.id} contacts={linkable} own={company.kind === "own"} action={linkContactToCompany} />
               {people.length === 0 ? (
-                <p className="text-sm text-slate-400">{t(lang, "noCompanyContacts")}</p>
+                <p className="text-sm text-slate-400">{t(lang, company.kind === "own" ? "noOwnCompanyContacts" : "noCompanyContacts")}</p>
               ) : (
                 <ul className="space-y-2 text-sm">
                   {people.map((row) => {
@@ -152,6 +152,7 @@ export default async function CompanyDetailPage({
                           {dash(row.contact.fullName, hide)}
                         </Link>
                         {row.contact.role ? <span className="text-slate-400"> · {dash(row.contact.role, hide)}</span> : null}
+                        {row.relationship.trim() ? <span className="text-slate-400"> · {dash(row.relationship, hide)}</span> : null}
                         {range ? <span className="text-slate-400"> · {range}</span> : null}
                       </li>
                     );

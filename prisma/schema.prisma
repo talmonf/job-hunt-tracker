@@ -34,6 +34,9 @@ enum JobStatus {
   parked
   not_applicable
   signed
+  exploring
+  preparing
+  practicing
 }
 
 enum EventType {
@@ -97,6 +100,21 @@ enum WorkArrangement {
 enum Engagement {
   employee
   freelance
+  consultant
+  fractional
+  independent
+}
+
+enum CompanyKind {
+  tracked
+  own
+}
+
+enum CompanyStage {
+  idea
+  forming
+  running
+  paused
 }
 
 enum CompanySize {
@@ -281,6 +299,8 @@ model Company {
   foundedOn     String       @default("")
   employeeCount CompanySize?
   following     Boolean      @default(true)
+  kind          CompanyKind  @default(tracked)
+  stage         CompanyStage?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   jobs          Job[]
@@ -305,6 +325,7 @@ model Job {
   workArrangement        WorkArrangement?
   hybridNote             String    @default("")
   engagement             Engagement?
+  engagementNote         String    @default("")
   description            String    @default("")
   interestDate           DateTime
   followUpAt             DateTime?
@@ -416,6 +437,7 @@ model ContactCompany {
   startedUnknown Boolean @default(false)
   endedOn        String  @default("")
   endedUnknown   Boolean @default(false)
+  relationship   String  @default("")
 
   @@id([contactId, companyId])
   @@index([companyId])

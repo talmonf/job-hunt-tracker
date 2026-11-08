@@ -1,3 +1,17 @@
+export const COMPANY_KINDS = ["tracked", "own"] as const;
+
+export const COMPANY_STAGES = ["idea", "forming", "running", "paused"] as const;
+
+export const RELATIONSHIP_MAX = 80;
+
+export type CompanyKindName = (typeof COMPANY_KINDS)[number];
+
+export type CompanyStageName = (typeof COMPANY_STAGES)[number];
+
+export function isCompanyStage(value: string): value is CompanyStageName {
+  return (COMPANY_STAGES as readonly string[]).includes(value);
+}
+
 export function companyNameKey(name: string): string {
   return name.trim().toLowerCase();
 }
@@ -27,13 +41,18 @@ export type NamedCompany = {
   startedUnknown: boolean;
   endedOn: string;
   endedUnknown: boolean;
+  relationship?: string;
 };
 
 /** A contact's workplace is one of their companies. A name that is not listed yet is added. */
-export function withWorkplaceCompany(links: readonly NamedCompany[], workplace: string): NamedCompany[] {
+export function withWorkplaceCompany(
+  links: readonly NamedCompany[],
+  workplace: string,
+): Array<NamedCompany & { relationship: string }> {
   const name = workplace.trim();
-  if (!name || links.some((link) => sameCompanyName(link.name, name))) return [...links];
-  return [{ name, startedOn: "", startedUnknown: false, endedOn: "", endedUnknown: false }, ...links];
+  const normalized = links.map((link) => ({ ...link, relationship: link.relationship ?? "" }));
+  if (!name || normalized.some((link) => sameCompanyName(link.name, name))) return normalized;
+  return [{ name, startedOn: "", startedUnknown: false, endedOn: "", endedUnknown: false, relationship: "" }, ...normalized];
 }
 
 /** Keep an explicit match. Otherwise prefer a company they still work at, then the first listed. */

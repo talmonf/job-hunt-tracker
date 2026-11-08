@@ -92,6 +92,7 @@ export default async function EventsPage({
   const jobOptions = jobs.map((job) => ({
     id: job.id,
     label: dash(`${job.companyName}${job.title ? ` — ${job.title}` : ""}`, hide),
+    engagement: job.engagement,
   }));
   const contactOptions = contacts.map((item) => ({ id: item.id, label: dash(item.fullName, hide) }));
   const noteOptions = notes.map((item) => ({ id: item.id, label: dash(item.title, hide) }));

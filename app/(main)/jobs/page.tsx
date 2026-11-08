@@ -6,7 +6,7 @@ import { allParams, firstParam, preserveQuery } from "@/lib/http";
 import { assignmentTags, parseTagMatch, tagChipStyle, tagFilter, tagSwatchStyle, type TagMatchMode, type TagRef } from "@/lib/tags";
 import { parseDateOnly } from "@/lib/forms";
 import { ACTIVE_JOB_STATUSES, JOB_STATUSES, statusesForJobList } from "@/lib/events";
-import { jobAttributeLabel, statusLabel, t, workArrangementLabel, type Lang } from "@/lib/i18n";
+import { engagementLabel, jobAttributeLabel, statusLabel, t, workArrangementLabel, type Lang } from "@/lib/i18n";
 import { formatProcessProgress, processProgress } from "@/lib/process-steps";
 import { dash, maskText } from "@/lib/mask";
 import { formatDate, formatDateTime } from "@/lib/dates";
@@ -192,9 +192,9 @@ export default async function JobsPage({
                   <td className="px-3 py-2">{dash(job.location, hide)}</td>
                   <td className="px-3 py-2">{job.employmentType ? jobAttributeLabel(lang, job.employmentType) : "—"}</td>
                   <td className="px-3 py-2">{job.workArrangement ? workArrangementLabel(lang, job.workArrangement, job.hybridNote) : "—"}</td>
-                  <td className="px-3 py-2">{job.engagement ? jobAttributeLabel(lang, job.engagement) : "—"}</td>
+                  <td className="px-3 py-2">{job.engagement ? engagementLabel(lang, job.engagement, job.engagementNote) : "—"}</td>
                   <td className="px-3 py-2">
-                    <JobStatusEditor jobId={job.id} status={job.status} lang={lang} />
+                    <JobStatusEditor jobId={job.id} status={job.status} engagement={job.engagement} lang={lang} />
                   </td>
                   <td className="px-3 py-2">{formatDate(job.interestDate, user.timezone)}</td>
                   <td className="px-3 py-2">{job.followUpAt ? formatDateTime(job.followUpAt, user.timezone) : "—"}</td>

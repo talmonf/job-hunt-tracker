@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { firstParam, preserveQuery } from "@/lib/http";
-import { companySizeLabel, statusLabel, t } from "@/lib/i18n";
+import { companyKindLabel, companySizeLabel, companyStageLabel, statusLabel, t } from "@/lib/i18n";
 import { jobsForCompanyStatus, publishContactCompanies } from "@/lib/companies";
 import { dash } from "@/lib/mask";
 import { assignmentTags } from "@/lib/tags";
@@ -27,11 +27,14 @@ export default async function CompaniesPage({
   await publishContactCompanies(user.id);
   const requested = firstParam(search.following);
   const following = requested === "all" || requested === "0" ? requested : "1";
+  const requestedKind = firstParam(search.kind);
+  const kind = requestedKind === "own" || requestedKind === "tracked" ? requestedKind : "all";
   const [companies, catalog] = await Promise.all([
     prisma.company.findMany({
       where: {
         userId: user.id,
         ...(following === "1" ? { following: true } : following === "0" ? { following: false } : {}),
+        ...(kind === "all" ? {} : { kind }),
       },
       orderBy: { name: "asc" },
       include: {
@@ -54,6 +57,14 @@ export default async function CompaniesPage({
                 <option value="1">{t(lang, "following")}</option>
                 <option value="all">{t(lang, "all")}</option>
                 <option value="0">{t(lang, "notFollowing")}</option>
+              </select>
+            </label>
+            <label className="w-40 min-w-0">
+              <span className={compactLabelClass}>{t(lang, "companyKind")}</span>
+              <select className={compactFieldClass} name="kind" defaultValue={kind}>
+                <option value="all">{t(lang, "all")}</option>
+                <option value="own">{companyKindLabel(lang, "own")}</option>
+                <option value="tracked">{companyKindLabel(lang, "tracked")}</option>
               </select>
             </label>
             <button className="rounded bg-sky-500 px-2 py-0.5 text-xs font-semibold leading-tight text-slate-950" type="submit">
@@ -95,6 +106,14 @@ export default async function CompaniesPage({
                       <Link className="text-sky-300" href={`/companies/${company.id}`}>
                         {dash(company.name, hide)}
                       </Link>
+                      {company.kind === "own" ? (
+                        <span className="ms-2 align-middle text-[11px] font-medium text-teal-300">
+                          {companyKindLabel(lang, "own")}
+                        </span>
+                      ) : null}
+                      {company.stage ? (
+                        <span className="ms-2 text-xs text-slate-400">{companyStageLabel(lang, company.stage)}</span>
+                      ) : null}
                       {company.description.trim() ? (
                         <p className="mt-0.5 max-w-sm truncate text-xs text-slate-400">
                           {dash(company.description.replace(/\s+/g, " "), hide)}

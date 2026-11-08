@@ -36,7 +36,7 @@ export default async function ContactsPage({
   const dir = firstParam(search.dir) === "desc" ? "desc" : "asc";
   const [catalog, companies] = await Promise.all([
     prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
-    prisma.company.findMany({ where: { userId: user.id }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.company.findMany({ where: { userId: user.id }, orderBy: { name: "asc" }, select: { id: true, name: true, kind: true } }),
   ]);
   const tagIds = allParams(search.tag).filter((id) => catalog.some((tag) => tag.id === id));
   const where: Prisma.ContactWhereInput = {

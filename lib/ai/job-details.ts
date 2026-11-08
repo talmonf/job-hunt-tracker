@@ -29,13 +29,14 @@ companyName, title, location,
 employmentType ("full_time" or "part_time"),
 workArrangement ("on_site", "remote", "hybrid", or ""),
 hybridNote (a short phrase such as "3 days in office" or "6 days a month from home" when workArrangement is "hybrid" and the posting states the schedule, otherwise ""),
-engagement ("employee" or "freelance"),
+engagement ("employee", "freelance", "consultant", "fractional", or "independent"),
 tagNames (array of strings).
 Use "" for companyName, title, or location when the posting does not state it. Do not invent those.
 Use "full_time" for employmentType when the posting does not state full-time or part-time.
 Use "" for workArrangement when the posting does not state on-site, remote, or hybrid.
 Use "" for hybridNote unless workArrangement is "hybrid" and the posting states how the hybrid schedule works. Keep it short. Do not invent a schedule.
-Use "employee" for engagement when the posting does not state freelance.
+Use "consultant" for an advisory engagement, "fractional" for an ongoing part-time executive seat, and "independent" when the person is the practice.
+Use "employee" for engagement when the posting does not state freelance, consulting, a fractional seat, or an independent practice.
 Prefer names from this existing tag catalog when they fit: ${catalog}.
 You may propose new short tag names for skills, domains, or seniority that the posting clearly names and that are not in the catalog. At most ${PROPOSED_TAG_CAP} new names. Do not repeat a catalog name.`;
 }

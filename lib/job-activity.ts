@@ -32,7 +32,7 @@ export type DirectStatusResult =
   | { ok: false; error: "required" };
 
 export type EventFormCatalog = {
-  jobs: { id: string; label: string }[];
+  jobs: { id: string; label: string; engagement: string | null }[];
   contacts: { id: string; label: string }[];
   notes: { id: string; label: string }[];
   cvs: { id: string; label: string; jobId: string }[];

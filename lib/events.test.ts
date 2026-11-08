@@ -1,10 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { defaultResultingStatus, eventLoggedAt, eventScheduledStart, statusesForJobList } from "./events";
+import { defaultResultingStatus, eventLoggedAt, eventScheduledStart, statusesForEngagement, statusesForJobList } from "./events";
 import { eventHappenedLabel, meetingKindLabel } from "./i18n";
 
 test("the default job list is the active statuses", () => {
-  assert.deepEqual(statusesForJobList([]), ["interest", "contacted", "applied", "interviewing", "offer"]);
+  assert.deepEqual(statusesForJobList([]), [
+    "interest",
+    "contacted",
+    "applied",
+    "interviewing",
+    "offer",
+    "exploring",
+    "preparing",
+    "practicing",
+  ]);
   assert.deepEqual(statusesForJobList(["parked"]), ["parked"]);
   assert.deepEqual(statusesForJobList(["rejected", "on_hold"]), ["rejected", "on_hold"]);
   assert.deepEqual(statusesForJobList(["nope", "applied"]), ["applied"]);
@@ -18,6 +27,24 @@ test("event types map to job status", () => {
   assert.equal(defaultResultingStatus("meeting"), "interviewing");
   assert.equal(defaultResultingStatus("contract"), "signed");
   assert.equal(defaultResultingStatus("status_change"), null);
+});
+
+test("an independent role uses practice statuses", () => {
+  assert.deepEqual(statusesForEngagement("independent"), [
+    "exploring",
+    "preparing",
+    "practicing",
+    "not_applicable",
+    "withdrawn",
+    "on_hold",
+    "parked",
+  ]);
+  assert.equal(statusesForEngagement("fractional").includes("exploring"), false);
+  assert.equal(statusesForEngagement("consultant").includes("practicing"), false);
+  assert.equal(defaultResultingStatus("contract", "independent"), "practicing");
+  assert.equal(defaultResultingStatus("meeting", "independent"), "preparing");
+  assert.equal(defaultResultingStatus("outreach", "independent"), "exploring");
+  assert.equal(defaultResultingStatus("contract", "fractional"), "signed");
 });
 
 test("legacy meetings treat occurredAt as the scheduled start", () => {

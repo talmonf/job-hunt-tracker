@@ -1,12 +1,40 @@
 import type { EmploymentType, Engagement, EventType, JobStatus, WorkArrangement } from "@prisma/client";
 import { dateTimeInputValue } from "./dates";
 
+export const HIRING_JOB_STATUSES = [
+  "interest",
+  "contacted",
+  "applied",
+  "interviewing",
+  "offer",
+  "signed",
+  "rejected",
+  "not_applicable",
+  "withdrawn",
+  "on_hold",
+  "parked",
+] as const satisfies readonly JobStatus[];
+
+/** Statuses for a role you are building yourself. Hiring statuses stay off this list. */
+export const INDEPENDENT_JOB_STATUSES = [
+  "exploring",
+  "preparing",
+  "practicing",
+  "not_applicable",
+  "withdrawn",
+  "on_hold",
+  "parked",
+] as const satisfies readonly JobStatus[];
+
 export const JOB_STATUSES = [
   "interest",
   "contacted",
   "applied",
   "interviewing",
   "offer",
+  "exploring",
+  "preparing",
+  "practicing",
   "signed",
   "rejected",
   "not_applicable",
@@ -22,7 +50,15 @@ export const ACTIVE_JOB_STATUSES = [
   "applied",
   "interviewing",
   "offer",
+  "exploring",
+  "preparing",
+  "practicing",
 ] as const satisfies readonly JobStatus[];
+
+export function statusesForEngagement(engagement: string | null | undefined): readonly JobStatus[] {
+  if (engagement === "independent") return INDEPENDENT_JOB_STATUSES;
+  return HIRING_JOB_STATUSES;
+}
 
 export function statusesForJobList(selected: readonly string[]): JobStatus[] {
   const picked = selected.filter((status): status is JobStatus => (JOB_STATUSES as readonly string[]).includes(status));
@@ -36,7 +72,15 @@ export const WORK_ARRANGEMENTS = ["on_site", "remote", "hybrid"] as const satisf
 
 export const HYBRID_NOTE_MAX = 200;
 
-export const ENGAGEMENTS = ["employee", "freelance"] as const satisfies readonly Engagement[];
+export const ENGAGEMENT_NOTE_MAX = 200;
+
+export const ENGAGEMENTS = ["employee", "freelance", "consultant", "fractional", "independent"] as const satisfies readonly Engagement[];
+
+const SCOPED_ENGAGEMENTS = new Set<string>(["consultant", "fractional", "independent"]);
+
+export function engagementTakesNote(engagement: string | null | undefined): boolean {
+  return !!engagement && SCOPED_ENGAGEMENTS.has(engagement);
+}
 
 export const EVENT_TYPES = ["interest", "outreach", "application", "response", "meeting", "contract", "status_change"] as const satisfies readonly EventType[];
 
@@ -96,7 +140,22 @@ export function eventFormValues(
   };
 }
 
-export function defaultResultingStatus(type: EventType): JobStatus | null {
+export function defaultResultingStatus(type: EventType, engagement?: string | null): JobStatus | null {
+  if (engagement === "independent") {
+    switch (type) {
+      case "interest":
+      case "outreach":
+        return "exploring";
+      case "application":
+      case "meeting":
+        return "preparing";
+      case "contract":
+        return "practicing";
+      case "response":
+      case "status_change":
+        return null;
+    }
+  }
   switch (type) {
     case "interest":
       return "interest";

@@ -3,7 +3,7 @@ import type { FillAccess } from "@/lib/ai/feature-access";
 import { createJob } from "@/lib/actions/jobs";
 import { t, type Lang } from "@/lib/i18n";
 import type { TagRef } from "@/lib/tags";
-import { AttributeSelect, SubmitButton, WorkArrangementField, fieldClass, labelClass } from "./widgets";
+import { AttributeSelect, EngagementField, SubmitButton, WorkArrangementField, fieldClass, labelClass } from "./widgets";
 import { CompanyNameField } from "./company-picker";
 import { FillJobDetails } from "./fill-job-details";
 import { JobScheduleFields } from "./job-schedule-fields";
@@ -53,7 +53,7 @@ export function JobCreateForm({
           <input className={fieldClass} name="location" />
         </label>
         <AttributeSelect lang={lang} name="employmentType" label={t(lang, "employmentType")} options={EMPLOYMENT_TYPES} />
-        <AttributeSelect lang={lang} name="engagement" label={t(lang, "engagement")} options={ENGAGEMENTS} />
+        <EngagementField lang={lang} options={ENGAGEMENTS} />
         <WorkArrangementField lang={lang} options={WORK_ARRANGEMENTS} />
       </div>
       <FillJobDetails lang={lang} access={jobFillAccess} lead="create">

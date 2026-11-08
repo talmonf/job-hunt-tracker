@@ -1,4 +1,5 @@
 -- Numbered migrations (newest first — add new lines at the top after each migration).
+[x] 032_own_companies.sql
 [x] 031_company_description.sql
 [x] 030_event_response.sql
 [x] 029_tag_color_hex.sql

@@ -20,9 +20,9 @@ test("a finished role drops its follow-up even when nothing happened after the d
   }
 });
 
-test("offer, on hold, and parked keep a follow-up that is still in the future", () => {
+test("offer, on hold, parked, and an active practice keep a follow-up that is still in the future", () => {
   const later = new Date("2026-10-10T06:00:00.000Z");
-  for (const status of ["offer", "on_hold", "parked", "applied", "interviewing"]) {
+  for (const status of ["offer", "on_hold", "parked", "applied", "interviewing", "exploring", "preparing", "practicing"]) {
     assert.equal(
       followUpSuperseded({ followUpAt: later, status, events: [event("outreach", before)] }),
       false,

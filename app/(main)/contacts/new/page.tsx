@@ -39,7 +39,7 @@ export default async function NewContactPage({
       },
     }),
     prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
-    prisma.company.findMany({ where: { userId: user.id }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.company.findMany({ where: { userId: user.id }, orderBy: { name: "asc" }, select: { id: true, name: true, kind: true } }),
   ]);
   const names = link ? assignFieldsByScript(link.firstName, link.lastName) : emptyBilingualName();
   const fullName = displayPersonName(names);

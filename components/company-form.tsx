@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Lang } from "@/lib/i18n";
-import { companySizeLabel, t } from "@/lib/i18n";
+import { companyKindLabel, companySizeLabel, companyStageLabel, t } from "@/lib/i18n";
+import { COMPANY_KINDS, COMPANY_STAGES } from "@/lib/company-name";
 import { COMPANY_SIZES } from "@/lib/company-size";
 import { isHttpUrl } from "@/lib/entity-links";
 import type { TagRef } from "@/lib/tags";
@@ -41,8 +42,12 @@ export function CompanyForm({
     foundedOn: string;
     employeeCount: string | null;
     following: boolean;
+    kind: string;
+    stage: string | null;
   };
 }) {
+  const [kind, setKind] = useState(company?.kind ?? "tracked");
+  const [stage, setStage] = useState(company?.stage || "idea");
   return (
     <form action={action} className="grid max-w-5xl gap-3">
       {company ? <input type="hidden" name="companyId" value={company.id} /> : null}
@@ -58,6 +63,28 @@ export function CompanyForm({
           </label>
           <span className={hintClass}>{t(lang, "partialDateHint")}</span>
         </div>
+        <label className="w-fit max-w-full">
+          <span className={labelClass}>{t(lang, "companyKind")}</span>
+          <select className={narrowSelectClass} name="kind" value={kind} onChange={(event) => setKind(event.target.value)}>
+            {COMPANY_KINDS.map((option) => (
+              <option key={option} value={option}>
+                {companyKindLabel(lang, option)}
+              </option>
+            ))}
+          </select>
+        </label>
+        {kind === "own" ? (
+          <label className="w-fit max-w-full">
+            <span className={labelClass}>{t(lang, "companyStage")}</span>
+            <select className={narrowSelectClass} name="stage" value={stage} onChange={(event) => setStage(event.target.value)}>
+              {COMPANY_STAGES.map((option) => (
+                <option key={option} value={option}>
+                  {companyStageLabel(lang, option)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <label className="w-fit max-w-full">
           <span className={labelClass}>{t(lang, "employeeCount")}</span>
           <select className={narrowSelectClass} name="employeeCount" defaultValue={company?.employeeCount ?? ""}>

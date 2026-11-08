@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
-import { HYBRID_NOTE_MAX } from "@/lib/events";
+import { ENGAGEMENT_NOTE_MAX, engagementTakesNote, HYBRID_NOTE_MAX } from "@/lib/events";
 import type { Lang } from "@/lib/i18n";
 import { jobAttributeLabel, t } from "@/lib/i18n";
 
@@ -58,6 +58,51 @@ export function AttributeSelect({
         ))}
       </select>
     </label>
+  );
+}
+
+export function EngagementField({
+  lang,
+  options,
+  value = "",
+  note = "",
+}: {
+  lang: Lang;
+  options: readonly string[];
+  value?: string;
+  note?: string;
+}) {
+  const [engagement, setEngagement] = useState(value);
+  const scoped = engagementTakesNote(engagement);
+  return (
+    <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
+      <label className="w-fit max-w-full">
+        <span className={labelClass}>{t(lang, "engagement")}</span>
+        <select
+          className={narrowSelectClass}
+          name="engagement"
+          value={engagement}
+          onChange={(event) => setEngagement(event.target.value)}
+        >
+          <option value="">—</option>
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {jobAttributeLabel(lang, option)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className={scoped ? "w-fit max-w-full" : "hidden"}>
+        <span className={labelClass}>{t(lang, "engagementNote")}</span>
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <input className={hybridNoteClass} name="engagementNote" defaultValue={note} maxLength={ENGAGEMENT_NOTE_MAX} />
+          <span className="text-[11px] italic text-slate-500">{t(lang, "engagementNoteHint")}</span>
+        </span>
+      </label>
+      {engagement === "independent" ? (
+        <span className="max-w-xs pb-2 text-[11px] italic text-slate-500">{t(lang, "independentCompanyHint")}</span>
+      ) : null}
+    </div>
   );
 }
 

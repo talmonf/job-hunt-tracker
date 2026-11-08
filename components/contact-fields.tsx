@@ -117,7 +117,7 @@ export function ContactFields({
       if (!existing) {
         setCompaniesOnContact([
           ...companiesOnContact,
-          { name: nextWorkplace, from: "", fromUnknown: false, to: "", toUnknown: false },
+          { name: nextWorkplace, from: "", fromUnknown: false, to: "", toUnknown: false, relationship: "" },
         ]);
       }
       setWorkplace(existing?.name ?? nextWorkplace);
@@ -481,6 +481,7 @@ function initialCompanyChips(selected: CompanyLinkSelection[], workplace: string
       startedUnknown: Boolean(company.startedUnknown),
       endedOn: company.endedOn ?? "",
       endedUnknown: Boolean(company.endedUnknown),
+      relationship: company.relationship ?? "",
     })),
     workplace,
   ).map((link) => ({
@@ -489,6 +490,7 @@ function initialCompanyChips(selected: CompanyLinkSelection[], workplace: string
     fromUnknown: link.startedUnknown,
     to: link.endedOn,
     toUnknown: link.endedUnknown,
+    relationship: link.relationship ?? "",
   }));
 }
 

@@ -4,13 +4,13 @@ import { redirect } from "next/navigation";
 import { prisma } from "../prisma";
 import { requireUser } from "../session";
 import { optionalInt, parseDateOnly, parseDateTime, requiredText } from "../forms";
-import { EMPLOYMENT_TYPES, ENGAGEMENTS, HYBRID_NOTE_MAX, WORK_ARRANGEMENTS } from "../events";
+import { EMPLOYMENT_TYPES, ENGAGEMENT_NOTE_MAX, ENGAGEMENTS, engagementTakesNote, HYBRID_NOTE_MAX, WORK_ARRANGEMENTS } from "../events";
 import { recomputeJobStatus } from "../job-status";
 import { removeStored, saveUpload } from "../files";
 import { deleteCalendarEvent } from "../calendar";
 import { copyCompanyTags, replaceRecordTags } from "../tag-assign";
 import { persistEvent } from "../event-write";
-import { ensureCompany } from "../companies";
+import { companyForJob } from "../companies";
 
 export async function createJob(formData: FormData) {
   const user = await requireUser();
@@ -19,24 +19,27 @@ export async function createJob(formData: FormData) {
   const description = String(formData.get("description") ?? "");
   const interestDate = parseDateOnly(formData.get("interestDate"), user.timezone);
   if (!companyName || !interestDate) redirect(back(formData, "/jobs", "required"));
-  const company = await ensureCompany(prisma, user.id, companyName);
+  const attributes = readJobAttributes(formData);
+  const company = await companyForJob(prisma, user.id, companyName, attributes.engagement);
+  if (company === "tracked") redirect(back(formData, "/jobs", "ownCompany"));
   if (!company) redirect(back(formData, "/jobs", "required"));
   const followUpAt = parseDateTime(formData.get("followUpAt"), user.timezone);
   const reminder = readReminder(formData);
   if (reminder === "invalid") redirect(back(formData, "/jobs", "required"));
+  const openingStatus = attributes.engagement === "independent" ? "exploring" : "interest";
   const job = await prisma.job.create({
     data: {
       userId: user.id,
       companyId: company.id,
       companyName: company.name,
       title,
-      ...readJobAttributes(formData),
+      ...attributes,
       description,
       interestDate,
       followUpAt,
       reminderLeadDays: reminder.days,
       reminderLeadHours: reminder.hours,
-      status: "interest",
+      status: openingStatus,
     },
   });
   const urls = readUrls(formData);
@@ -51,7 +54,7 @@ export async function createJob(formData: FormData) {
       jobId: job.id,
       type: "interest",
       occurredAt: interestDate,
-      resultingStatus: "interest",
+      resultingStatus: openingStatus,
       summary: description.slice(0, 500),
     },
   });
@@ -68,7 +71,9 @@ export async function updateJob(formData: FormData) {
   const interestDate = parseDateOnly(formData.get("interestDate"), user.timezone);
   const followUpAt = parseDateTime(formData.get("followUpAt"), user.timezone);
   if (!companyName || !interestDate) redirect(`/jobs/${job.id}?error=required`);
-  const company = await ensureCompany(prisma, user.id, companyName);
+  const attributes = readJobAttributes(formData);
+  const company = await companyForJob(prisma, user.id, companyName, attributes.engagement);
+  if (company === "tracked") redirect(`/jobs/${job.id}?error=ownCompany`);
   if (!company) redirect(`/jobs/${job.id}?error=required`);
   const reminder = readReminder(formData);
   if (reminder === "invalid") redirect(`/jobs/${job.id}?error=required`);
@@ -82,7 +87,7 @@ export async function updateJob(formData: FormData) {
       companyId: company.id,
       companyName: company.name,
       title: requiredText(formData.get("title")),
-      ...readJobAttributes(formData),
+      ...attributes,
       description: String(formData.get("description") ?? ""),
       interestDate,
       followUpAt,
@@ -200,12 +205,14 @@ export async function deleteEvent(formData: FormData) {
 
 function readJobAttributes(formData: FormData) {
   const workArrangement = optionalEnum(formData.get("workArrangement"), WORK_ARRANGEMENTS);
+  const engagement = optionalEnum(formData.get("engagement"), ENGAGEMENTS);
   return {
     location: requiredText(formData.get("location")),
     employmentType: optionalEnum(formData.get("employmentType"), EMPLOYMENT_TYPES),
     workArrangement,
     hybridNote: workArrangement === "hybrid" ? requiredText(formData.get("hybridNote")).slice(0, HYBRID_NOTE_MAX) : "",
-    engagement: optionalEnum(formData.get("engagement"), ENGAGEMENTS),
+    engagement,
+    engagementNote: engagementTakesNote(engagement) ? requiredText(formData.get("engagementNote")).slice(0, ENGAGEMENT_NOTE_MAX) : "",
   };
 }
 

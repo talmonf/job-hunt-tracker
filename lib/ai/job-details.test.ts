@@ -49,6 +49,12 @@ describe("job details from a description", () => {
     });
   });
 
+  it("keeps consultant, fractional, and independent engagements", () => {
+    assert.equal(normalizeJobDetails({ engagement: "consultant" }, []).fields.engagement, "consultant");
+    assert.equal(normalizeJobDetails({ engagement: "fractional" }, []).fields.engagement, "fractional");
+    assert.equal(normalizeJobDetails({ engagement: "independent" }, []).fields.engagement, "independent");
+  });
+
   it("keeps stated part-time, remote, and freelance values", () => {
     const result = normalizeJobDetails(
       { employmentType: "part_time", workArrangement: "remote", engagement: "freelance" },

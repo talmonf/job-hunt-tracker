@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import type { Lang } from "@/lib/i18n";
 import { channelLabel, eventTypeLabel, stageLabel, statusLabel, t } from "@/lib/i18n";
-import { CHANNELS, EVENT_TYPES, JOB_STATUSES, STAGES } from "@/lib/events";
+import { CHANNELS, EVENT_TYPES, JOB_STATUSES, STAGES, statusesForEngagement } from "@/lib/events";
 import type { LoggedHistoryEvent } from "@/lib/job-activity";
 import { AppointmentRangeField, DateTimeField, fieldClass, labelClass, SubmitButton } from "./widgets";
 
@@ -41,7 +41,7 @@ export function EventForm({
 }: {
   action?: (formData: FormData) => void;
   lang: Lang;
-  jobs: { id: string; label: string }[];
+  jobs: { id: string; label: string; engagement?: string | null }[];
   contacts: { id: string; label: string }[];
   notes: { id: string; label: string }[];
   cvs: { id: string; label: string; jobId?: string }[];
@@ -78,6 +78,13 @@ export function EventForm({
   const [inlineError, setInlineError] = useState("");
   const [inlinePending, setInlinePending] = useState(false);
   const visibleCvs = cvs.filter((cv) => !cv.jobId || cv.jobId === jobId);
+  const engagement = jobs.find((job) => job.id === jobId)?.engagement;
+  const pickedStatus = event?.resultingStatus || defaultResultingStatus || "";
+  const allowedStatuses = statusesForEngagement(engagement);
+  const shownStatuses =
+    !pickedStatus || (allowedStatuses as readonly string[]).includes(pickedStatus) || !(JOB_STATUSES as readonly string[]).includes(pickedStatus)
+      ? allowedStatuses
+      : [pickedStatus, ...allowedStatuses];
 
   async function onInlineSubmit(formEvent: FormEvent<HTMLFormElement>) {
     if (!submitInline) return;
@@ -217,7 +224,7 @@ export function EventForm({
                 required
               >
                 <option value="">{t(lang, "chooseStatus")}</option>
-                {JOB_STATUSES.map((status) => (
+                {shownStatuses.map((status) => (
                   <option key={status} value={status}>
                     {statusLabel(lang, status)}
                   </option>
@@ -244,7 +251,7 @@ export function EventForm({
         <label>
           <span className={labelClass}>{t(lang, "resultingStatus")}</span>
           <select className={fieldClass} name="resultingStatus" defaultValue={event?.resultingStatus || defaultResultingStatus || "rejected"}>
-            {JOB_STATUSES.map((status) => (
+            {shownStatuses.map((status) => (
               <option key={status} value={status}>
                 {statusLabel(lang, status)}
               </option>

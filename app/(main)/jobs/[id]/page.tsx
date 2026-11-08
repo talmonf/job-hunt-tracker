@@ -3,14 +3,14 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { hidePersonalInfo, requireUser } from "@/lib/session";
 import { dateInputValue, dateTimeInputValue, formatDateTime } from "@/lib/dates";
-import { jobAttributeLabel, t, workArrangementLabel } from "@/lib/i18n";
+import { engagementLabel, jobAttributeLabel, t, workArrangementLabel } from "@/lib/i18n";
 import { formatProcessProgress, processProgress, stepTiming } from "@/lib/process-steps";
 import { dash } from "@/lib/mask";
 import { assignmentTags, rankByOverlap } from "@/lib/tags";
 import { EMPLOYMENT_TYPES, ENGAGEMENTS, WORK_ARRANGEMENTS } from "@/lib/events";
 import { deleteCv, deleteJob, updateJob, uploadCv } from "@/lib/actions/jobs";
 import { PageFrame } from "@/components/chrome";
-import { AttributeSelect, SubmitButton, WorkArrangementField, compactFieldClass, fieldClass, labelClass } from "@/components/widgets";
+import { AttributeSelect, EngagementField, SubmitButton, WorkArrangementField, compactFieldClass, fieldClass, labelClass } from "@/components/widgets";
 import { JobScheduleFields } from "@/components/job-schedule-fields";
 import { JobStatusEditor } from "@/components/job-status-editor";
 import { JobUrlsEditor } from "@/components/job-urls";
@@ -147,7 +147,9 @@ export default async function JobDetailPage({
     job.location?.trim() ? { label: t(lang, "location"), value: dash(job.location, hide) } : null,
     job.employmentType ? { label: t(lang, "employmentType"), value: jobAttributeLabel(lang, job.employmentType) } : null,
     job.workArrangement ? { label: t(lang, "workArrangement"), value: workArrangementLabel(lang, job.workArrangement, job.hybridNote) } : null,
-    job.engagement === "freelance" ? { label: t(lang, "engagement"), value: jobAttributeLabel(lang, job.engagement) } : null,
+    job.engagement && job.engagement !== "employee"
+      ? { label: t(lang, "engagement"), value: engagementLabel(lang, job.engagement, job.engagementNote) }
+      : null,
   ].filter((item): item is { label: string; value: string } => item !== null);
   const detailSummary = detailItems.length ? (
     <span className="flex flex-wrap gap-x-4 gap-y-1">
@@ -179,7 +181,7 @@ export default async function JobDetailPage({
       spreadAside
       titleAside={
         <>
-          <JobStatusEditor jobId={job.id} status={job.status} lang={lang} prominent />
+          <JobStatusEditor jobId={job.id} status={job.status} engagement={job.engagement} lang={lang} prominent />
           <Link
             className="w-fit rounded-md bg-sky-500 px-3 py-1.5 text-sm font-semibold text-slate-950 lg:ms-8 lg:justify-self-start"
             href={logHref}
@@ -237,13 +239,7 @@ export default async function JobDetailPage({
                 options={EMPLOYMENT_TYPES}
                 value={job.employmentType ?? ""}
               />
-              <AttributeSelect
-                lang={lang}
-                name="engagement"
-                label={t(lang, "engagement")}
-                options={ENGAGEMENTS}
-                value={job.engagement ?? ""}
-              />
+              <EngagementField lang={lang} options={ENGAGEMENTS} value={job.engagement ?? ""} note={job.engagementNote} />
               <WorkArrangementField
                 lang={lang}
                 options={WORK_ARRANGEMENTS}

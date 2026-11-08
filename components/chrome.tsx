@@ -99,6 +99,8 @@ export function Flash({ lang, search }: { lang: Lang; search: Record<string, str
                                       ? t(lang, "errorCompanyJobs")
                                       : error === "companyName"
                                         ? t(lang, "errorCompanyName")
+                                        : error === "ownCompany"
+                                          ? t(lang, "errorOwnCompany")
                       : error
                         ? t(lang, "errorGeneric")
                         : "";
@@ -182,6 +184,9 @@ export function EmptyState({ children }: { children: ReactNode }) {
 
 export function statusClass(status: string) {
   if (status === "signed") return "text-lime-300";
+  if (status === "practicing") return "text-teal-300";
+  if (status === "preparing") return "text-teal-400";
+  if (status === "exploring") return "text-teal-200";
   if (status === "offer") return "text-emerald-400";
   if (status === "rejected") return "text-rose-400";
   if (status === "not_applicable") return "text-slate-400";
@@ -197,6 +202,9 @@ export function statusChipClass(status: string) {
   if (status === "applied") return "bg-cyan-400 text-cyan-950";
   if (status === "interviewing") return "bg-amber-300 text-amber-950";
   if (status === "signed") return "bg-lime-300 text-lime-950";
+  if (status === "exploring") return "bg-teal-200 text-teal-950";
+  if (status === "preparing") return "bg-teal-300 text-teal-950";
+  if (status === "practicing") return "bg-teal-400 text-teal-950";
   if (status === "offer") return "bg-emerald-400 text-emerald-950";
   if (status === "rejected") return "bg-rose-400 text-rose-950";
   if (status === "withdrawn") return "bg-orange-400 text-orange-950";

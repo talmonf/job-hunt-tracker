@@ -62,4 +62,21 @@ test("a company status cell lists one role, or only active roles when there are 
       { id: "b", status: "signed" },
     ],
   );
+  assert.deepEqual(
+    jobsForCompanyStatus([
+      { id: "a", status: "practicing" },
+      { id: "b", status: "rejected" },
+    ]),
+    [{ id: "a", status: "practicing" }],
+  );
+  assert.deepEqual(
+    jobsForCompanyStatus([
+      { id: "a", status: "exploring" },
+      { id: "b", status: "preparing" },
+    ]),
+    [
+      { id: "a", status: "exploring" },
+      { id: "b", status: "preparing" },
+    ],
+  );
 });

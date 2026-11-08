@@ -60,7 +60,7 @@ export default async function ContactDetailPage({
       include: { tags: { include: { tag: true } } },
     }),
     prisma.tag.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
-    prisma.company.findMany({ where: { userId: user.id }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.company.findMany({ where: { userId: user.id }, orderBy: { name: "asc" }, select: { id: true, name: true, kind: true } }),
   ]);
   if (!contact) notFound();
   const lang = user.uiLanguage;
@@ -178,6 +178,7 @@ export default async function ContactDetailPage({
           startedUnknown: row.startedUnknown,
           endedOn: row.endedOn,
           endedUnknown: row.endedUnknown,
+          relationship: row.relationship,
         }))}
         hide={hide}
       />

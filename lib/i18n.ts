@@ -63,8 +63,20 @@ const dict = {
     job: "Job",
     contact: "Contact",
     addCompany: "Add company",
-    companiesIntro: "Companies you are tracking, and the people and roles tied to them.",
+    companiesIntro: "Companies you are tracking or building, and the people and roles tied to them.",
     companyDetailIntro: "Offices, links, and the jobs, contacts, and notes for this company.",
+    companyOwnIntro: "A company you are building, its stage, and the roles, people, and notes tied to it.",
+    roles: "Roles",
+    companyKind: "This company",
+    companyStage: "Stage",
+    relationship: "Connection",
+    relationshipOwnHint: "Advisor, partner, referral",
+    relationshipTrackedHint: "Their role, if you want it.",
+    relationshipDatesOptional: "Dates are optional.",
+    noOwnCompanyContacts: "No people linked yet.",
+    engagementNote: "Scope",
+    engagementNoteHint: "2 days a week",
+    independentCompanyHint: "A new name becomes your venture. An existing company must already be yours.",
     emptyCompanies: "No companies in this list.",
     following: "Following",
     notFollowing: "Not following",
@@ -359,6 +371,7 @@ const dict = {
     errorGeneric: "Something went wrong. Try again.",
     errorCompanyJobs: "This company still has jobs. Move or delete those jobs first.",
     errorCompanyName: "That company name is already in use.",
+    errorOwnCompany: "Mark this company as yours first, or pick a venture you are building.",
     errorRequired: "Fill in the required fields.",
     errorDate: "Enter a valid date.",
     errorCurrent: "The current password does not match.",
@@ -740,8 +753,20 @@ const dict = {
     job: "משרה",
     contact: "איש קשר",
     addCompany: "הוספת חברה",
-    companiesIntro: "חברות במעקב, והאנשים והמשרות הקשורים אליהן.",
+    companiesIntro: "חברות במעקב או שאתם מקימים, והאנשים והתפקידים שקשורים אליהן.",
     companyDetailIntro: "משרדים, קישורים, והמשרות, אנשי הקשר וההערות של החברה.",
+    companyOwnIntro: "חברה שאתם מקימים, השלב שלה, והתפקידים, האנשים וההערות שקשורים אליה.",
+    roles: "תפקידים",
+    companyKind: "החברה הזו",
+    companyStage: "שלב",
+    relationship: "קשר",
+    relationshipOwnHint: "יועץ, שותף, הפניה",
+    relationshipTrackedHint: "התפקיד שלהם, אם רוצים לציין.",
+    relationshipDatesOptional: "תאריכים הם רשות.",
+    noOwnCompanyContacts: "עדיין אין אנשים מקושרים.",
+    engagementNote: "היקף",
+    engagementNoteHint: "יומיים בשבוע",
+    independentCompanyHint: "שם חדש הופך למיזם שלכם. חברה קיימת צריכה כבר להיות שלכם.",
     emptyCompanies: "אין חברות ברשימה הזו.",
     following: "במעקב",
     notFollowing: "לא במעקב",
@@ -1036,6 +1061,7 @@ const dict = {
     errorGeneric: "משהו השתבש. נסו שוב.",
     errorCompanyJobs: "לחברה זו עדיין יש משרות. העבירו או מחקו אותן קודם.",
     errorCompanyName: "שם החברה כבר קיים.",
+    errorOwnCompany: "סמנו קודם את החברה כשלי, או בחרו מיזם שאתם מקימים.",
     errorRequired: "יש למלא את שדות החובה.",
     errorDate: "יש להזין תאריך תקין.",
     errorCurrent: "הסיסמה הנוכחית אינה תואמת.",
@@ -1369,6 +1395,9 @@ const statusEn: Record<string, string> = {
   interviewing: "Interviewing",
   offer: "Offer",
   signed: "Signed",
+  exploring: "Exploring",
+  preparing: "Preparing",
+  practicing: "Practicing",
   rejected: "Rejected",
   not_applicable: "Not applicable",
   withdrawn: "Withdrawn",
@@ -1383,6 +1412,9 @@ const statusHe: Record<string, string> = {
   interviewing: "בראיונות",
   offer: "הצעה",
   signed: "חתמתי",
+  exploring: "בחינה",
+  preparing: "בהכנה",
+  practicing: "בעיסוק",
   rejected: "נדחה",
   not_applicable: "לא מתאים",
   withdrawn: "משכתי",
@@ -1509,6 +1541,9 @@ const jobAttributeEn: Record<string, string> = {
   hybrid: "Hybrid",
   employee: "Employee",
   freelance: "Freelance",
+  consultant: "Consultant",
+  fractional: "Fractional",
+  independent: "Independent",
 };
 
 const jobAttributeHe: Record<string, string> = {
@@ -1519,10 +1554,49 @@ const jobAttributeHe: Record<string, string> = {
   hybrid: "היברידי",
   employee: "שכיר",
   freelance: "פרילנס",
+  consultant: "יועץ",
+  fractional: "פרקציונלי",
+  independent: "עצמאי",
 };
 
 export function jobAttributeLabel(lang: Lang, value: string): string {
   return (lang === "he" ? jobAttributeHe : jobAttributeEn)[value] ?? value;
+}
+
+export function engagementLabel(lang: Lang, engagement: string, note: string): string {
+  const label = jobAttributeLabel(lang, engagement);
+  const detail = note.trim();
+  if (detail && engagementTakesScope(engagement)) return `${label} (${detail})`;
+  return label;
+}
+
+function engagementTakesScope(engagement: string): boolean {
+  return engagement === "consultant" || engagement === "fractional" || engagement === "independent";
+}
+
+const companyKindEn: Record<string, string> = { tracked: "Tracked", own: "Mine" };
+const companyKindHe: Record<string, string> = { tracked: "במעקב", own: "שלי" };
+
+export function companyKindLabel(lang: Lang, value: string): string {
+  return (lang === "he" ? companyKindHe : companyKindEn)[value] ?? value;
+}
+
+const companyStageEn: Record<string, string> = {
+  idea: "Idea",
+  forming: "Forming",
+  running: "Running",
+  paused: "Paused",
+};
+
+const companyStageHe: Record<string, string> = {
+  idea: "רעיון",
+  forming: "בהקמה",
+  running: "פעיל",
+  paused: "מושהה",
+};
+
+export function companyStageLabel(lang: Lang, value: string): string {
+  return (lang === "he" ? companyStageHe : companyStageEn)[value] ?? value;
 }
 
 export function workArrangementLabel(lang: Lang, arrangement: string, note: string): string {

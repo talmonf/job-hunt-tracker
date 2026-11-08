@@ -4,11 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import type { Lang } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
-import { sameCompanyName } from "@/lib/company-name";
+import { RELATIONSHIP_MAX, sameCompanyName } from "@/lib/company-name";
 import { dash } from "@/lib/mask";
 import { fieldClass, labelClass } from "./widgets";
 
-export type CompanyOption = { id: string; name: string };
+export type CompanyOption = { id: string; name: string; kind?: string };
 
 export type CompanyLinkSelection = {
   id?: string;
@@ -17,6 +17,7 @@ export type CompanyLinkSelection = {
   startedUnknown?: boolean;
   endedOn?: string;
   endedUnknown?: boolean;
+  relationship?: string;
 };
 
 export type CompanyChip = {
@@ -25,6 +26,7 @@ export type CompanyChip = {
   fromUnknown: boolean;
   to: string;
   toUnknown: boolean;
+  relationship: string;
 };
 
 export function CompanyNameField({
@@ -77,7 +79,7 @@ export function CompanyNamesField({
     const name = raw.trim();
     if (!name) return;
     if (!chips.some((item) => sameCompanyName(item.name, name))) {
-      onChipsChange([...chips, { name, from: "", fromUnknown: false, to: "", toUnknown: false }]);
+      onChipsChange([...chips, { name, from: "", fromUnknown: false, to: "", toUnknown: false, relationship: "" }]);
     }
     setDraft("");
   }
@@ -94,6 +96,21 @@ export function CompanyNamesField({
         <ul className="mt-2 space-y-2">
           {chips.map((chip) => {
             const known = companies.find((company) => sameCompanyName(company.name, chip.name));
+            const own = known?.kind === "own";
+            const connection = (
+              <label className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="shrink-0 text-xs leading-none text-slate-300">{t(lang, "relationship")}</span>
+                <input
+                  className="w-64 max-w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-start text-sm text-slate-100 outline-none focus:border-sky-500"
+                  value={chip.relationship}
+                  maxLength={RELATIONSHIP_MAX}
+                  onChange={(event) => update(chip.name, { relationship: event.target.value })}
+                />
+                <span className="text-[11px] italic text-slate-500">
+                  {t(lang, own ? "relationshipOwnHint" : "relationshipTrackedHint")}
+                </span>
+              </label>
+            );
             return (
               <li key={chip.name} className="rounded-md border border-slate-600 p-2">
                 <div className="flex items-center gap-2 text-sm">
@@ -113,6 +130,7 @@ export function CompanyNamesField({
                     ×
                   </button>
                 </div>
+                {own ? connection : null}
                 <div className="mt-2 grid gap-2 md:grid-cols-2">
                   <DateBound
                     lang={lang}
@@ -131,12 +149,14 @@ export function CompanyNamesField({
                     onUnknown={(toUnknown) => update(chip.name, { toUnknown, to: toUnknown ? "" : chip.to })}
                   />
                 </div>
-                <p className="mt-1 text-xs text-slate-500">{t(lang, "stillThereHint")}</p>
+                <p className="mt-1 text-xs text-slate-500">{t(lang, own ? "relationshipDatesOptional" : "stillThereHint")}</p>
+                {own ? null : connection}
                 <input type="hidden" name="companyNames" value={chip.name} />
                 <input type="hidden" name="companyFrom" value={chip.fromUnknown ? "" : chip.from} />
                 <input type="hidden" name="companyFromUnknown" value={chip.fromUnknown ? "1" : "0"} />
                 <input type="hidden" name="companyTo" value={chip.toUnknown ? "" : chip.to} />
                 <input type="hidden" name="companyToUnknown" value={chip.toUnknown ? "1" : "0"} />
+                <input type="hidden" name="companyRelationship" value={chip.relationship} />
               </li>
             );
           })}

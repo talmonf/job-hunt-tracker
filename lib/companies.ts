@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { companyNameKey, defaultWorkplaceName, distinctCompanyNames, sameCompanyName } from "./company-name";
+import { companyNameKey, defaultWorkplaceName, distinctCompanyNames, RELATIONSHIP_MAX, sameCompanyName } from "./company-name";
 import { ACTIVE_JOB_STATUSES } from "./events";
 import { canonicalPartialDate } from "./partial-date";
 import { prisma } from "./prisma";
@@ -24,6 +24,33 @@ export async function ensureCompany(db: CompanyDb, userId: string, name: string)
   }
 }
 
+/**
+ * The company a job belongs to.
+ * An independent role must sit on a company you own. A new name becomes that venture.
+ * An existing tracked company is refused so a client contract is not marked as yours.
+ */
+export async function companyForJob(db: CompanyDb, userId: string, name: string, engagement: string | null) {
+  const trimmed = name.trim();
+  const nameKey = companyNameKey(trimmed);
+  if (!nameKey) return null;
+  const existing = await db.company.findUnique({ where: { userId_nameKey: { userId, nameKey } } });
+  if (engagement === "independent") {
+    if (existing) return existing.kind === "own" ? existing : "tracked";
+    try {
+      return await db.company.create({
+        data: { userId, name: trimmed, nameKey, following: true, kind: "own", stage: "idea" },
+      });
+    } catch (error) {
+      if (!isUnique(error)) throw error;
+      const raced = await db.company.findUnique({ where: { userId_nameKey: { userId, nameKey } } });
+      if (!raced) return null;
+      return raced.kind === "own" ? raced : "tracked";
+    }
+  }
+  if (existing) return existing;
+  return ensureCompany(db, userId, trimmed);
+}
+
 /** Create any of these companies that the user does not already have. Existing rows are left as they are. */
 export async function ensureCompanies(db: CompanyDb, userId: string, names: readonly string[]) {
   const wanted = new Map(distinctCompanyNames(names).map((name) => [companyNameKey(name), name]));
@@ -46,6 +73,7 @@ export type ContactCompanyLink = {
   startedUnknown: boolean;
   endedOn: string;
   endedUnknown: boolean;
+  relationship: string;
 };
 
 export function readContactCompanyLinks(formData: FormData): ContactCompanyLink[] | "invalid" {
@@ -54,6 +82,7 @@ export function readContactCompanyLinks(formData: FormData): ContactCompanyLink[
   const fromUnknown = formData.getAll("companyFromUnknown").map(String);
   const to = formData.getAll("companyTo").map(String);
   const toUnknown = formData.getAll("companyToUnknown").map(String);
+  const relationships = formData.getAll("companyRelationship").map(String);
   if (from.length !== names.length || fromUnknown.length !== names.length || to.length !== names.length || toUnknown.length !== names.length) {
     return "invalid";
   }
@@ -63,7 +92,12 @@ export function readContactCompanyLinks(formData: FormData): ContactCompanyLink[
     const started = readBound(from[index] ?? "", fromUnknown[index] === "1");
     const ended = readBound(to[index] ?? "", toUnknown[index] === "1");
     if (started === "invalid" || ended === "invalid") return "invalid";
-    links.push({ name: names[index], ...startedFields(started), ...endedFields(ended) });
+    links.push({
+      name: names[index],
+      ...startedFields(started),
+      ...endedFields(ended),
+      relationship: (relationships[index] ?? "").trim().slice(0, RELATIONSHIP_MAX),
+    });
   }
   return links;
 }
@@ -97,6 +131,7 @@ export async function replaceContactCompanies(db: CompanyDb, userId: string, con
       startedUnknown: row.startedUnknown,
       endedOn: row.endedOn,
       endedUnknown: row.endedUnknown,
+      relationship: row.relationship,
     })),
   });
   const added = rows.filter((row) => !previousIds.has(row.companyId)).map((row) => row.companyId);
@@ -111,9 +146,9 @@ export async function replaceContactCompanies(db: CompanyDb, userId: string, con
  * An upsert with an empty update is a separate read and insert, so two loads of the
  * companies page can both miss the row and one then fails the primary key.
  */
-export async function ensureContactCompany(db: CompanyDb, contactId: string, companyId: string) {
+export async function ensureContactCompany(db: CompanyDb, contactId: string, companyId: string, relationship = "") {
   await db.contactCompany.createMany({
-    data: [{ contactId, companyId }],
+    data: [{ contactId, companyId, relationship: relationship.trim().slice(0, RELATIONSHIP_MAX) }],
     skipDuplicates: true,
   });
 }

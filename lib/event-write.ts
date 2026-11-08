@@ -2,7 +2,7 @@ import type { Channel, EventType, JobStatus, MeetingStage, User } from "@prisma/
 import { prisma } from "./prisma";
 import { parseDateTime, requiredText } from "./forms";
 import { dateTimeInputValue } from "./dates";
-import { CHANNELS, defaultResultingStatus, EVENT_TYPES, JOB_STATUSES, STAGES } from "./events";
+import { CHANNELS, defaultResultingStatus, EVENT_TYPES, JOB_STATUSES, STAGES, statusesForEngagement } from "./events";
 import { recomputeJobStatus } from "./job-status";
 import { t } from "./i18n";
 import { dash } from "./mask";
@@ -73,6 +73,7 @@ export async function eventFormCatalog(user: Pick<User, "id" | "timezone" | "cal
     jobs: jobs.map((job) => ({
       id: job.id,
       label: dash(`${job.companyName}${job.title ? ` — ${job.title}` : ""}`, hide),
+      engagement: job.engagement,
     })),
     contacts: contacts.map((item) => ({ id: item.id, label: dash(item.fullName, hide) })),
     notes: notes.map((item) => ({ id: item.id, label: dash(item.title, hide) })),
@@ -90,6 +91,7 @@ export async function applyDirectStatusChange(user: Pick<User, "id" | "uiLanguag
   const job = await ownedJob(user.id, requiredText(formData.get("jobId")));
   const status = requiredText(formData.get("status")) as JobStatus;
   if (!job || !JOB_STATUSES.includes(status)) return { ok: false, error: "required" };
+  if (!(statusesForEngagement(job.engagement) as readonly string[]).includes(status)) return { ok: false, error: "required" };
   if (job.status === status) return { ok: true, jobId: job.id, status: job.status, event: null };
   const created = await prisma.event.create({
     data: {
@@ -129,10 +131,13 @@ export async function persistEvent(user: User, formData: FormData): Promise<Even
   }
   const channel = optionalEnum(formData.get("channel"), CHANNELS) as Channel | null;
   const stage = optionalEnum(formData.get("stage"), STAGES) as MeetingStage | null;
-  let resultingStatus = defaultResultingStatus(type);
+  const allowedStatuses = statusesForEngagement(job?.engagement);
+  let resultingStatus = defaultResultingStatus(type, job?.engagement);
   if (type === "status_change" || type === "response") {
     const picked = requiredText(formData.get("resultingStatus")) as JobStatus;
-    if (!JOB_STATUSES.includes(picked)) return { ok: false, error: "required", jobId: job?.id, contactId: contact?.id };
+    if (!JOB_STATUSES.includes(picked) || !(allowedStatuses as readonly string[]).includes(picked)) {
+      return { ok: false, error: "required", jobId: job?.id, contactId: contact?.id };
+    }
     resultingStatus = picked;
   }
   if ((type === "outreach" || type === "response") && !channel) return { ok: false, error: "required", jobId: job?.id, contactId: contact?.id };

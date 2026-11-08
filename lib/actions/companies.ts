@@ -7,7 +7,9 @@ import { requireUser } from "../session";
 import { requiredText } from "../forms";
 import { companyNameKey } from "../company-name";
 import { ensureContactCompany, readFoundedOn } from "../companies";
+import { isCompanyStage } from "../company-name";
 import { isCompanySize, type CompanySize } from "../company-size";
+import type { CompanyKind, CompanyStage } from "@prisma/client";
 import { replaceRecordTags } from "../tag-assign";
 
 export async function createCompany(formData: FormData) {
@@ -83,7 +85,7 @@ export async function linkContactToCompany(formData: FormData) {
   if (!company) redirect("/companies?error=required");
   const contact = await prisma.contact.findFirst({ where: { id: contactId, userId: user.id } });
   if (!contact) redirect(`/companies/${company.id}?tab=contacts&error=required`);
-  await ensureContactCompany(prisma, contact.id, company.id);
+  await ensureContactCompany(prisma, contact.id, company.id, requiredText(formData.get("relationship")));
   revalidatePath("/companies");
   revalidatePath(`/companies/${company.id}`);
   revalidatePath(`/contacts/${contact.id}`);
@@ -119,5 +121,12 @@ function companyFields(formData: FormData) {
     linkedinUrl: requiredText(formData.get("linkedinUrl")),
     foundedOn,
     employeeCount,
+    ...readKind(formData),
   };
+}
+
+function readKind(formData: FormData): { kind: CompanyKind; stage: CompanyStage | null } {
+  if (formData.get("kind") !== "own") return { kind: "tracked", stage: null };
+  const stage = requiredText(formData.get("stage"));
+  return { kind: "own", stage: isCompanyStage(stage) ? stage : "idea" };
 }

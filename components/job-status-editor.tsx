@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { JOB_EVENT_LOGGED, type EventFormCatalog, type LoggedHistoryEvent } from "@/lib/job-activity";
-import { JOB_STATUSES } from "@/lib/events";
+import { JOB_STATUSES, statusesForEngagement } from "@/lib/events";
 import { statusLabel, t, type Lang } from "@/lib/i18n";
 import { statusClass } from "./chrome";
 import { EventForm, type InlineEventResult } from "./event-form";
@@ -13,15 +13,24 @@ function publishLoggedEvent(jobId: string, event: LoggedHistoryEvent) {
   window.dispatchEvent(new CustomEvent(JOB_EVENT_LOGGED, { detail: { jobId, event } }));
 }
 
+function editorStatuses(engagement: string | null | undefined, current: string): readonly string[] {
+  const allowed = statusesForEngagement(engagement);
+  if ((allowed as readonly string[]).includes(current)) return allowed;
+  if ((JOB_STATUSES as readonly string[]).includes(current)) return [current, ...allowed];
+  return allowed;
+}
+
 export function JobStatusEditor({
   jobId,
   status,
+  engagement = null,
   lang,
   fit = false,
   prominent = false,
 }: {
   jobId: string;
   status: string;
+  engagement?: string | null;
   lang: Lang;
   fit?: boolean;
   prominent?: boolean;
@@ -54,9 +63,11 @@ export function JobStatusEditor({
     return () => document.removeEventListener("keydown", onKey);
   }, [notice, eventOpen, saving]);
 
+  const options = editorStatuses(engagement, value);
+
   function onChange(next: string) {
     if (!next || next === value || notice || saving) return;
-    if (!(JOB_STATUSES as readonly string[]).includes(next)) return;
+    if (!options.includes(next)) return;
     setBanner("");
     setActionError("");
     setNotice({ from: value, to: next });
@@ -254,7 +265,7 @@ export function JobStatusEditor({
         value={notice?.to ?? value}
         onChange={(event) => onChange(event.target.value)}
       >
-        {JOB_STATUSES.map((option) => (
+        {options.map((option) => (
           <option key={option} value={option}>
             {statusLabel(lang, option)}
           </option>
