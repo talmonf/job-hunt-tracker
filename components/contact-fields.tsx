@@ -381,11 +381,11 @@ export function ContactFields({
               <input type="checkbox" name="willingToRecommend" value="1" defaultChecked={contact?.willingToRecommend} />
               {t(lang, "willing")}
             </label>
-            <div className="ms-auto">
-              <SubmitButton label={t(lang, "save")} />
-            </div>
           </div>
         </SettingsSection>
+        <div className="mb-3 flex justify-end">
+          <SubmitButton label={t(lang, "save")} />
+        </div>
       </form>
     );
   }
