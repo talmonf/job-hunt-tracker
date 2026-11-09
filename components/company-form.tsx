@@ -182,7 +182,7 @@ export function CompanyForm({
       </label>
       <fieldset className="m-0 min-w-0 rounded-lg border border-slate-700 px-3 pb-3">
         <legend className="bg-slate-900 px-1 text-xs text-slate-300">{t(lang, "urls")}</legend>
-        <div className="grid gap-3">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <UrlField lang={lang} name="websiteHome" label={t(lang, "websiteHome")} value={company?.websiteHome ?? ""} saved={Boolean(company)} />
           <UrlField lang={lang} name="websitePeople" label={t(lang, "websitePeople")} value={company?.websitePeople ?? ""} saved={Boolean(company)} />
           <UrlField lang={lang} name="websiteJobs" label={t(lang, "websiteJobs")} value={company?.websiteJobs ?? ""} saved={Boolean(company)} />
@@ -228,44 +228,34 @@ function UrlField({
 
   if (!editing) {
     return (
-      <div>
-        <span className={labelClass}>{label}</span>
-        <div className="flex min-w-0 items-center gap-1">
-          {isHttpUrl(href) ? (
-            <a
-              className="min-w-0 truncate text-sm text-sky-300 hover:text-sky-200"
-              href={href}
-              target="_blank"
-              rel="noreferrer"
-              dir="ltr"
-              title={href}
-            >
-              {href}
-            </a>
-          ) : (
-            <span className="min-w-0 truncate text-sm text-slate-100" dir="ltr" title={href}>
-              {href}
-            </span>
-          )}
-          <button
-            type="button"
-            className="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-            aria-label={t(lang, "edit")}
-            onClick={() => {
-              opened.current = true;
-              setEditing(true);
-            }}
-          >
-            <PencilIcon />
-          </button>
-          <input type="hidden" name={name} value={value} />
-        </div>
+      <div className="flex min-w-0 items-center gap-1">
+        {isHttpUrl(href) ? (
+          <a className="text-sm text-sky-300 hover:text-sky-200" href={href} target="_blank" rel="noreferrer" title={href}>
+            {label}
+          </a>
+        ) : (
+          <span className="text-sm text-slate-100" title={href}>
+            {label}
+          </span>
+        )}
+        <button
+          type="button"
+          className="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+          aria-label={t(lang, "edit")}
+          onClick={() => {
+            opened.current = true;
+            setEditing(true);
+          }}
+        >
+          <PencilIcon />
+        </button>
+        <input type="hidden" name={name} value={value} />
       </div>
     );
   }
 
   return (
-    <label>
+    <label className="w-full">
       <span className={labelClass}>{label}</span>
       <input
         ref={inputRef}
