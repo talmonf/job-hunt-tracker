@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { Lang } from "@/lib/i18n";
 import { companyKindLabel, companySizeLabel, companyStageLabel, t } from "@/lib/i18n";
 import { COMPANY_KINDS, COMPANY_STAGES } from "@/lib/company-name";
 import { COMPANY_SIZES } from "@/lib/company-size";
 import { isHttpUrl } from "@/lib/entity-links";
+import { canonicalPartialDate } from "@/lib/partial-date";
 import type { TagRef } from "@/lib/tags";
 import { SubmitButton, fieldClass, labelClass } from "./widgets";
 import { TagPicker } from "./tag-picker";
@@ -48,8 +49,66 @@ export function CompanyForm({
 }) {
   const [kind, setKind] = useState(company?.kind ?? "tracked");
   const [stage, setStage] = useState(company?.stage || "idea");
+  const [dateError, setDateError] = useState(false);
+  const foundedRef = useRef<HTMLInputElement>(null);
+
+  function applyFounded(input: HTMLInputElement, commit: boolean) {
+    const trimmed = input.value.trim();
+    const digits = /^\d{8}$/.test(trimmed) ? canonicalPartialDate(trimmed) : null;
+    if (digits) {
+      input.value = digits;
+      input.setCustomValidity("");
+      setDateError(false);
+      return;
+    }
+    const canonical = trimmed ? canonicalPartialDate(trimmed) : "";
+    if (commit && canonical && canonical !== trimmed) input.value = canonical;
+    const bad = trimmed !== "" && !canonical;
+    input.setCustomValidity(bad ? t(lang, "errorDate") : "");
+    if (!bad) setDateError(false);
+    else if (commit) setDateError(true);
+  }
+
+  useEffect(() => {
+    const input = foundedRef.current;
+    const form = input?.form;
+    if (!input || !form) return;
+    const onSubmit = (event: Event) => {
+      if (event.target !== form) return;
+      const trimmed = input.value.trim();
+      if (!trimmed) return;
+      const canonical = canonicalPartialDate(trimmed);
+      if (!canonical) {
+        event.preventDefault();
+        event.stopPropagation();
+        setDateError(true);
+        input.focus();
+        return;
+      }
+      input.value = canonical;
+    };
+    document.addEventListener("submit", onSubmit, true);
+    return () => document.removeEventListener("submit", onSubmit, true);
+  }, []);
+
+  function guardFounded(event: FormEvent<HTMLFormElement>) {
+    const input = foundedRef.current;
+    if (!input) return;
+    const trimmed = input.value.trim();
+    if (!trimmed) return;
+    if (canonicalPartialDate(trimmed)) {
+      input.value = canonicalPartialDate(trimmed) ?? trimmed;
+      input.setCustomValidity("");
+      return;
+    }
+    event.preventDefault();
+    input.setCustomValidity(t(lang, "errorDate"));
+    setDateError(true);
+    input.focus();
+  }
+
   return (
-    <form action={action} className="grid max-w-5xl gap-3">
+    <form action={action} className="grid max-w-5xl gap-3" onSubmit={guardFounded}>
       {company ? <input type="hidden" name="companyId" value={company.id} /> : null}
       <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
         <label className="w-64 max-w-full">
@@ -59,9 +118,25 @@ export function CompanyForm({
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
           <label className="flex items-center gap-2">
             <span className={inlineLabelClass}>{t(lang, "dateFounded")}</span>
-            <input className={dateInputClass} name="foundedOn" defaultValue={company?.foundedOn ?? ""} dir="ltr" />
+            <input
+              ref={foundedRef}
+              className={`${dateInputClass}${dateError ? " ring-1 ring-rose-500" : ""}`}
+              name="foundedOn"
+              defaultValue={company?.foundedOn ?? ""}
+              dir="ltr"
+              aria-invalid={dateError}
+              onChange={(event) => applyFounded(event.target, false)}
+              onBlur={(event) => applyFounded(event.target, true)}
+              onInvalid={(event) => {
+                if (!event.currentTarget.validity.customError) return;
+                event.preventDefault();
+                setDateError(true);
+              }}
+            />
           </label>
-          <span className={hintClass}>{t(lang, "partialDateHint")}</span>
+          <span className={dateError ? "text-xs text-rose-300" : hintClass}>
+            {dateError ? t(lang, "errorDate") : t(lang, "partialDateHint")}
+          </span>
         </div>
         <label className="w-fit max-w-full">
           <span className={labelClass}>{t(lang, "companyKind")}</span>

@@ -15,6 +15,12 @@ export function parsePartialDate(raw: string): PartialDate | null {
     if (!validDay(parsed.year, parsed.month, parsed.day)) return null;
     return { precision: "day", ...parsed };
   }
+  const digits = /^(\d{2})(\d{2})(\d{4})$/.exec(text);
+  if (digits) {
+    const parsed = { day: Number(digits[1]), month: Number(digits[2]), year: Number(digits[3]) };
+    if (!validDay(parsed.year, parsed.month, parsed.day)) return null;
+    return { precision: "day", ...parsed };
+  }
   const month = /^(\d{1,2})\/(\d{4})$/.exec(text);
   if (month) {
     const parsed = { year: Number(month[2]), month: Number(month[1]) };

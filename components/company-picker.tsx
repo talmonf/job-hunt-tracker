@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Lang } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
 import { RELATIONSHIP_MAX, sameCompanyName } from "@/lib/company-name";
+import { canonicalPartialDate } from "@/lib/partial-date";
 import { dash } from "@/lib/mask";
 import { fieldClass, labelClass } from "./widgets";
 
@@ -66,12 +67,14 @@ export function CompanyNamesField({
   companies,
   chips,
   onChipsChange,
+  showDateError = false,
 }: {
   lang: Lang;
   hide: boolean;
   companies: CompanyOption[];
   chips: CompanyChip[];
   onChipsChange: (chips: CompanyChip[]) => void;
+  showDateError?: boolean;
 }) {
   const [draft, setDraft] = useState("");
 
@@ -135,16 +138,20 @@ export function CompanyNamesField({
                   <DateBound
                     lang={lang}
                     label={t(lang, "workedFrom")}
+                    kind="from"
                     value={chip.from}
                     unknown={chip.fromUnknown}
+                    forceError={showDateError}
                     onValue={(from) => update(chip.name, { from })}
                     onUnknown={(fromUnknown) => update(chip.name, { fromUnknown, from: fromUnknown ? "" : chip.from })}
                   />
                   <DateBound
                     lang={lang}
                     label={t(lang, "workedTo")}
+                    kind="to"
                     value={chip.to}
                     unknown={chip.toUnknown}
+                    forceError={showDateError}
                     onValue={(to) => update(chip.name, { to })}
                     onUnknown={(toUnknown) => update(chip.name, { toUnknown, to: toUnknown ? "" : chip.to })}
                   />
@@ -152,9 +159,9 @@ export function CompanyNamesField({
                 <p className="mt-1 text-xs text-slate-500">{t(lang, own ? "relationshipDatesOptional" : "stillThereHint")}</p>
                 {own ? null : connection}
                 <input type="hidden" name="companyNames" value={chip.name} />
-                <input type="hidden" name="companyFrom" value={chip.fromUnknown ? "" : chip.from} />
+                <input type="hidden" name="companyFrom" value={chip.fromUnknown ? "" : (canonicalPartialDate(chip.from) ?? chip.from)} />
                 <input type="hidden" name="companyFromUnknown" value={chip.fromUnknown ? "1" : "0"} />
-                <input type="hidden" name="companyTo" value={chip.toUnknown ? "" : chip.to} />
+                <input type="hidden" name="companyTo" value={chip.toUnknown ? "" : (canonicalPartialDate(chip.to) ?? chip.to)} />
                 <input type="hidden" name="companyToUnknown" value={chip.toUnknown ? "1" : "0"} />
                 <input type="hidden" name="companyRelationship" value={chip.relationship} />
               </li>
@@ -188,35 +195,106 @@ export function CompanyNamesField({
 function DateBound({
   lang,
   label,
+  kind,
   value,
   unknown,
+  forceError = false,
   onValue,
   onUnknown,
 }: {
   lang: Lang;
   label: string;
+  kind: "from" | "to";
   value: string;
   unknown: boolean;
+  forceError?: boolean;
   onValue: (value: string) => void;
   onUnknown: (unknown: boolean) => void;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [showError, setShowError] = useState(false);
+  const invalid = !unknown && value.trim() !== "" && !canonicalPartialDate(value);
+  const visibleError = invalid && (showError || forceError);
+
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.setCustomValidity(invalid ? t(lang, "errorDate") : "");
+  }, [invalid, lang]);
+
+  useEffect(() => {
+    const input = inputRef.current;
+    const form = input?.form;
+    if (!input || !form) return;
+    const onSubmit = (event: Event) => {
+      if (event.target !== form || input.disabled) return;
+      const raw = input.value.trim();
+      if (!raw) return;
+      const canonical = canonicalPartialDate(raw);
+      if (!canonical) {
+        event.preventDefault();
+        event.stopPropagation();
+        setShowError(true);
+        return;
+      }
+      const hiddenName = input.dataset.partialDate === "to" ? "companyTo" : "companyFrom";
+      const hidden = input.closest("li")?.querySelector<HTMLInputElement>(`input[type="hidden"][name="${hiddenName}"]`);
+      if (hidden) hidden.value = canonical;
+    };
+    document.addEventListener("submit", onSubmit, true);
+    return () => document.removeEventListener("submit", onSubmit, true);
+  }, []);
+
+  function apply(raw: string) {
+    const trimmed = raw.trim();
+    if (/^\d{8}$/.test(trimmed)) {
+      const canonical = canonicalPartialDate(trimmed);
+      if (canonical) {
+        onValue(canonical);
+        setShowError(false);
+        return;
+      }
+    }
+    onValue(raw);
+    if (!trimmed || canonicalPartialDate(trimmed)) setShowError(false);
+  }
+
   return (
     <label>
       <span className={labelClass}>{label}</span>
       <span className="mt-1 flex items-center gap-2">
         <input
-          className={fieldClass}
+          ref={inputRef}
+          className={`${fieldClass}${visibleError ? " ring-1 ring-rose-500" : ""}`}
           dir="ltr"
+          data-partial-date={kind}
           value={unknown ? "" : value}
           disabled={unknown}
           placeholder={t(lang, "partialDateHint")}
-          onChange={(event) => onValue(event.target.value)}
+          aria-invalid={visibleError}
+          onChange={(event) => apply(event.target.value)}
+          onBlur={() => {
+            if (unknown) return;
+            const canonical = canonicalPartialDate(value);
+            if (canonical) {
+              if (canonical !== value) onValue(canonical);
+              setShowError(false);
+              return;
+            }
+            if (value.trim()) setShowError(true);
+          }}
+          onInvalid={(event) => {
+            if (!event.currentTarget.validity.customError) return;
+            event.preventDefault();
+            setShowError(true);
+          }}
         />
         <span className="flex shrink-0 items-center gap-1 text-xs text-slate-300">
           <input type="checkbox" checked={unknown} onChange={(event) => onUnknown(event.target.checked)} />
           {t(lang, "dateUnknown")}
         </span>
       </span>
+      {visibleError ? <span className="mt-1 block text-xs text-rose-300">{t(lang, "errorDate")}</span> : null}
     </label>
   );
 }

@@ -7,6 +7,7 @@ import type { Lang } from "@/lib/i18n";
 import type { ChipLink } from "@/lib/entity-links";
 import type { TagRef } from "@/lib/tags";
 import { defaultWorkplaceName, sameCompanyName, withWorkplaceCompany } from "@/lib/company-name";
+import { canonicalPartialDate, parsePartialDate } from "@/lib/partial-date";
 import { dash } from "@/lib/mask";
 import { assignNameByScript, displayPersonName, emptyBilingualName, type BilingualName } from "@/lib/person-name";
 import { DateField, SubmitButton, compactFieldClass, compactLabelClass, fieldClass, labelClass, quietButton } from "./widgets";
@@ -87,6 +88,7 @@ export function ContactFields({
   const [firstNameHe, setFirstNameHe] = useState(initialNames.firstNameHe);
   const [lastNameHe, setLastNameHe] = useState(initialNames.lastNameHe);
   const [nameError, setNameError] = useState(false);
+  const [dateError, setDateError] = useState(false);
   const [role, setRole] = useState(contact?.role ?? "");
   const [companiesOnContact, setCompaniesOnContact] = useState<CompanyChip[]>(() =>
     initialCompanyChips(selectedCompanies, contact?.workplace ?? ""),
@@ -137,9 +139,32 @@ export function ContactFields({
 
   const linkedName = displayPersonName({ firstName, lastName, firstNameHe, lastNameHe });
   function guardName(event: FormEvent<HTMLFormElement>) {
-    if ([firstName, lastName, firstNameHe, lastNameHe].some((value) => value.trim())) return;
+    const form = event.currentTarget;
+    let badDate = false;
+    for (const input of form.querySelectorAll<HTMLInputElement>("input[data-partial-date], input[data-day-date]")) {
+      if (input.disabled) continue;
+      const raw = input.value.trim();
+      if (!raw) continue;
+      const partial = input.dataset.partialDate;
+      if (partial) {
+        const canonical = canonicalPartialDate(raw);
+        const hiddenName = partial === "to" ? "companyTo" : "companyFrom";
+        const hidden = input.closest("li")?.querySelector<HTMLInputElement>(`input[type="hidden"][name="${hiddenName}"]`);
+        if (!canonical) badDate = true;
+        else if (hidden) hidden.value = canonical;
+        continue;
+      }
+      const parsed = parsePartialDate(raw);
+      if (!parsed || parsed.precision !== "day") badDate = true;
+    }
+    const missingName = ![firstName, lastName, firstNameHe, lastNameHe].some((value) => value.trim());
+    if (!missingName && !badDate) {
+      setDateError(false);
+      return;
+    }
     event.preventDefault();
-    setNameError(true);
+    setNameError(missingName);
+    setDateError(badDate);
   }
   const nameFields = (
     <>
@@ -237,6 +262,7 @@ export function ContactFields({
         companies={companies}
         chips={companiesOnContact}
         onChipsChange={changeCompanies}
+        showDateError={dateError}
       />
       <label>
         <span className={labelClass}>{t(lang, "mobile")}</span>

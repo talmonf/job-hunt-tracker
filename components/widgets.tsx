@@ -7,6 +7,7 @@ import { useFormStatus } from "react-dom";
 import { ENGAGEMENT_NOTE_MAX, engagementTakesNote, HYBRID_NOTE_MAX } from "@/lib/events";
 import type { Lang } from "@/lib/i18n";
 import { jobAttributeLabel, t } from "@/lib/i18n";
+import { formatPartialDate, parsePartialDate } from "@/lib/partial-date";
 
 export const fieldClass =
   "w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-start text-sm text-slate-100 outline-none focus:border-sky-500";
@@ -288,6 +289,7 @@ export function DateField({
 }) {
   const [text, setText] = useState(isoDateToDisplay(defaultValue ?? ""));
   const lastCommitted = useRef(displayDateToIso(isoDateToDisplay(defaultValue ?? "")));
+  const hiddenRef = useRef<HTMLInputElement>(null);
   const iso = displayDateToIso(text);
 
   function emit(nextIso: string) {
@@ -303,10 +305,11 @@ export function DateField({
       emit("");
       return;
     }
-    const nextIso = displayDateToIso(nextText);
-    if (nextIso) {
-      setText(nextText);
-      emit(nextIso);
+    const parsed = parseDisplayDate(nextText);
+    if (parsed) {
+      const shown = formatDisplayDate(parsed);
+      setText(shown);
+      emit(formatIsoDate(parsed));
       return;
     }
     setText(isoDateToDisplay(lastCommitted.current));
@@ -320,13 +323,17 @@ export function DateField({
         compact={compact}
         onTextChange={setText}
         required={required}
+        reportInvalid={!onCommit}
+        onSubmitIso={(next) => {
+          if (hiddenRef.current) hiddenRef.current.value = next;
+        }}
         onPick={(picked) => {
           setText(picked);
           commit(picked);
         }}
-        onBlur={() => commit(text)}
+        onBlur={(value) => commit(value)}
       />
-      <input type="hidden" name={name} value={iso} />
+      <input ref={hiddenRef} type="hidden" name={name} value={iso} />
     </>
   );
 }
@@ -354,6 +361,11 @@ export function DateTimeField({
   const [text, setText] = useState(initial.date);
   const [hour, setHour] = useState(initial.hour);
   const [minute, setMinute] = useState(initial.minute);
+  const hiddenRef = useRef<HTMLInputElement>(null);
+  const hourRef = useRef(hour);
+  const minuteRef = useRef(minute);
+  hourRef.current = hour;
+  minuteRef.current = minute;
   const isoDate = displayDateToIso(text);
   const timeRequired = required || Boolean(isoDate);
   const iso = isoDate && hour && minute ? `${isoDate}T${hour}:${minute}` : "";
@@ -380,7 +392,20 @@ export function DateTimeField({
     <div className={`flex flex-wrap ${inlineLabels ? "items-center gap-x-1.5 gap-y-1" : `items-end ${compact ? "gap-1" : "gap-2"}`}`}>
       <div className="shrink-0">
         {dateLabel ? <span className={activeLabel}>{dateLabel}</span> : null}
-        <DatePicker lang={lang} text={text} compact={compact} onTextChange={applyDateText} required={required} onPick={applyDateText} />
+        <DatePicker
+          lang={lang}
+          text={text}
+          compact={compact}
+          onTextChange={applyDateText}
+          required={required}
+          onPick={applyDateText}
+          onSubmitIso={(next) => {
+            if (!hiddenRef.current) return;
+            const currentHour = hourRef.current;
+            const currentMinute = minuteRef.current;
+            hiddenRef.current.value = next && currentHour && currentMinute ? `${next}T${currentHour}:${currentMinute}` : "";
+          }}
+        />
       </div>
       <label className={inlineLabels ? "flex items-center gap-1" : "block"} dir="ltr">
         <span className={timeLabel}>{t(lang, "timeHour")}</span>
@@ -435,7 +460,7 @@ export function DateTimeField({
           {t(lang, "clearDate")}
         </button>
       ) : null}
-      <input type="hidden" name={name} value={iso} />
+      <input ref={hiddenRef} type="hidden" name={name} value={iso} />
     </div>
   );
 }
@@ -466,6 +491,16 @@ export function AppointmentRangeField({
   const [fromMinute, setFromMinute] = useState(start.minute);
   const [toHour, setToHour] = useState(end.hour);
   const [toMinute, setToMinute] = useState(end.minute);
+  const startRef = useRef<HTMLInputElement>(null);
+  const endRef = useRef<HTMLInputElement>(null);
+  const fromHourRef = useRef(fromHour);
+  const fromMinuteRef = useRef(fromMinute);
+  const toHourRef = useRef(toHour);
+  const toMinuteRef = useRef(toMinute);
+  fromHourRef.current = fromHour;
+  fromMinuteRef.current = fromMinute;
+  toHourRef.current = toHour;
+  toMinuteRef.current = toMinute;
   const isoDate = displayDateToIso(text);
   const startsAt = isoDate && fromHour && fromMinute ? `${isoDate}T${fromHour}:${fromMinute}` : "";
   const endsAt = isoDate && toHour && toMinute ? `${isoDate}T${toHour}:${toMinute}` : "";
@@ -487,7 +522,19 @@ export function AppointmentRangeField({
     <div>
       <span className={labelClass}>{dateLabel}</span>
       <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
-        <DatePicker lang={lang} text={text} onTextChange={applyDateText} required onPick={applyDateText} />
+        <DatePicker
+          lang={lang}
+          text={text}
+          onTextChange={applyDateText}
+          required
+          onPick={applyDateText}
+          onSubmitIso={(next) => {
+            const from = fromHourRef.current && fromMinuteRef.current ? `${next}T${fromHourRef.current}:${fromMinuteRef.current}` : "";
+            const to = toHourRef.current && toMinuteRef.current ? `${next}T${toHourRef.current}:${toMinuteRef.current}` : "";
+            if (startRef.current) startRef.current.value = next ? from : "";
+            if (endRef.current) endRef.current.value = next ? to : "";
+          }}
+        />
         <TimePair
           lang={lang}
           caption={fromLabel}
@@ -529,8 +576,8 @@ export function AppointmentRangeField({
           }}
         />
       </div>
-      <input type="hidden" name={startName} value={startsAt} />
-      <input type="hidden" name={endName} value={endsAt} />
+      <input ref={startRef} type="hidden" name={startName} value={startsAt} />
+      <input ref={endRef} type="hidden" name={endName} value={endsAt} />
     </div>
   );
 }
@@ -589,24 +636,60 @@ function DatePicker({
   onTextChange,
   required = false,
   compact = false,
+  reportInvalid = true,
   onPick,
   onBlur,
+  onSubmitIso,
 }: {
   lang: Lang;
   text: string;
   onTextChange: (value: string) => void;
   required?: boolean;
   compact?: boolean;
+  reportInvalid?: boolean;
   onPick?: (value: string) => void;
-  onBlur?: () => void;
+  onBlur?: (value: string) => void;
+  onSubmitIso?: (iso: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [showError, setShowError] = useState(false);
   const [popup, setPopup] = useState({ top: 0, left: 0 });
   const today = todayYmd();
   const selected = parseDisplayDate(text);
   const [view, setView] = useState({ year: (selected ?? today).year, month: (selected ?? today).month });
   const ref = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const onSubmitIsoRef = useRef(onSubmitIso);
+  onSubmitIsoRef.current = onSubmitIso;
   const locale = lang === "he" ? "he-IL" : "en-GB";
+  const invalid = reportInvalid && text.trim() !== "" && !parseDisplayDate(text);
+  const visibleError = invalid && showError;
+
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+    input.setCustomValidity(invalid ? t(lang, "errorDate") : "");
+  }, [invalid, lang]);
+
+  useEffect(() => {
+    const input = inputRef.current;
+    const form = input?.form;
+    if (!input || !form || !reportInvalid) return;
+    const onSubmit = (event: Event) => {
+      if (event.target !== form) return;
+      const raw = input.value.trim();
+      const parsed = raw ? parseDisplayDate(liveDateText(raw)) : null;
+      if (raw && !parsed) {
+        event.preventDefault();
+        event.stopPropagation();
+        setShowError(true);
+        return;
+      }
+      onSubmitIsoRef.current?.(parsed ? formatIsoDate(parsed) : "");
+    };
+    document.addEventListener("submit", onSubmit, true);
+    return () => document.removeEventListener("submit", onSubmit, true);
+  }, [reportInvalid]);
 
   useEffect(() => {
     if (!open) return;
@@ -650,18 +733,38 @@ function DatePicker({
     <div className="relative w-fit" ref={ref}>
       <span className="relative inline-block">
         <input
-          className={compact ? compactDateInputClass : dateInputClass}
+          ref={inputRef}
+          className={`${compact ? compactDateInputClass : dateInputClass}${visibleError ? " ring-1 ring-rose-500" : ""}`}
           value={text}
           placeholder="dd/mm/yyyy"
           inputMode="numeric"
           required={required}
           aria-required={required}
-          onChange={(event) => onTextChange(event.target.value)}
+          aria-invalid={visibleError}
+          data-day-date={reportInvalid ? "" : undefined}
+          onChange={(event) => {
+            const shown = liveDateText(event.target.value);
+            const bad = reportInvalid && shown.trim() !== "" && !parseDisplayDate(shown);
+            event.target.setCustomValidity(bad ? t(lang, "errorDate") : "");
+            if (!bad) setShowError(false);
+            onTextChange(shown);
+          }}
           onBlur={(event) => {
             const next = event.relatedTarget as Node | null;
             const dialog = ref.current?.querySelector("[role='dialog']");
             if (dialog && next && dialog.contains(next)) return;
-            onBlur?.();
+            const raw = event.currentTarget.value;
+            const parsed = parseDisplayDate(raw);
+            const shown = parsed ? formatDisplayDate(parsed) : raw;
+            if (shown !== text) onTextChange(shown);
+            if (reportInvalid && raw.trim() && !parsed) setShowError(true);
+            else setShowError(false);
+            onBlur?.(shown);
+          }}
+          onInvalid={(event) => {
+            if (!event.currentTarget.validity.customError) return;
+            event.preventDefault();
+            setShowError(true);
           }}
         />
         <button
@@ -675,6 +778,7 @@ function DatePicker({
           <CalendarIcon compact={compact} />
         </button>
       </span>
+      {visibleError ? <p className="mt-1 max-w-[16rem] text-xs text-rose-300">{t(lang, "errorDate")}</p> : null}
       {open ? (
         <div
           className="fixed z-50 w-72 rounded-md border border-slate-600 bg-slate-900 p-2 shadow-lg"
@@ -1082,20 +1186,21 @@ function displayDateToIso(value: string) {
   return formatIsoDate(parsed);
 }
 
+function liveDateText(raw: string) {
+  const trimmed = raw.trim();
+  if (!/^\d{8}$/.test(trimmed)) return raw;
+  const parsed = parseDisplayDate(trimmed);
+  return parsed ? formatDisplayDate(parsed) : raw;
+}
+
 function parseDisplayDate(value: string): Ymd | null {
-  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value.trim());
-  if (!match) return null;
-  const day = Number(match[1]);
-  const month = Number(match[2]);
-  const year = Number(match[3]);
-  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-  const last = new Date(year, month, 0).getDate();
-  if (day > last) return null;
-  return { year, month, day };
+  const parsed = parsePartialDate(value);
+  if (!parsed || parsed.precision !== "day") return null;
+  return { year: parsed.year, month: parsed.month, day: parsed.day };
 }
 
 function formatDisplayDate(parts: Ymd) {
-  return `${pad2(parts.day)}/${pad2(parts.month)}/${parts.year}`;
+  return formatPartialDate({ precision: "day", ...parts });
 }
 
 function formatIsoDate(parts: Ymd) {
